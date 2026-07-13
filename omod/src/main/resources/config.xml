@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<module configVersion="1.4">
+
+	<!-- Module Properties -->
+	<id>${project.parent.artifactId}</id>
+	<name>${project.parent.name}</name>
+	<version>${project.parent.version}</version>
+	<package>${project.parent.groupId}.${project.parent.artifactId}</package>
+	<author>OpenMRS</author>
+	<description>
+		${project.parent.description}
+	</description>
+	<require_version>1.9.3</require_version>
+	<!-- / Module Properties -->
+
+	<require_modules>
+		<require_module version="${uicommonsVersion}">org.openmrs.module.uicommons</require_module>
+		<require_module version="${emrapiVersion}">org.openmrs.module.emrapi</require_module>
+		<require_module version="${appframeworkVersion}">org.openmrs.module.appframework</require_module>
+		<require_module version="${appuiVersion}">org.openmrs.module.appui</require_module>
+		<require_module version="${coreappsVersion}">org.openmrs.module.coreapps</require_module>
+		<require_module version="${webservicesRestVersion}">org.openmrs.module.webservices.rest</require_module>
+	</require_modules>
+
+	<!-- Module Activator -->
+	<activator>${project.parent.groupId}.${project.parent.artifactId}.TransferAppActivator</activator>
+
+	<mappingFiles>
+
+	</mappingFiles>
+
+	<packagesWithMappedClasses>
+		org.openmrs.module.transferapp.model
+	</packagesWithMappedClasses>
+
+	<!-- Internationalization -->
+	<messages>
+		<lang>en</lang>
+		<file>messages.properties</file>
+	</messages>
+	<!-- /Internationalization -->
+
+	<globalProperty>
+		<property>transferapp.receivedTransferConceptUuid</property>
+		<defaultValue>076b04e5-d62d-47da-83e2-0da6e7a119b4</defaultValue>
+		<description>UUID of the observation concept used to count received patient transfers on the dashboard</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.insuranceTypeConceptUuid</property>
+		<defaultValue>8da67e73-776c-43f6-9758-79d1f6786db3</defaultValue>
+		<description>UUID of the observation concept for patient insurance type (coded)</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.insuranceNumberConceptUuid</property>
+		<defaultValue>5775fd72-b120-40e1-84a4-a2554a781bb2</defaultValue>
+		<description>UUID of the observation concept for patient insurance number (text)</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.insuranceCBHI</property>
+		<description>Comma-separated concept IDs (value_coded) mapped to CBHI on the transfer preview</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.insuranceRSSB</property>
+		<description>Comma-separated concept IDs (value_coded) mapped to RSSB on the transfer preview</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.insuranceMMI</property>
+		<description>Comma-separated concept IDs (value_coded) mapped to MMI on the transfer preview</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.insuranceOther</property>
+		<description>Comma-separated concept IDs (value_coded) mapped to Other on the transfer preview</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.insuranceNone</property>
+		<description>Comma-separated concept IDs (value_coded) mapped to None on the transfer preview</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.diagnosisConceptUuid</property>
+		<defaultValue>2dce81f9-3874-4247-b441-6369ca0725c2,afb8006f-e7c4-45bd-82bd-16f6e4b4b51d</defaultValue>
+		<description>Comma-separated observation concept UUIDs used to resolve diagnosis from the active visit</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.heightConceptUuid</property>
+		<defaultValue>3ce93cf2-26fe-102b-80cb-0017a47871b2</defaultValue>
+		<description>Observation concept UUID for height on the active visit</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.weightConceptUuid</property>
+		<defaultValue>3ce93b62-26fe-102b-80cb-0017a47871b2</defaultValue>
+		<description>Observation concept UUID for weight on the active visit</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.temperatureConceptUuid</property>
+		<defaultValue>3ce939d2-26fe-102b-80cb-0017a47871b2</defaultValue>
+		<description>Observation concept UUID for temperature on the active visit</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.pulseConceptUuid</property>
+		<defaultValue>3ce93824-26fe-102b-80cb-0017a47871b2</defaultValue>
+		<description>Observation concept UUID for pulse on the active visit</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.bloodPressureConceptUuid</property>
+		<defaultValue>3ce934fa-26fe-102b-80cb-0017a47871b2/3ce93694-26fe-102b-80cb-0017a47871b2</defaultValue>
+		<description>Systolic/diastolic observation concept UUIDs separated by / for blood pressure</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.oxygenSaturationConceptUuid</property>
+		<defaultValue>3ce9401c-26fe-102b-80cb-0017a47871b2</defaultValue>
+		<description>Observation concept UUID for oxygen saturation on the active visit</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.muacConceptUuid</property>
+		<defaultValue>4326b04b-3158-417a-bb8d-ad022295b0f4</defaultValue>
+		<description>Observation concept UUID for MUAC on the active visit</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.respiratoryRateConceptUuid</property>
+		<defaultValue>3ceb11f8-26fe-102b-80cb-0017a47871b2</defaultValue>
+		<description>Observation concept UUID for respiratory rate on the active visit</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.hie.url</property>
+		<defaultValue>http://197.243.24.138:5001</defaultValue>
+		<description>Fallback HIE base URL for outbound transfer submission</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.hie.username</property>
+		<defaultValue>MRS_TEST</defaultValue>
+		<description>Fallback HIE username for outbound transfer submission</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.hie.password</property>
+		<description>Fallback HIE password for outbound transfer submission</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.verify_base_url</property>
+		<defaultValue>http://197.243.24.138:8081</defaultValue>
+		<description>Base URL for transfer verification QR codes (eTransfer verify endpoint)</description>
+	</globalProperty>
+
+	<privilege>
+		<name>App: transferapp.dashboard</name>
+		<description>Able to access the transfer dashboard</description>
+	</privilege>
+
+	<privilege>
+		<name>Task: transferapp.listTransfers</name>
+		<description>List Transfer</description>
+	</privilege>
+
+	<privilege>
+		<name>Task: transferapp.createTransfer</name>
+		<description>Create Transfer</description>
+	</privilege>
+
+</module>

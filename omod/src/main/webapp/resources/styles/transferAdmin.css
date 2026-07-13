@@ -1,0 +1,175 @@
+.transfer-admin {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.transfer-admin-intro {
+    color: #555;
+    margin-bottom: 24px;
+}
+
+.transfer-admin-location {
+    margin-bottom: 28px;
+}
+
+.transfer-admin-location label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.transfer-admin-location-select {
+    min-width: 320px;
+    max-width: 100%;
+}
+
+.transfer-admin-section {
+    margin-bottom: 40px;
+}
+
+.transfer-admin-section-title {
+    margin-bottom: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+.transfer-admin-section-help {
+    color: #666;
+    margin-bottom: 16px;
+}
+
+.transfer-admin-add-form {
+    margin-bottom: 16px;
+}
+
+.transfer-admin-form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+    padding-bottom: 5px;
+    padding-left: 5px;
+}
+
+.transfer-admin-field {
+    min-width: 180px;
+}
+
+.transfer-admin-field-grow {
+    flex: 1 1 240px;
+}
+
+.transfer-admin-field-name {
+    flex: 0 1 220px;
+    max-width: 220px;
+}
+
+.transfer-admin-field-location {
+    flex: 0 1 150px;
+    max-width: 150px;
+}
+
+.transfer-admin-field-distance {
+    flex: 0 0 120px;
+    max-width: 120px;
+}
+
+.transfer-admin-field-distance input[type="number"] {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.transfer-admin-col-distance {
+    width: 100px;
+    white-space: nowrap;
+}
+
+.transfer-admin-field-registry {
+    flex: 1 1 420px;
+    min-width: 320px;
+    max-width: 100%;
+}
+
+.transfer-admin-facility-registry-select {
+    width: 100%;
+}
+
+.transfer-admin-field-registry .select2-container {
+    width: 100% !important;
+    min-width: 320px;
+}
+
+.transfer-admin-field-registry .select2-container--default .select2-selection--single {
+    height: 34px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+.transfer-admin-field-registry .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 32px;
+    padding-left: 8px;
+}
+
+.transfer-admin-field-registry .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 32px;
+}
+
+.transfer-admin-field-registry .select2-dropdown {
+    z-index: 10050;
+}
+
+.transfer-admin-field-action {
+    min-width: auto;
+}
+
+.transfer-admin-field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.transfer-admin-field input[type="text"] {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.transfer-admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border: 1px solid #ddd;
+}
+
+.transfer-admin-table th,
+.transfer-admin-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
+    text-align: left;
+}
+
+.transfer-admin-table th {
+    background: #f7f7f7;
+    font-weight: 600;
+}
+
+.transfer-admin-col-action {
+    width: 220px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.transfer-admin-table tr.is-selected td {
+    background: #f3f8ff;
+}
+
+.transfer-admin-empty,
+.transfer-admin-empty-row td {
+    color: #777;
+    font-style: italic;
+}
+
+.transfer-admin-empty {
+    padding: 24px 0;
+}

@@ -1,0 +1,221 @@
+/* Patient dashboard transfers section — aligned with Rwanda EMR Irembo Pay styling */
+
+.transfer-section .transfer-section-subtitle {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #00473f;
+}
+
+.transfer-new-btn-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  margin-bottom: 12px;
+}
+
+a.transfer-new-btn.transfer-new-btn-disabled,
+.transfer-new-btn.transfer-new-btn-disabled {
+  display: inline-block;
+  margin: 4px 0 0;
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #fff !important;
+  text-decoration: none !important;
+  text-align: center;
+  background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%);
+  border: 1px solid #64748b;
+  border-radius: 6px;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.transfer-insurance-info {
+  font-size: 13px;
+  color: #0f766e;
+  line-height: 1.4;
+}
+
+.transfer-insurance-separator {
+  margin: 0 6px;
+  color: #94a3b8;
+}
+
+.transfer-insurance-missing {
+  font-size: 13px;
+  color: #b45309;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+a.transfer-new-btn {
+  display: inline-block;
+  margin: 4px 0 12px 0;
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #fff !important;
+  text-decoration: none !important;
+  text-align: center;
+  background: linear-gradient(180deg, #0d9488 0%, #0f766e 100%);
+  border: 1px solid #0a5c52;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
+}
+
+a.transfer-new-btn:hover,
+a.transfer-new-btn:focus {
+  color: #fff !important;
+  background: linear-gradient(180deg, #14b8a6 0%, #0d9488 100%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  outline: none;
+}
+
+a.transfer-new-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.transfer-table-wrapper {
+  overflow-x: auto;
+}
+
+table.transfer-datatable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+table.transfer-datatable thead th {
+  text-align: left;
+  padding: 8px 10px;
+  background: #00473f;
+  color: #fff;
+  font-weight: 600;
+  border: 1px solid #003830;
+}
+
+table.transfer-datatable tbody td {
+  padding: 8px 10px;
+  border: 1px solid #d9e8e6;
+  vertical-align: top;
+}
+
+table.transfer-datatable tbody tr:nth-child(even) {
+  background: #f4faf9;
+}
+
+table.transfer-datatable tbody tr:hover {
+  background: #e8f5f3;
+}
+
+table.transfer-datatable tbody tr.transfer-row-sent,
+table.transfer-datatable tbody tr.transfer-row-sent:nth-child(even) {
+  background: #dcfce7;
+}
+
+table.transfer-datatable tbody tr.transfer-row-sent:hover {
+  background: #bbf7d0;
+}
+
+.transfer-status-sent {
+  color: #166534;
+  font-weight: 600;
+}
+
+.transfer-status-pending {
+  color: #64748b;
+}
+
+a.transfer-view-link {
+  color: #0f766e;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+a.transfer-view-link:hover {
+  color: #0d9488;
+  text-decoration: underline;
+}
+
+.transfer-records-link-wrap {
+  margin-top: 10px;
+  text-align: right;
+}
+
+.transfer-records-link-wrap a {
+  color: #0f766e;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.transfer-records-link-wrap a:hover {
+  text-decoration: underline;
+}
+
+.transfer-pagination {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #555;
+}
+
+.transfer-pagination button {
+  margin-left: 8px;
+}
+
+.transfer-empty-message {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #666;
+  font-style: italic;
+}
+
+.transfer-out-form-note {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #0f766e;
+  background: #d9f2f0;
+  border: 1px solid #9ed9d3;
+  border-radius: 4px;
+}
+
+.transfer-out-field {
+  margin-bottom: 12px;
+}
+
+.transfer-out-field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #2c3e66;
+}
+
+.transfer-out-field input[type="text"],
+.transfer-out-field select,
+.transfer-out-field textarea {
+  width: 100%;
+  max-width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  box-sizing: border-box;
+}
+
+#new-transfer-out-dialog.dialog select {
+  min-width: 100px !important;
+}
+
+.transfer-out-actions {
+  margin-top: 16px;
+  text-align: right;
+}
+

@@ -1,0 +1,555 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
+
+    <changeSet id="transferapp-20250617-create-transfer-table" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="transfers"/>
+            </not>
+        </preConditions>
+        <comment>Create transfers table for outbound referral records</comment>
+        <createTable tableName="transfers">
+            <column name="transfer_id" type="int" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="uuid" type="char(38)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="patient_id" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="decision_to_transfer_at" type="datetime"/>
+            <column name="calling_time" type="varchar(8)"/>
+            <column name="receiving_facility_code" type="varchar(64)"/>
+            <column name="receiving_service" type="varchar(255)"/>
+            <column name="staff_contacted_name" type="varchar(255)"/>
+            <column name="staff_contacted_phone" type="varchar(64)"/>
+            <column name="reason_for_transfer" type="text"/>
+            <column name="emr_id" type="varchar(64)"/>
+            <column name="client_name" type="varchar(255)"/>
+            <column name="client_telephone" type="varchar(64)"/>
+            <column name="age_or_dob" type="varchar(64)"/>
+            <column name="sex" type="varchar(20)"/>
+            <column name="identifier_type" type="varchar(40)"/>
+            <column name="identifier_value" type="varchar(64)"/>
+            <column name="caregiver_name" type="varchar(255)"/>
+            <column name="caregiver_telephone" type="varchar(64)"/>
+            <column name="client_district" type="varchar(120)"/>
+            <column name="sector" type="varchar(120)"/>
+            <column name="cell" type="varchar(120)"/>
+            <column name="village" type="varchar(120)"/>
+            <column name="sending_facility" type="varchar(255)"/>
+            <column name="referring_provider_name" type="varchar(255)"/>
+            <column name="creator" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="int"/>
+            <column name="date_changed" type="datetime"/>
+            <column name="voided" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voided_by" type="int"/>
+            <column name="date_voided" type="datetime"/>
+            <column name="void_reason" type="varchar(255)"/>
+        </createTable>
+
+        <addForeignKeyConstraint constraintName="transfers_patient_fk"
+                                 baseTableName="transfers"
+                                 baseColumnNames="patient_id"
+                                 referencedTableName="patient"
+                                 referencedColumnNames="patient_id"/>
+
+        <addForeignKeyConstraint constraintName="transfers_creator_fk"
+                                 baseTableName="transfers"
+                                 baseColumnNames="creator"
+                                 referencedTableName="users"
+                                 referencedColumnNames="user_id"/>
+
+        <addForeignKeyConstraint constraintName="transfers_changed_by_fk"
+                                 baseTableName="transfers"
+                                 baseColumnNames="changed_by"
+                                 referencedTableName="users"
+                                 referencedColumnNames="user_id"/>
+
+        <addForeignKeyConstraint constraintName="transfers_voided_by_fk"
+                                 baseTableName="transfers"
+                                 baseColumnNames="voided_by"
+                                 referencedTableName="users"
+                                 referencedColumnNames="user_id"/>
+
+        <createIndex tableName="transfers" indexName="transfers_patient_idx">
+            <column name="patient_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="transferapp-20250617-add-transfer-patient-snapshot-columns" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfers"/>
+                <not>
+                    <columnExists tableName="transfers" columnName="emr_id"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Add patient snapshot columns for transfer preview</comment>
+        <addColumn tableName="transfers">
+            <column name="emr_id" type="varchar(64)"/>
+            <column name="client_name" type="varchar(255)"/>
+            <column name="client_telephone" type="varchar(64)"/>
+            <column name="age_or_dob" type="varchar(64)"/>
+            <column name="sex" type="varchar(20)"/>
+            <column name="identifier_type" type="varchar(40)"/>
+            <column name="identifier_value" type="varchar(64)"/>
+            <column name="caregiver_name" type="varchar(255)"/>
+            <column name="caregiver_telephone" type="varchar(64)"/>
+            <column name="client_district" type="varchar(120)"/>
+            <column name="sector" type="varchar(120)"/>
+            <column name="cell" type="varchar(120)"/>
+            <column name="village" type="varchar(120)"/>
+            <column name="sending_facility" type="varchar(255)"/>
+            <column name="referring_provider_name" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="transferapp-20250617-create-receiving-facilities-table" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="transfer_receiving_facilities"/>
+            </not>
+        </preConditions>
+        <comment>Per-sending-facility list of receiving facilities for transfer referrals</comment>
+        <createTable tableName="transfer_receiving_facilities">
+            <column name="receiving_facility_id" type="int" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="uuid" type="char(38)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="sending_location_id" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="facility_code" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="facility_name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creator" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="int"/>
+            <column name="date_changed" type="datetime"/>
+            <column name="voided" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voided_by" type="int"/>
+            <column name="date_voided" type="datetime"/>
+            <column name="void_reason" type="varchar(255)"/>
+        </createTable>
+
+        <addForeignKeyConstraint constraintName="transfer_receiving_facilities_location_fk"
+                                 baseTableName="transfer_receiving_facilities"
+                                 baseColumnNames="sending_location_id"
+                                 referencedTableName="location"
+                                 referencedColumnNames="location_id"/>
+
+        <addForeignKeyConstraint constraintName="transfer_receiving_facilities_creator_fk"
+                                 baseTableName="transfer_receiving_facilities"
+                                 baseColumnNames="creator"
+                                 referencedTableName="users"
+                                 referencedColumnNames="user_id"/>
+
+        <createIndex tableName="transfer_receiving_facilities" indexName="transfer_receiving_facilities_location_idx">
+            <column name="sending_location_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="transferapp-20250617-create-receiving-services-table" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="transfer_receiving_services"/>
+            </not>
+        </preConditions>
+        <comment>Per-sending-facility list of receiving services for transfer referrals</comment>
+        <createTable tableName="transfer_receiving_services">
+            <column name="receiving_service_id" type="int" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="uuid" type="char(38)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="sending_location_id" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="service_name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creator" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="int"/>
+            <column name="date_changed" type="datetime"/>
+            <column name="voided" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voided_by" type="int"/>
+            <column name="date_voided" type="datetime"/>
+            <column name="void_reason" type="varchar(255)"/>
+        </createTable>
+
+        <addForeignKeyConstraint constraintName="transfer_receiving_services_location_fk"
+                                 baseTableName="transfer_receiving_services"
+                                 baseColumnNames="sending_location_id"
+                                 referencedTableName="location"
+                                 referencedColumnNames="location_id"/>
+
+        <addForeignKeyConstraint constraintName="transfer_receiving_services_creator_fk"
+                                 baseTableName="transfer_receiving_services"
+                                 baseColumnNames="creator"
+                                 referencedTableName="users"
+                                 referencedColumnNames="user_id"/>
+
+        <createIndex tableName="transfer_receiving_services" indexName="transfer_receiving_services_location_idx">
+            <column name="sending_location_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="transferapp-20250622-receiving-services-by-facility" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfer_receiving_services"/>
+                <columnExists tableName="transfer_receiving_services" columnName="sending_location_id"/>
+                <not>
+                    <columnExists tableName="transfer_receiving_services" columnName="receiving_facility_id"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Link receiving services to receiving facilities instead of sending locations</comment>
+
+        <dropForeignKeyConstraint baseTableName="transfer_receiving_services"
+                                  constraintName="transfer_receiving_services_location_fk"/>
+        <dropIndex tableName="transfer_receiving_services" indexName="transfer_receiving_services_location_idx"/>
+
+        <sql>DELETE FROM transfer_receiving_services</sql>
+
+        <dropColumn tableName="transfer_receiving_services" columnName="sending_location_id"/>
+
+        <addColumn tableName="transfer_receiving_services">
+            <column name="receiving_facility_id" type="int">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <addForeignKeyConstraint constraintName="transfer_receiving_services_facility_fk"
+                                 baseTableName="transfer_receiving_services"
+                                 baseColumnNames="receiving_facility_id"
+                                 referencedTableName="transfer_receiving_facilities"
+                                 referencedColumnNames="receiving_facility_id"/>
+
+        <createIndex tableName="transfer_receiving_services" indexName="transfer_receiving_services_facility_idx">
+            <column name="receiving_facility_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="transferapp-20250617-add-receiving-facility-distance" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfer_receiving_facilities"/>
+                <not>
+                    <columnExists tableName="transfer_receiving_facilities" columnName="distance"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Ambulance travel distance in KM for billing</comment>
+        <addColumn tableName="transfer_receiving_facilities">
+            <column name="distance" type="int"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="transferapp-20250628-receiving-facility-province-district" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfer_receiving_facilities"/>
+                <not>
+                    <columnExists tableName="transfer_receiving_facilities" columnName="province"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Province and district for each receiving destination</comment>
+        <addColumn tableName="transfer_receiving_facilities">
+            <column name="province" type="varchar(120)"/>
+            <column name="district" type="varchar(120)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="transferapp-20250628-transfer-receiving-province-district" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfers"/>
+                <not>
+                    <columnExists tableName="transfers" columnName="receiving_province"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Snapshot of receiving facility province and district on each transfer</comment>
+        <addColumn tableName="transfers">
+            <column name="receiving_province" type="varchar(120)"/>
+            <column name="receiving_district" type="varchar(120)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="transferapp-20250628-transfer-type-emergency-times" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfers"/>
+                <not>
+                    <columnExists tableName="transfers" columnName="transfer_type"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Transfer type and emergency ambulance timing on outbound transfers</comment>
+        <addColumn tableName="transfers">
+            <column name="transfer_type" type="varchar(32)"/>
+            <column name="ambulance_call_time" type="varchar(8)"/>
+            <column name="depart_ref_time" type="varchar(8)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="transferapp-20250628-transfer-transport-type" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfers"/>
+                <not>
+                    <columnExists tableName="transfers" columnName="transport_type"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Type of transportation on outbound transfers</comment>
+        <addColumn tableName="transfers">
+            <column name="transport_type" type="varchar(16)"/>
+            <column name="transport_other" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="transferapp-20250628-create-transfer-profile-table" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="transfer_profile"/>
+            </not>
+        </preConditions>
+        <comment>Provider transfer profile linked to OpenMRS users</comment>
+        <createTable tableName="transfer_profile">
+            <column name="transfer_profile_id" type="int" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="uuid" type="char(38)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="user_id" type="int">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="license_number" type="varchar(64)"/>
+            <column name="phone_number" type="varchar(64)"/>
+            <column name="qualification" type="varchar(255)"/>
+            <column name="creator" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="int"/>
+            <column name="date_changed" type="datetime"/>
+            <column name="voided" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voided_by" type="int"/>
+            <column name="date_voided" type="datetime"/>
+            <column name="void_reason" type="varchar(255)"/>
+        </createTable>
+
+        <addForeignKeyConstraint constraintName="transfer_profile_user_fk"
+                                 baseTableName="transfer_profile"
+                                 baseColumnNames="user_id"
+                                 referencedTableName="users"
+                                 referencedColumnNames="user_id"/>
+
+        <addForeignKeyConstraint constraintName="transfer_profile_creator_fk"
+                                 baseTableName="transfer_profile"
+                                 baseColumnNames="creator"
+                                 referencedTableName="users"
+                                 referencedColumnNames="user_id"/>
+    </changeSet>
+
+    <changeSet id="transferapp-20250628-transfer-health-insurance" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfers"/>
+                <not>
+                    <columnExists tableName="transfers" columnName="health_insurance_type"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Health insurance category snapshot for transfer preview</comment>
+        <addColumn tableName="transfers">
+            <column name="health_insurance_type" type="varchar(16)"/>
+            <column name="health_insurance_other" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="transferapp-20250628-transfer-referring-unit" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfers"/>
+                <not>
+                    <columnExists tableName="transfers" columnName="referring_unit"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Current session location name used as referring unit on transfer preview</comment>
+        <addColumn tableName="transfers">
+            <column name="referring_unit" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="transferapp-20250628-transfer-admission-at" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfers"/>
+                <not>
+                    <columnExists tableName="transfers" columnName="admission_at"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Patient visit admission datetime snapshot for transfer preview</comment>
+        <addColumn tableName="transfers">
+            <column name="admission_at" type="datetime"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="transferapp-20250629-transfer-diagnosis" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfers"/>
+                <not>
+                    <columnExists tableName="transfers" columnName="diagnosis"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Diagnosis snapshot from active visit observations for transfer preview</comment>
+        <addColumn tableName="transfers">
+            <column name="diagnosis" type="text"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="transferapp-20250629-transfer-vital-signs" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfers"/>
+                <not>
+                    <columnExists tableName="transfers" columnName="vital_temp"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Vital signs snapshot from active visit observations for transfer preview</comment>
+        <addColumn tableName="transfers">
+            <column name="vital_ht" type="varchar(32)"/>
+            <column name="vital_wt" type="varchar(32)"/>
+            <column name="vital_temp" type="varchar(32)"/>
+            <column name="vital_pulse" type="varchar(32)"/>
+            <column name="vital_bp" type="varchar(32)"/>
+            <column name="vital_spo2" type="varchar(32)"/>
+            <column name="vital_muac" type="varchar(32)"/>
+            <column name="vital_rr" type="varchar(32)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="transferapp-20250629-transfer-hie-status" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfers"/>
+                <not>
+                    <columnExists tableName="transfers" columnName="hie_sent"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>HIE submission tracking for outbound transfers</comment>
+        <addColumn tableName="transfers">
+            <column name="hie_sent" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="hie_sent_at" type="datetime"/>
+            <column name="hie_send_err" type="varchar(500)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="transferapp-20250701-transfer-hie-received" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfers"/>
+                <not>
+                    <columnExists tableName="transfers" columnName="hie_transfer_id"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Track transfers received from HIE and their source encounter id</comment>
+        <addColumn tableName="transfers">
+            <column name="hie_transfer_id" type="varchar(64)"/>
+            <column name="received_from_hie" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <createIndex tableName="transfers" indexName="transfers_hie_transfer_id_idx">
+            <column name="hie_transfer_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="transferapp-20250702-transfer-form-extra-fields" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfers"/>
+                <not>
+                    <columnExists tableName="transfers" columnName="clinical_presentation"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Extended transfer form fields for inbound and outbound caching</comment>
+        <addColumn tableName="transfers">
+            <column name="clinical_presentation" type="text"/>
+            <column name="disability_type" type="varchar(255)"/>
+            <column name="laboratory" type="text"/>
+            <column name="procedures_treatments" type="text"/>
+            <column name="other_notes" type="text"/>
+            <column name="provider_qualification" type="varchar(255)"/>
+            <column name="signed_date" type="date"/>
+            <column name="signed_time" type="varchar(8)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="transferapp-20250703-fr-token-global-property" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM global_property WHERE property = 'transferapp.fr_token'
+            </sqlCheck>
+        </preConditions>
+        <comment>X-Auth-Token for HIE facility registry integration</comment>
+        <insert tableName="global_property">
+            <column name="property" value="transferapp.fr_token"/>
+            <column name="property_value" value=""/>
+            <column name="description" value="X-Auth-Token used when calling the HIE facility registry API"/>
+            <column name="uuid" value="f3a8c2e1-4b5d-6e7f-8a9b-0c1d2e3f4a5b"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,4 @@
+Uuid,Privilege name,Description
+a1b2c3d4-e5f6-7890-abcd-ef1234567890,App: transferapp.dashboard,Able to access the transfer dashboard
+b2c3d4e5-f6a7-8901-bcde-f12345678901,Task: transferapp.listTransfers,List Transfer
+c3d4e5f6-a7b8-9012-cdef-123456789012,Task: transferapp.createTransfer,Create Transfer

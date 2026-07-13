@@ -1,0 +1,23 @@
+[
+    {
+        "id": "transferapp.patientTransfers",
+        "description": "transferapp.patient.transfers.description",
+        "label": "transferapp.patient.transfers.title",
+        "icon": "icon-retweet",
+        "order": 0,
+        "config": {
+            "label": "Transfer Information"
+        },
+        "extensions": [
+            {
+                "id": "transferapp.patientTransfers.clinicianDashboardFirstColumn",
+                "appId": "transferapp.patientTransfers",
+                "extensionPointId": "patientDashboard.firstColumnFragments",
+                "extensionParams": {
+                    "provider": "transferapp",
+                    "fragment": "patient/transfersSection"
+                }
+            }
+        ]
+    }
+]

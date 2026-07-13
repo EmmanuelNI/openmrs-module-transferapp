@@ -1,0 +1,220 @@
+(function(global) {
+	"use strict";
+
+	function escTransferPreview(value) {
+		if (value === null || value === undefined) {
+			return "";
+		}
+		return String(value)
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;");
+	}
+
+	function yesNoCircle(flag) {
+		return flag ? "&#9679;" : "&#9711;";
+	}
+
+	function line(value, minWidth) {
+		var safe = escTransferPreview(value || "");
+		var width = minWidth || 180;
+		return "<span class='tf-line' style='min-width:" + width + "px;'>" + safe + "</span>";
+	}
+
+	function truthy(value) {
+		return value === true || value === "true";
+	}
+
+	function normalizeTransferPreviewItem(item) {
+		var normalized = item || {};
+		var transferType = normalized.transferType || "";
+
+		return {
+			province: normalized.province,
+			district: normalized.district || normalized.clientDistrict,
+			hospitalName: normalized.hospitalName || normalized.sendingFacility,
+			referringFacilityName: normalized.referringFacilityName || normalized.sendingFacility,
+			referringUnit: normalized.referringUnit,
+			receivingClinicianPhone: normalized.receivingClinicianPhone || normalized.staffContactedPhone,
+			clientName: normalized.clientName,
+			serialNumberEmr: normalized.serialNumberEmr || normalized.emrId,
+			clientTelephone: normalized.clientTelephone,
+			ageOrDob: normalized.ageOrDob || normalized.ageDob,
+			sex: normalized.sex,
+			caregiverName: normalized.caregiverName,
+			caregiverTelephone: normalized.caregiverTelephone,
+			clientDistrict: normalized.clientDistrict || normalized.district,
+			sector: normalized.sector || normalized.patientSector,
+			cell: normalized.cell || normalized.patientCell,
+			village: normalized.village || normalized.patientVillage,
+			admissionAt: normalized.admissionAt || normalized.admissionDatetime,
+			decisionToTransferAt: normalized.decisionToTransferAt || normalized.transferDecisionDatetime,
+			receivingFacility: normalized.receivingFacility,
+			receivingService: normalized.receivingService,
+			callingTime: normalized.callingTime,
+			staffContactedName: normalized.staffContactedName || normalized.staffContactedAtReceivingFacility,
+			staffContactedPhone: normalized.staffContactedPhone || normalized.staffContactPhone,
+			isEmergency: normalized.isEmergency != null ? truthy(normalized.isEmergency) : transferType === "EMERGENCY",
+			isNonEmergency: normalized.isNonEmergency != null ? truthy(normalized.isNonEmergency) : transferType === "NOT_EMERGENCY",
+			isFollowUp: normalized.isFollowUp != null ? truthy(normalized.isFollowUp) : transferType === "FOLLOW_UP",
+			ambulanceCalledTime: normalized.ambulanceCalledTime,
+			departureFromReferringTime: normalized.departureFromReferringTime || normalized.departureTime,
+			reasonForTransfer: normalized.reasonForTransfer,
+			clinicalPresentation: normalized.clinicalPresentation,
+			disabilityType: normalized.disabilityType,
+			vitalTemp: normalized.vitalTemp || normalized.temperature,
+			vitalSpo2: normalized.vitalSpo2 || normalized.spo2,
+			vitalRr: normalized.vitalRr || normalized.respiratoryRate,
+			vitalPulse: normalized.vitalPulse || normalized.pulse,
+			vitalBp: normalized.vitalBp || normalized.bloodPressure,
+			vitalWeight: normalized.vitalWeight || normalized.weight,
+			vitalHeight: normalized.vitalHeight || normalized.height,
+			vitalMuac: normalized.vitalMuac || normalized.muac,
+			laboratory: normalized.laboratory,
+			othersNotes: normalized.othersNotes || normalized.others,
+			diagnosis: normalized.diagnosis,
+			proceduresAndTreatments: normalized.proceduresAndTreatments,
+			isAmbulanceTransport: normalized.isAmbulanceTransport != null ? truthy(normalized.isAmbulanceTransport) : normalized.transportationType === "AMBULANCE",
+			transportationOtherSpec: normalized.transportationOtherSpec || normalized.otherTransportType,
+			isNaTransport: normalized.isNaTransport != null ? truthy(normalized.isNaTransport) : normalized.transportationType === "NA",
+			isCbhiInsurance: normalized.isCbhiInsurance != null ? truthy(normalized.isCbhiInsurance) : normalized.healthInsuranceType === "CBHI",
+			isRssbInsurance: normalized.isRssbInsurance != null ? truthy(normalized.isRssbInsurance) : normalized.healthInsuranceType === "RSSB",
+			isMmiInsurance: normalized.isMmiInsurance != null ? truthy(normalized.isMmiInsurance) : normalized.healthInsuranceType === "MMI",
+			otherInsurance: normalized.otherInsurance || normalized.healthInsuranceOtherSpec,
+			isNoInsurance: normalized.isNoInsurance != null ? truthy(normalized.isNoInsurance) : normalized.healthInsuranceType === "NONE",
+			referringProviderName: normalized.referringProviderName,
+			referringProviderQualification: normalized.referringProviderQualification,
+			referringSignedDate: normalized.referringSignedDate || normalized.formDate,
+			referringSignedTime: normalized.referringSignedTime || normalized.formTime,
+			referringProviderPhone: normalized.referringProviderPhone || normalized.providerPhone,
+			signatureAndStamp: normalized.signatureAndStamp,
+			showVerificationQr: truthy(normalized.showVerificationQr),
+			verifyQrUrl: normalized.verifyQrUrl,
+			verifyRemoteUrl: normalized.verifyRemoteUrl,
+			verificationTransferId: normalized.verificationTransferId
+		};
+	}
+
+	function resolveTransferPreviewQrUrl(verifyQrUrl) {
+		if (!verifyQrUrl) {
+			return "";
+		}
+		if (/^https?:\/\//i.test(verifyQrUrl)) {
+			return verifyQrUrl;
+		}
+		var openmrsPath = global.transferOpenmrsPath || "";
+		if (verifyQrUrl.charAt(0) === "/") {
+			return openmrsPath + verifyQrUrl;
+		}
+		return openmrsPath + "/" + verifyQrUrl;
+	}
+
+	function buildTransferFormPreviewHtml(item) {
+		var p = normalizeTransferPreviewItem(item);
+		var logoUri = global.transferMohLogoDataUri || "";
+		var logoHtml = logoUri
+			? "<img class='tf-moh-logo' src='" + logoUri + "' alt='Ministry of Health' />"
+			: "";
+		var signatureBlock = line(p.signatureAndStamp, 260);
+		var bottomRows = "<div class='tf-row'><strong>Laboratory:</strong> " + line(p.laboratory, 680) + "</div>"
+			+ "<div class='tf-row'><strong>Others:</strong> " + line(p.othersNotes, 725) + "</div>"
+			+ "<div class='tf-row'><strong>Diagnosis:</strong> " + line(p.diagnosis, 700) + "</div>"
+			+ "<div class='tf-row'><strong>Procedures and Treatments:</strong> " + line(p.proceduresAndTreatments, 565) + "</div>"
+			+ "<div class='tf-row'><strong>Type of Transportation:</strong>"
+			+ " Ambulance:<span class='tf-circle'>" + yesNoCircle(p.isAmbulanceTransport) + "</span>"
+			+ " Other (specify):" + line(p.transportationOtherSpec, 230)
+			+ " NA:<span class='tf-circle'>" + yesNoCircle(p.isNaTransport) + "</span></div>"
+			+ "<div class='tf-row'><strong>Health insurance:</strong>"
+			+ " CBHI (mutuelle):<span class='tf-circle'>" + yesNoCircle(p.isCbhiInsurance) + "</span>"
+			+ " RSSB:<span class='tf-circle'>" + yesNoCircle(p.isRssbInsurance) + "</span>"
+			+ " MMI:<span class='tf-circle'>" + yesNoCircle(p.isMmiInsurance) + "</span>"
+			+ " Other (Specify):" + line(p.otherInsurance, 120)
+			+ " None:<span class='tf-circle'>" + yesNoCircle(p.isNoInsurance) + "</span></div>"
+			+ "<div class='tf-row tf-bottom-gap'><strong>Names of referring health care provider:</strong> " + line(p.referringProviderName, 220)
+			+ " <strong>Qualification:</strong> " + line(p.referringProviderQualification, 160) + "</div>"
+			+ "<div class='tf-row tf-signature-row'><strong>Date:</strong> " + line(p.referringSignedDate, 120)
+			+ " <strong>Time:</strong> " + line(p.referringSignedTime, 120)
+			+ " <strong>Phone:</strong> " + line(p.referringProviderPhone, 180)
+			+ signatureBlock + "</div>";
+
+		var bottomSection = bottomRows;
+		if (p.showVerificationQr && p.verifyQrUrl) {
+			bottomSection = "<table class='tf-bottom-table' cellpadding='0' cellspacing='0'>"
+				+ "<tr>"
+				+ "<td class='tf-bottom-fields'>" + bottomRows + "</td>"
+				+ "<td class='tf-qr-cell'>"
+				+ "<img class='tf-qr-image' src='" + escTransferPreview(resolveTransferPreviewQrUrl(p.verifyQrUrl))
+				+ "' alt='Scan to verify this transfer'/>"
+				+ "</td>"
+				+ "</tr>"
+				+ "</table>";
+		}
+
+		return "<div class='transfer-form-preview'><div class='tf-sheet'>"
+			+ "<div class='tf-head'>"
+			+ "<div class='tf-left'>"
+			+ "<div class='tf-row'><strong>REPUBLIC OF RWANDA</strong></div>"
+			+ "<div class='tf-row'>" + logoHtml + "</div>"
+			+ "<div class='tf-row' style='margin-top: 22px;'><strong>MINISTRY OF HEALTH</strong></div>"
+			+ "</div>"
+			+ "<div class='tf-right'>"
+			+ "<div class='tf-row'><strong>Province:</strong>" + line(p.province, 320) + "</div>"
+			+ "<div class='tf-row'><strong>District:</strong>" + line(p.district, 332) + "</div>"
+			+ "<div class='tf-row'><strong>Name of Hospital:</strong>" + line(p.receivingFacility, 230) + "</div>"
+			+ "<div class='tf-row'><strong>Name of Referring Facility:</strong>" + line(p.referringFacilityName, 172) + "</div>"
+			+ "<div class='tf-row'><strong>Referring Unit:</strong>" + line(p.referringUnit, 280) + "</div>"
+			+ "<div class='tf-row'><strong>Receiving Clinician/Phone:</strong>" + line(p.receivingClinicianPhone, 190) + "</div>"
+			+ "</div>"
+			+ "</div>"
+
+			+ "<div class='tf-title'>EXTERNAL TRANSFER FORM</div>"
+
+			+ "<div class='tf-row'><strong>Client Name:</strong> " + line(p.clientName, 280)
+			+ " <strong>EMR ID:</strong> " + line(p.serialNumberEmr, 220)
+			+ " <strong>Telephone:</strong> " + line(p.clientTelephone, 180) + "</div>"
+			+ "<div class='tf-row'><strong>Age(DOB):</strong> " + line(p.ageOrDob, 150)
+			+ " <strong>Sex:</strong> " + line(p.sex, 90)
+			+ " <strong>Name of caregiver:</strong> " + line(p.referringProviderName, 270)
+			+ " <strong>Caregiver telephone:</strong> " + line(p.caregiverTelephone, 180) + "</div>"
+			+ "<div class='tf-row'><strong>District:</strong> " + line(p.clientDistrict, 200)
+			+ " <strong>Sector:</strong> " + line(p.sector, 170)
+			+ " <strong>Cell:</strong> " + line(p.cell, 210)
+			+ " <strong>Village:</strong> " + line(p.village, 190) + "</div>"
+			+ "<div class='tf-row'><strong>Date and time of Admission:</strong> " + line(p.admissionAt, 280)
+			+ " <strong>Date and Time of decision to transfer:</strong> " + line(p.decisionToTransferAt, 240) + "</div>"
+			+ "<div class='tf-row'><strong>Receiving Facility:</strong> " + line(p.receivingFacility, 240)
+			+ " <strong>Receiving Service:</strong> " + line(p.receivingService, 250)
+			+ " <strong>Calling Time:</strong> " + line(p.callingTime, 140) + "</div>"
+			+ "<div class='tf-row'><strong>Staff contacted at receiving facility:</strong> " + line(p.staffContactedName, 320)
+			+ " <strong>Phone:</strong> " + line(p.staffContactedPhone, 260) + "</div>"
+
+			+ "<div class='tf-row'><strong>Type of transfer:</strong>"
+			+ " Emergency:<span class='tf-circle'>" + yesNoCircle(p.isEmergency) + "</span>"
+			+ " Not- Emergency:<span class='tf-circle'>" + yesNoCircle(p.isNonEmergency) + "</span>"
+			+ " Follow up:<span class='tf-circle'>" + yesNoCircle(p.isFollowUp) + "</span></div>"
+			+ "<div class='tf-row'><strong>If emergency:</strong> Time ambulance called: " + line(p.ambulanceCalledTime, 200)
+			+ " Time of departure from referring facility: " + line(p.departureFromReferringTime, 250) + "</div>"
+			+ "<div class='tf-row'><strong>Reason for Transfer:</strong> " + line(p.reasonForTransfer, 830) + "</div>"
+
+			+ "<div class='tf-section-title'>Significant Findings:</div>"
+			+ "<div class='tf-row'><strong>Clinical Presentation:</strong> " + line(p.clinicalPresentation, 780) + "</div>"
+			+ "<div class='tf-lines-block'></div><div class='tf-lines-block'></div><div class='tf-lines-block'></div>"
+			+ "<div class='tf-row'><strong>If person with disability, record the type of disability:</strong> " + line(p.disabilityType, 470) + "</div>"
+
+			+ "<div class='tf-row'><strong>Vital Signs:</strong>"
+			+ " T&#176;:" + line(p.vitalTemp, 70)
+			+ " SpO<sub>2</sub>:" + line(p.vitalSpo2, 70)
+			+ " RR:" + line(p.vitalRr, 70)
+			+ " Pulse:" + line(p.vitalPulse, 70)
+			+ " BP:" + line(p.vitalBp, 90)
+			+ " Weight:" + line(p.vitalWeight, 80)
+			+ " Height:" + line(p.vitalHeight, 80)
+			+ " MUAC:" + line(p.vitalMuac, 80) + "</div>"
+			+ bottomSection
+
+			+ "</div></div>";
+	}
+
+	global.escTransferPreview = escTransferPreview;
+	global.buildTransferFormPreviewHtml = buildTransferFormPreviewHtml;
+})(window);

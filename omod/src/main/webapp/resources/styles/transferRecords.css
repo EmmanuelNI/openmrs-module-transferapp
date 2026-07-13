@@ -1,0 +1,104 @@
+.transfer-records-page {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.transfer-records-title {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #00473f;
+}
+
+.transfer-records-intro {
+  margin: 0 0 16px;
+  color: #555;
+}
+
+.transfer-records-filter {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  background: #eef8f6;
+  border: 1px solid #c7e7e2;
+  border-radius: 4px;
+  color: #0f766e;
+}
+
+.transfer-records-filter a {
+  margin-left: 12px;
+  color: #2a7ae2;
+}
+
+.transfer-records-empty {
+  padding: 16px;
+  color: #64748b;
+  font-style: italic;
+}
+
+#transfer-records-table_wrapper .dataTables_length,
+#transfer-records-table_wrapper .dataTables_filter,
+#transfer-records-table_wrapper .dataTables_info,
+#transfer-records-table_wrapper .dataTables_paginate {
+  margin: 10px 0;
+}
+
+#transfer-preview-dialog.transfer-preview-dialog.dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10001;
+  background: white;
+  border: 1px solid #00473f;
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  max-width: 95%;
+  max-height: 92vh;
+  width: 1400px;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+#transfer-preview-dialog .dialog-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #00473f;
+  background: #00473f;
+  border-radius: 4px 4px 0 0;
+  flex-shrink: 0;
+  color: #fff;
+}
+
+#transfer-preview-dialog .dialog-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff;
+}
+
+#transfer-preview-dialog .dialog-content {
+  padding: 20px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+#transfer-preview-dialog .transfer-preview-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+#transfer-preview-dialog #transfer-preview-submit {
+  background: #0f766e;
+  color: #fff;
+  border: 1px solid #0a5c52;
+}
+
+#transfer-preview-dialog #transfer-preview-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

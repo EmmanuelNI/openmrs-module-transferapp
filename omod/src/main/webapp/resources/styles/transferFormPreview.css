@@ -1,0 +1,162 @@
+/* MOH External Transfer Form preview — matches hieTransferSection / etransfer */
+
+#transfer-preview-body {
+	background: #f0f0f0;
+	padding: 12px;
+}
+
+.transfer-form-preview {
+	max-width: 100%;
+}
+
+.tf-sheet {
+	border: 2px solid #111;
+	padding: 10px 12px;
+	background: #fff;
+	font-family: "Times New Roman", Times, serif;
+	color: #111;
+}
+
+.tf-bottom-table {
+	width: 100%;
+	border-collapse: collapse;
+	table-layout: fixed;
+	margin: 0;
+	border: none !important;
+}
+
+.tf-bottom-table tr,
+.tf-bottom-table td {
+	border: none !important;
+}
+
+.tf-bottom-fields {
+	vertical-align: top;
+	padding: 0;
+}
+
+.tf-qr-cell {
+	width: 140px;
+	vertical-align: bottom;
+	text-align: right;
+	padding: 0 4px 2px 8px;
+}
+
+.tf-qr-image {
+	width: 132px;
+	height: 132px;
+	border: 1px solid #111;
+	padding: 3px;
+	background: #fff;
+	display: block;
+	margin-left: auto;
+}
+
+.tf-head {
+	display: flex;
+	gap: 10px;
+}
+
+.tf-left {
+	flex: 1;
+}
+
+.tf-right {
+	width: 48%;
+	border: 2px solid #111;
+	padding: 6px 10px;
+}
+
+.tf-title {
+	text-align: center;
+	font-weight: 700;
+	text-decoration: underline;
+	font-size: 20px;
+	margin: 8px 0 10px;
+	letter-spacing: 0.5px;
+}
+
+.tf-line {
+	display: inline-block;
+	border-bottom: 1px dashed #111;
+	min-height: 20px;
+	vertical-align: bottom;
+	word-break: break-word;
+}
+
+.tf-row {
+	font-size: 19px;
+	line-height: 1.25;
+	margin: 2px 0;
+}
+
+.tf-row strong {
+	font-weight: 700;
+}
+
+.tf-section-title {
+	font-size: 23px;
+	font-weight: 700;
+	text-decoration: underline;
+	margin-top: 8px;
+}
+
+.tf-lines-block {
+	border-bottom: 1px dashed #111;
+	height: 34px;
+	margin-top: 2px;
+}
+
+.tf-circle {
+	font-size: 20px;
+	vertical-align: middle;
+	margin: 0 8px 0 4px;
+	line-height: 1;
+}
+
+.tf-bottom-gap {
+	margin-top: 10px;
+}
+
+.tf-moh-logo {
+	height: 120px;
+}
+
+.tf-signature-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: flex-start;
+	gap: 8px 12px;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+	.tf-head {
+		flex-direction: column;
+	}
+
+	.tf-right {
+		width: 100%;
+	}
+
+	.tf-row {
+		font-size: 15px;
+	}
+
+	.tf-title {
+		font-size: 17px;
+	}
+
+	.tf-section-title {
+		font-size: 19px;
+	}
+}
+
+@media print {
+	#transfer-preview-body {
+		background: #fff;
+		padding: 0;
+	}
+}

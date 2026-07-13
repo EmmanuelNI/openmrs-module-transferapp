@@ -1,0 +1,374 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+  		    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
+	<bean id="transferDashboardService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="target">
+			<bean class="org.openmrs.module.transferapp.api.impl.TransferDashboardServiceImpl">
+				<property name="transferDao" ref="transferDao" />
+				<property name="transferAdminService" ref="transferAdminService" />
+			</bean>
+		</property>
+		<property name="preInterceptors">
+			<ref bean="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource">
+			<ref bean="transactionAttributeSource" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.TransferDashboardService</value>
+				<ref bean="transferDashboardService" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="transferDao" class="org.openmrs.module.transferapp.api.dao.hibernate.HibernateTransferDao">
+		<property name="sessionFactory" ref="dbSessionFactory" />
+	</bean>
+
+	<bean id="transferAdminDao" class="org.openmrs.module.transferapp.api.dao.hibernate.HibernateTransferAdminDao">
+		<property name="sessionFactory" ref="dbSessionFactory" />
+	</bean>
+
+	<bean id="transferProfileDao" class="org.openmrs.module.transferapp.api.dao.hibernate.HibernateTransferProfileDao">
+		<property name="sessionFactory" ref="dbSessionFactory" />
+	</bean>
+
+	<bean id="transferAdminServiceTarget" class="org.openmrs.module.transferapp.api.impl.TransferAdminServiceImpl">
+		<property name="transferAdminDao" ref="transferAdminDao" />
+		<property name="locationService" ref="locationService" />
+	</bean>
+
+	<bean id="transferAdminService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="target">
+			<ref bean="transferAdminServiceTarget" />
+		</property>
+		<property name="preInterceptors">
+			<ref bean="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource">
+			<ref bean="transactionAttributeSource" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.TransferAdminService</value>
+				<ref bean="transferAdminService" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="transferProfileServiceTarget" class="org.openmrs.module.transferapp.api.impl.TransferProfileServiceImpl">
+		<property name="transferProfileDao" ref="transferProfileDao" />
+	</bean>
+
+	<bean id="transferProfileService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="target">
+			<ref bean="transferProfileServiceTarget" />
+		</property>
+		<property name="preInterceptors">
+			<ref bean="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource">
+			<ref bean="transactionAttributeSource" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.TransferProfileService</value>
+				<ref bean="transferProfileService" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="transferServiceTarget" class="org.openmrs.module.transferapp.api.impl.TransferServiceImpl">
+		<property name="transferDao" ref="transferDao" />
+		<property name="patientService" ref="patientService" />
+		<property name="transferAdminService" ref="transferAdminService" />
+		<property name="patientInsuranceService" ref="patientInsuranceService" />
+		<property name="transferProfileService" ref="transferProfileService" />
+	</bean>
+
+	<bean id="transferService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="target">
+			<ref bean="transferServiceTarget" />
+		</property>
+		<property name="preInterceptors">
+			<ref bean="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource">
+			<ref bean="transactionAttributeSource" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.TransferService</value>
+				<ref bean="transferService" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="patientTransferListService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="target">
+			<bean class="org.openmrs.module.transferapp.api.impl.PatientTransferListServiceImpl">
+				<property name="transferService" ref="transferService" />
+			</bean>
+		</property>
+		<property name="preInterceptors">
+			<ref bean="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource">
+			<ref bean="transactionAttributeSource" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.PatientTransferListService</value>
+				<ref bean="patientTransferListService" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="facilityTransferRecordsService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="target">
+			<bean class="org.openmrs.module.transferapp.api.impl.FacilityTransferRecordsServiceImpl">
+				<property name="transferDao" ref="transferDao" />
+				<property name="transferAdminService" ref="transferAdminService" />
+			</bean>
+		</property>
+		<property name="preInterceptors">
+			<ref bean="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource">
+			<ref bean="transactionAttributeSource" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.FacilityTransferRecordsService</value>
+				<ref bean="facilityTransferRecordsService" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="transferAppHieSearchService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="target">
+			<bean class="org.openmrs.module.transferapp.api.impl.TransferHieSearchServiceImpl" />
+		</property>
+		<property name="preInterceptors">
+			<ref bean="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource">
+			<ref bean="transactionAttributeSource" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.TransferHieSearchService</value>
+				<ref bean="transferAppHieSearchService" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="patientInsuranceServiceTarget" class="org.openmrs.module.transferapp.api.impl.PatientInsuranceServiceImpl" />
+
+	<bean id="patientInsuranceService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="target">
+			<ref bean="patientInsuranceServiceTarget" />
+		</property>
+		<property name="preInterceptors">
+			<ref bean="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource">
+			<ref bean="transactionAttributeSource" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.PatientInsuranceService</value>
+				<ref bean="patientInsuranceService" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="newTransferOutService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="target">
+			<bean class="org.openmrs.module.transferapp.api.impl.NewTransferOutServiceImpl">
+				<property name="transferDao" ref="transferDao" />
+				<property name="transferAdminService" ref="transferAdminService" />
+			</bean>
+		</property>
+		<property name="preInterceptors">
+			<ref bean="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource">
+			<ref bean="transactionAttributeSource" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.NewTransferOutService</value>
+				<ref bean="newTransferOutService" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="transferHieSubmissionServiceTarget" class="org.openmrs.module.transferapp.api.impl.TransferHieSubmissionServiceImpl">
+		<property name="transferDao" ref="transferDao" />
+		<property name="transferAdminService" ref="transferAdminService" />
+	</bean>
+
+	<bean id="transferHieSubmissionService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="target">
+			<ref bean="transferHieSubmissionServiceTarget" />
+		</property>
+		<property name="preInterceptors">
+			<ref bean="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource">
+			<ref bean="transactionAttributeSource" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.TransferHieSubmissionService</value>
+				<ref bean="transferHieSubmissionService" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="transferAppHieReceiveService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="target">
+			<bean class="org.openmrs.module.transferapp.api.impl.TransferHieReceiveServiceImpl">
+				<property name="transferDao" ref="transferDao" />
+				<property name="patientService" ref="patientService" />
+				<property name="transferHieSearchService" ref="transferAppHieSearchService" />
+				<property name="transferAdminService" ref="transferAdminService" />
+			</bean>
+		</property>
+		<property name="preInterceptors">
+			<ref bean="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource">
+			<ref bean="transactionAttributeSource" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.TransferHieReceiveService</value>
+				<ref bean="transferAppHieReceiveService" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="transferFacilityRegistryServiceTarget"
+	      class="org.openmrs.module.transferapp.api.impl.TransferFacilityRegistryServiceImpl" />
+
+	<bean id="transferFacilityRegistryService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="target">
+			<ref bean="transferFacilityRegistryServiceTarget" />
+		</property>
+		<property name="preInterceptors">
+			<ref bean="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource">
+			<ref bean="transactionAttributeSource" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.TransferFacilityRegistryService</value>
+				<ref bean="transferFacilityRegistryService" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="transferVerificationUrlServiceTarget"
+	      class="org.openmrs.module.transferapp.api.impl.TransferVerificationUrlServiceImpl" />
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.TransferVerificationUrlService</value>
+				<ref bean="transferVerificationUrlServiceTarget" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="transferQrCodeServiceTarget"
+	      class="org.openmrs.module.transferapp.api.impl.TransferQrCodeServiceImpl" />
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.TransferQrCodeService</value>
+				<ref bean="transferQrCodeServiceTarget" />
+			</list>
+		</property>
+	</bean>
+
+</beans>
