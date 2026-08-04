@@ -30,11 +30,15 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Default implementation of {@link TransferDashboardService}.
  */
 public class TransferDashboardServiceImpl implements TransferDashboardService {
+
+	private static final Pattern UUID_PATTERN = Pattern.compile(
+			"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
 
 	private TransferDao transferDao;
 
@@ -119,7 +123,31 @@ public class TransferDashboardServiceImpl implements TransferDashboardService {
 				toDate,
 				false);
 
-		return observations == null ? 0 : observations.size();
+		if (observations == null || observations.isEmpty()) {
+			return 0;
+		}
+
+		int count = 0;
+		for (Obs observation : observations) {
+			if (observation != null && isValidUuid(observation.getValueText())) {
+				count++;
+			}
+		}
+		return count;
+	}
+
+	/**
+	 * Accepts standard UUID text (with or without braces), case-insensitive.
+	 */
+	protected boolean isValidUuid(String value) {
+		if (StringUtils.isBlank(value)) {
+			return false;
+		}
+		String normalized = value.trim();
+		if (normalized.startsWith("{") && normalized.endsWith("}") && normalized.length() > 2) {
+			normalized = normalized.substring(1, normalized.length() - 1).trim();
+		}
+		return UUID_PATTERN.matcher(normalized).matches();
 	}
 
 	protected Date startOfToday() {

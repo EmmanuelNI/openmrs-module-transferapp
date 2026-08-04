@@ -18,6 +18,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.module.transferapp.TransferAppConstants;
 import org.openmrs.module.transferapp.api.TransferHieSearchService;
+import org.openmrs.module.transferapp.api.TransferSendingLocationResolver;
 import org.openmrs.module.transferapp.hie.HieApiException;
 import org.openmrs.module.transferapp.hie.HieBasicConnection;
 import org.openmrs.module.transferapp.hie.HieConnectionResolver;
@@ -43,6 +44,8 @@ public class TransferHieSearchServiceImpl implements TransferHieSearchService {
 	private HieShrClient hieShrClient = new HieShrClient();
 
 	private HieTransferResponseParser responseParser = new HieTransferResponseParser();
+
+	private TransferSendingLocationResolver sendingLocationResolver = new TransferSendingLocationResolver();
 
 	@Override
 	public Map<String, Object> searchTransfers(String upid, String transferId, boolean activeOnly) {
@@ -73,13 +76,13 @@ public class TransferHieSearchServiceImpl implements TransferHieSearchService {
 				endDate = today.plusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE);
 			}
 
-			String pathWithQuery = buildListTransfersPath(upid.trim(), fromDate, endDate);
+			String pathWithQuery = buildPatientListTransfersPath(upid.trim(), fromDate, endDate);
 			log.info("Requesting transfers from HIE: " + connection.getBaseUrl() + pathWithQuery);
 
 			String responseJson = hieShrClient.get(connection, pathWithQuery);
 			validateHieResponse(responseJson);
 
-			List<Map<String, Object>> transfers = responseParser.parse(responseJson);
+			List<Map<String, Object>> transfers = enrichTransfers(responseParser.parse(responseJson));
 			if (StringUtils.isNotBlank(transferId)) {
 				transfers = filterByTransferId(transfers, transferId.trim());
 			}
@@ -97,7 +100,59 @@ public class TransferHieSearchServiceImpl implements TransferHieSearchService {
 		}
 	}
 
-	private static String buildListTransfersPath(String upid, String fromDate, String endDate)
+	@Override
+	public Map<String, Object> listPendingTransfersForCurrentFacility() {
+		Map<String, Object> result = new LinkedHashMap<String, Object>();
+
+		String targetOrg = sendingLocationResolver.resolveCurrentSendingFacilityName();
+		if (StringUtils.isBlank(targetOrg)) {
+			result.put("status", "error");
+			result.put("message", "Current facility location is not available");
+			result.put("targetOrg", "");
+			result.put("data", Collections.emptyList());
+			return result;
+		}
+
+		if (!hieConnectionResolver.isHieConfigured()) {
+			log.warn("HIE is not configured for pending transfer list");
+			result.put("status", "error");
+			result.put("message", "HIE is not enabled");
+			result.put("targetOrg", targetOrg.trim());
+			result.put("data", Collections.emptyList());
+			return result;
+		}
+
+		try {
+			LocalDate today = LocalDate.now();
+			String fromDate = today.minusDays(28).format(DateTimeFormatter.ISO_LOCAL_DATE);
+			String endDate = today.plusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE);
+
+			HieBasicConnection connection = hieConnectionResolver.resolveConnection();
+			String pathWithQuery = buildTargetOrgListTransfersPath(targetOrg.trim(), fromDate, endDate);
+			log.info("Requesting pending transfers from HIE: " + connection.getBaseUrl() + pathWithQuery);
+
+			String responseJson = hieShrClient.get(connection, pathWithQuery);
+			validateHieResponse(responseJson);
+
+			List<Map<String, Object>> transfers = enrichTransfers(responseParser.parse(responseJson));
+			result.put("status", "success");
+			result.put("targetOrg", targetOrg.trim());
+			result.put("fromDate", fromDate);
+			result.put("endDate", endDate);
+			result.put("data", transfers);
+			return result;
+		}
+		catch (Exception ex) {
+			log.error("Error fetching pending transfers from HIE for targetOrg: " + targetOrg, ex);
+			result.put("status", "error");
+			result.put("message", ex.getMessage() != null ? ex.getMessage() : "Failed to fetch pending transfers from HIE");
+			result.put("targetOrg", targetOrg.trim());
+			result.put("data", Collections.emptyList());
+			return result;
+		}
+	}
+
+	private static String buildPatientListTransfersPath(String upid, String fromDate, String endDate)
 			throws UnsupportedEncodingException {
 		StringBuilder path = new StringBuilder(TransferAppConstants.HIE_LIST_TRANSFERS_PATH);
 		path.append("?patient=").append(URLEncoder.encode(upid, "UTF-8"));
@@ -106,6 +161,35 @@ public class TransferHieSearchServiceImpl implements TransferHieSearchService {
 			path.append("&endDate=").append(URLEncoder.encode(endDate, "UTF-8"));
 		}
 		return path.toString();
+	}
+
+	private static String buildTargetOrgListTransfersPath(String targetOrg, String fromDate, String endDate)
+			throws UnsupportedEncodingException {
+		StringBuilder path = new StringBuilder(TransferAppConstants.HIE_LIST_TRANSFERS_PATH);
+		path.append("?targetOrg=").append(URLEncoder.encode(targetOrg, "UTF-8"));
+		path.append("&fromDate=").append(URLEncoder.encode(fromDate, "UTF-8"));
+		path.append("&endDate=").append(URLEncoder.encode(endDate, "UTF-8"));
+		return path.toString();
+	}
+
+	private static List<Map<String, Object>> enrichTransfers(List<Map<String, Object>> transfers) {
+		if (transfers == null) {
+			return Collections.emptyList();
+		}
+		for (Map<String, Object> transfer : transfers) {
+			if (transfer == null) {
+				continue;
+			}
+			String uuid = asString(transfer.get("id"));
+			String upid = asString(transfer.get("subject"));
+			transfer.put("uuid", uuid);
+			transfer.put("upid", upid);
+		}
+		return transfers;
+	}
+
+	private static String asString(Object value) {
+		return value == null ? "" : String.valueOf(value).trim();
 	}
 
 	private static void validateHieResponse(String responseJson) {

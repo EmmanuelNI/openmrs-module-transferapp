@@ -50,7 +50,8 @@ public class TransferFacilityRegistryServiceImpl implements TransferFacilityRegi
 			"referral hospital",
 			"provincial hospital",
 			"specialised hospital",
-			"private hospital")));
+			"private hospital",
+			"medical clinic")));
 
 	private HieConnectionResolver hieConnectionResolver = new HieConnectionResolver();
 

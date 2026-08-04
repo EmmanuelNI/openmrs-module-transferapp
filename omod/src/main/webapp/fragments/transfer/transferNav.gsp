@@ -3,6 +3,7 @@
     def appParam = config.app ?: "transferapp.dashboard"
     def dashboardUrl = ui.pageLink("transferapp", "dashboard") + "?app=" + appParam
     def recordsUrl = ui.pageLink("transferapp", "records") + "?app=" + appParam
+    def pendingUrl = ui.pageLink("transferapp", "pending") + "?app=" + appParam
     def adminUrl = ui.pageLink("transferapp", "transferAdmin") + "?app=" + appParam
     def profileUrl = ui.pageLink("transferapp", "transferProfile") + "?app=" + appParam
 %>
@@ -12,6 +13,9 @@
     <span class="transfer-app-nav-separator">|</span>
     <a href="${ recordsUrl }"
        class="transfer-app-nav-link ${ activeTab == 'records' ? 'active' : '' }">${ ui.message("transferapp.nav.records") }</a>
+    <span class="transfer-app-nav-separator">|</span>
+    <a href="${ pendingUrl }"
+       class="transfer-app-nav-link ${ activeTab == 'pending' ? 'active' : '' }">${ ui.message("transferapp.nav.pending") }</a>
     <span class="transfer-app-nav-separator">|</span>
     <a href="${ adminUrl }"
        class="transfer-app-nav-link ${ activeTab == 'admin' ? 'active' : '' }">${ ui.message("transferapp.nav.admin") }</a>

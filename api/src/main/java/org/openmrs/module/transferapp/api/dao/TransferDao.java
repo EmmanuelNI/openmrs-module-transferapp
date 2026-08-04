@@ -33,6 +33,9 @@ public interface TransferDao {
 
 	List<Transfer> getOutboundTransfersBySendingFacility(String sendingFacility, Integer patientId, Integer limit);
 
+	List<Transfer> getOutboundTransfersBySendingFacility(String sendingFacility, Integer patientId, Integer limit,
+			Date startDate, Date endDate, String receivingFacilityCode);
+
 	int countOutboundTransfers(String sendingFacility, Date fromDate, Boolean hieSent);
 
 	Transfer getTransferByUuid(String uuid);

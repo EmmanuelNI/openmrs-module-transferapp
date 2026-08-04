@@ -277,13 +277,15 @@ public class HieTransferResponseParser {
             periodStart = textOrDefault(period.get("start"), "");
             periodEnd = textOrDefault(period.get("end"), "");
         }
-        transfer.put("admissionDatetime", firstNonBlank(
-                extractNestedExtensionValue(resource, EXT_TRANSFER_FLAGS, "admission-date"),
-                periodStart));
-        transfer.put("transferDecisionDatetime", firstNonBlank(periodEnd, periodStart));
-        transfer.put("departureTime", firstNonBlank(
-                extractExtensionDateTime(resource, EXT_DEPARTURE_TIME),
-                periodEnd));
+		transfer.put("admissionDatetime", firstNonBlank(
+				extractNestedExtensionValue(resource, EXT_TRANSFER_FLAGS, "admission-date"),
+				periodStart));
+		// Decision-to-transfer is not Encounter.period.end; leave blank unless
+		// provided by etransfer form (decisionToTransferAt) or a dedicated extension.
+		transfer.put("transferDecisionDatetime", "");
+		transfer.put("departureTime", firstNonBlank(
+				extractExtensionDateTime(resource, EXT_DEPARTURE_TIME),
+				periodEnd));
         transfer.put("ambulanceCalledTime", extractExtensionDateTime(resource, EXT_AMBULANCE_CALL_TIME));
 
         String transferType = extractExtensionDisplay(resource, EXT_TRANSFER_TYPE);

@@ -1,11 +1,154 @@
 (function() {
     jq(document).ready(function() {
+        var filterConfig = window.transferRecordsFilterConfig || {};
+        var filterMessages = filterConfig.messages || {};
+        var maxDateRangeMonths = filterConfig.maxDateRangeMonths || 3;
+
+        function ensureSelect2() {
+            if (typeof jq.fn.select2 === "function") {
+                return true;
+            }
+            if (typeof jQuery !== "undefined" && typeof jQuery.fn.select2 === "function") {
+                jq.fn.select2 = jQuery.fn.select2;
+                return true;
+            }
+            return false;
+        }
+
+        function parseIsoDate(value) {
+            if (!value) {
+                return null;
+            }
+            var parts = value.split("-");
+            if (parts.length !== 3) {
+                return null;
+            }
+            var year = parseInt(parts[0], 10);
+            var month = parseInt(parts[1], 10) - 1;
+            var day = parseInt(parts[2], 10);
+            if (isNaN(year) || isNaN(month) || isNaN(day)) {
+                return null;
+            }
+            return new Date(year, month, day);
+        }
+
+        function formatIsoDate(date) {
+            if (!date) {
+                return "";
+            }
+            var month = String(date.getMonth() + 1);
+            var day = String(date.getDate());
+            if (month.length < 2) {
+                month = "0" + month;
+            }
+            if (day.length < 2) {
+                day = "0" + day;
+            }
+            return date.getFullYear() + "-" + month + "-" + day;
+        }
+
+        function addMonths(date, months) {
+            var copy = new Date(date.getTime());
+            copy.setMonth(copy.getMonth() + months);
+            return copy;
+        }
+
+        function monthDiff(startDate, endDate) {
+            var months = (endDate.getFullYear() - startDate.getFullYear()) * 12;
+            months += endDate.getMonth() - startDate.getMonth();
+            if (endDate.getDate() < startDate.getDate()) {
+                months -= 1;
+            }
+            return months;
+        }
+
+        function showFilterError(message) {
+            if (typeof emr !== "undefined" && typeof emr.errorMessage === "function") {
+                emr.errorMessage(message);
+            } else {
+                window.alert(message);
+            }
+        }
+
+        function validateDateRange(startValue, endValue) {
+            var startDate = parseIsoDate(startValue);
+            var endDate = parseIsoDate(endValue);
+            if (!startDate || !endDate) {
+                showFilterError("Please select valid start and end dates.");
+                return false;
+            }
+            if (startDate > endDate) {
+                showFilterError(filterMessages.invalidDateRange || "Start date must be on or before end date.");
+                return false;
+            }
+            if (monthDiff(startDate, endDate) > maxDateRangeMonths) {
+                showFilterError(filterMessages.dateRangeError || ("Date range cannot exceed " + maxDateRangeMonths + " months."));
+                return false;
+            }
+            return true;
+        }
+
+        function initRecordsFilters() {
+            var startInput = document.getElementById("records-filter-start-date");
+            var endInput = document.getElementById("records-filter-end-date");
+            var destinationSelect = jq("#records-filter-destination");
+            var filterForm = jq("#transfer-records-filter-form");
+
+            if (!filterForm.length) {
+                return;
+            }
+
+            if (typeof flatpickr === "function") {
+                if (startInput) {
+                    flatpickr(startInput, {
+                        dateFormat: "Y-m-d",
+                        allowInput: true,
+                        defaultDate: filterConfig.startDate || null
+                    });
+                }
+                if (endInput) {
+                    flatpickr(endInput, {
+                        dateFormat: "Y-m-d",
+                        allowInput: true,
+                        defaultDate: filterConfig.endDate || null
+                    });
+                }
+            }
+
+            if (destinationSelect.length && ensureSelect2()) {
+                destinationSelect.select2({
+                    width: "100%",
+                    placeholder: filterMessages.destinationPlaceholder || "All destinations",
+                    allowClear: true
+                });
+                destinationSelect.on("change", function() {
+                    if (!validateDateRange(
+                            jq("#records-filter-start-date").val(),
+                            jq("#records-filter-end-date").val())) {
+                        return;
+                    }
+                    filterForm.trigger("submit");
+                });
+            }
+
+            filterForm.on("submit", function(e) {
+                if (!validateDateRange(
+                        jq("#records-filter-start-date").val(),
+                        jq("#records-filter-end-date").val())) {
+                    e.preventDefault();
+                }
+            });
+        }
+
+        initRecordsFilters();
+
         if (jq.fn.dataTable && jq("#transfer-records-table").length) {
             jq("#transfer-records-table").dataTable({
                 "sDom": "lfrtip",
                 "bLengthChange": true,
                 "iDisplayLength": 25,
                 "aLengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+                "sPaginationType": "full_numbers",
                 "aaSorting": [[0, "desc"]],
                 "aoColumnDefs": [
                     { "bSortable": false, "aTargets": [6] }
@@ -13,12 +156,13 @@
             });
         }
 
-        var transferOpenmrsPath = (typeof openmrsContextPath !== "undefined" ? openmrsContextPath : "");
+        var transferOpenmrsPath = (typeof openmrsContextPath !== "undefined" && openmrsContextPath)
+            ? openmrsContextPath
+            : (window.transferOpenmrsPath || "");
         window.transferOpenmrsPath = transferOpenmrsPath;
         var transferPreviewUrl = transferOpenmrsPath + "/module/transferapp/transfer/preview.form";
         var transferSubmitUrl = transferOpenmrsPath + "/module/transferapp/transfer/submit.form";
         var transferPreviewResourcesBase = transferOpenmrsPath + "/moduleResources/transferapp/scripts/";
-        var transferPreviewDialog = null;
         var transferPreviewScriptsLoading = null;
         var currentPreviewTransferUuid = null;
         var currentPreviewTransferSent = false;
@@ -48,7 +192,16 @@
                 .then(function() {
                     return jq.getScript(transferPreviewResourcesBase + "transferFormPreview.js");
                 })
-                .done(callback);
+                .done(function() {
+                    if (typeof buildTransferFormPreviewHtml === "function") {
+                        callback();
+                    } else {
+                        jq("#transfer-preview-body").html("<p style='color:red;'>Preview renderer failed to initialize.</p>");
+                    }
+                })
+                .fail(function() {
+                    jq("#transfer-preview-body").html("<p style='color:red;'>Unable to load preview scripts.</p>");
+                });
         }
 
         function renderTransferPreview(transfer) {
@@ -61,25 +214,47 @@
         }
 
         function showTransferPreviewDialog() {
-            if (transferPreviewDialog == null && typeof emr !== "undefined" && typeof emr.setupConfirmationDialog === "function") {
-                transferPreviewDialog = emr.setupConfirmationDialog({
-                    selector: "#transfer-preview-dialog",
-                    actions: {
-                        confirm: function() {},
-                        cancel: function() { jq("#transfer-preview-dialog").hide(); }
-                    }
-                });
-                transferPreviewDialog.close();
+            var dialog = jq("#transfer-preview-dialog");
+            if (!dialog.length) {
+                return;
             }
-            if (transferPreviewDialog) {
-                transferPreviewDialog.show();
-            } else {
-                jq("#transfer-preview-dialog").show();
+            if (dialog.parent()[0] !== document.body) {
+                dialog.appendTo(document.body);
             }
+            // Do not use emr.setupConfirmationDialog here; it can create a backdrop
+            // above our modal in some UI Framework stacks.
+            dialog.css({
+                display: "flex",
+                position: "fixed",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                zIndex: 20001
+            }).show();
+            if (!jq("#transfer-preview-overlay").length) {
+                jq("body").append("<div id='transfer-preview-overlay'></div>");
+            }
+            jq("#transfer-preview-overlay").css({
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: "rgba(0,0,0,0.45)",
+                zIndex: 20000
+            }).show();
+        }
+
+        function hideTransferPreviewDialog() {
+            jq("#transfer-preview-dialog").hide();
+            jq("#transfer-preview-overlay").hide();
         }
 
         function showTransferPreview(transferUuid) {
             if (!transferUuid) {
+                if (typeof emr !== "undefined" && typeof emr.errorMessage === "function") {
+                    emr.errorMessage("Transfer id is missing.");
+                }
                 return;
             }
             jq("#transfer-preview-body").html("<div style='padding:10px;'><i class='icon-spinner icon-spin'></i> Loading...</div>");
@@ -102,24 +277,29 @@
                 }
                 var message = response && response.message ? response.message : "Unable to load transfer details.";
                 jq("#transfer-preview-body").html("<p style='color:red;'>" + message + "</p>");
-            }).fail(function() {
-                jq("#transfer-preview-body").html("<p style='color:red;'>Unable to load transfer details.</p>");
+            }).fail(function(xhr) {
+                var message = "Unable to load transfer details.";
+                if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+                    message = xhr.responseJSON.message;
+                }
+                jq("#transfer-preview-body").html("<p style='color:red;'>" + message + "</p>");
             });
         }
 
         jq(document).on("click", ".transfer-view-link", function(e) {
             e.preventDefault();
-            var transferUuid = jq(this).attr("data-transfer-id")
-                || jq(this).closest("tr.transfer-row").attr("data-transfer-id");
+            e.stopPropagation();
+            var link = jq(this);
+            var transferUuid = link.attr("data-uuid")
+                || link.attr("data-transfer-id")
+                || link.closest("tr.transfer-row").attr("data-uuid")
+                || link.closest("tr.transfer-row").attr("data-transfer-id");
             showTransferPreview(transferUuid);
         });
 
-        jq(document).on("click", "#transfer-preview-close", function(e) {
+        jq(document).on("click", "#transfer-preview-close, #transfer-preview-overlay", function(e) {
             e.preventDefault();
-            if (transferPreviewDialog && typeof transferPreviewDialog.close === "function") {
-                transferPreviewDialog.close();
-            }
-            jq("#transfer-preview-dialog").hide();
+            hideTransferPreviewDialog();
         });
 
         jq(document).on("click", "#transfer-preview-submit", function(e) {

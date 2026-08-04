@@ -55,9 +55,7 @@ public class HieReceivedTransferMapper {
 				stringValue(hieData.get("receivingClinicianPhone")),
 				stringValue(hieData.get("providerPhone"))), 64));
 
-		transfer.setDecisionToTransferAt(parseDateTime(firstNonBlank(
-				stringValue(hieData.get("transferDecisionDatetime")),
-				stringValue(hieData.get("date")))));
+		transfer.setDecisionToTransferAt(parseDateTime(stringValue(hieData.get("transferDecisionDatetime"))));
 		transfer.setAdmissionAt(parseDateTime(stringValue(hieData.get("admissionDatetime"))));
 		transfer.setCallingTime(truncate(extractTime(stringValue(hieData.get("callingTime"))), 8));
 
