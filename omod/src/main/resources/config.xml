@@ -176,4 +176,9 @@
 		<description>Create Transfer</description>
 	</privilege>
 
+	<privilege>
+		<name>Task: transferapp.listpending</name>
+		<description>List pending inbound transfers from HIE</description>
+	</privilege>
+
 </module>

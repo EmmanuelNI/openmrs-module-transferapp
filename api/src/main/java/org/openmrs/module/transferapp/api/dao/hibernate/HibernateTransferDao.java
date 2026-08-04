@@ -17,6 +17,7 @@ import org.hibernate.Criteria;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.type.StandardBasicTypes;
 import org.apache.commons.lang.StringUtils;
 import org.openmrs.Patient;
 import org.openmrs.PersonAddress;
@@ -80,6 +81,13 @@ public class HibernateTransferDao implements TransferDao {
 	@Override
 	@SuppressWarnings("unchecked")
 	public List<Transfer> getOutboundTransfersBySendingFacility(String sendingFacility, Integer patientId, Integer limit) {
+		return getOutboundTransfersBySendingFacility(sendingFacility, patientId, limit, null, null, null);
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public List<Transfer> getOutboundTransfersBySendingFacility(String sendingFacility, Integer patientId, Integer limit,
+			Date startDate, Date endDate, String receivingFacilityCode) {
 		if (StringUtils.isBlank(sendingFacility)) {
 			return Collections.emptyList();
 		}
@@ -91,6 +99,22 @@ public class HibernateTransferDao implements TransferDao {
 			criteria.createAlias("patient", "patientAlias");
 			criteria.add(Restrictions.eq("patientAlias.patientId", patientId));
 		}
+		if (startDate != null) {
+			criteria.add(Restrictions.sqlRestriction(
+					"COALESCE({alias}.decision_to_transfer_at, {alias}.date_created) >= ?",
+					startDate,
+					StandardBasicTypes.TIMESTAMP));
+		}
+		if (endDate != null) {
+			criteria.add(Restrictions.sqlRestriction(
+					"COALESCE({alias}.decision_to_transfer_at, {alias}.date_created) <= ?",
+					endDate,
+					StandardBasicTypes.TIMESTAMP));
+		}
+		if (StringUtils.isNotBlank(receivingFacilityCode)) {
+			criteria.add(Restrictions.eq("receivingFacilityCode", receivingFacilityCode.trim()));
+		}
+		criteria.addOrder(Order.desc("decisionToTransferAt"));
 		criteria.addOrder(Order.desc("dateCreated"));
 		if (limit != null && limit.intValue() > 0) {
 			criteria.setMaxResults(limit.intValue());

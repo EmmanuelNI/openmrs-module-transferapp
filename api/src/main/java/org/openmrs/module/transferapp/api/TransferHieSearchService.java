@@ -22,8 +22,18 @@ import java.util.Map;
 @Transactional
 public interface TransferHieSearchService {
 
-	@Authorized(TransferAppActivator.PRIVILEGE_LIST_TRANSFERS)
+	@Authorized(value = {
+			TransferAppActivator.PRIVILEGE_LIST_TRANSFERS,
+			TransferAppActivator.PRIVILEGE_LIST_PENDING }, requireAll = false)
 	@Transactional(readOnly = true)
 	Map<String, Object> searchTransfers(String upid, String transferId, boolean activeOnly);
+
+	/**
+	 * Lists pending inbound transfers for the current parent location from HIE.
+	 * Uses targetOrg=parent location name, fromDate=today-28, endDate=today+1.
+	 */
+	@Authorized(TransferAppActivator.PRIVILEGE_LIST_PENDING)
+	@Transactional(readOnly = true)
+	Map<String, Object> listPendingTransfersForCurrentFacility();
 
 }

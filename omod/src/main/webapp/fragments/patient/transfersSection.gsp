@@ -2,8 +2,18 @@
 ui.includeCss("transferapp", "styles/transferSection.css")
 %>
 
-<g:if test="${canListTransfers || canCreateTransfer}">
-<g:if test="${canCreateTransfer}">
+<% if (!(canListTransfers || canCreateTransfer)) { %>
+<div class="info-section">
+    <div class="info-header">
+        <i class="icon-retweet"></i>
+        <h3>${ ui.message("transferapp.patient.transfers.title") }</h3>
+    </div>
+    <div class="info-body">
+        <p>${ ui.encodeHtmlContent(accessDeniedMessage ?: ui.message("transferapp.patient.transfers.accessDenied", requiredListPrivilege, requiredCreatePrivilege)) }</p>
+    </div>
+</div>
+<% } else { %>
+<% if (canCreateTransfer) { %>
 <div id="new-transfer-out-dialog" class="dialog transfer-wizard-dialog" style="display: none">
     <div class="dialog-header" style="display: none;">
         <i class="icon-retweet"></i>
@@ -86,9 +96,9 @@ ui.includeCss("transferapp", "styles/transferSection.css")
   background: #fff;
 }
 </style>
-</g:if>
+<% } %>
 
-<g:if test="${canListTransfers}">
+<% if (canListTransfers) { %>
 <div id="transfer-preview-dialog" class="dialog transfer-preview-dialog" style="display: none">
     <div class="dialog-header">
         <i class="icon-retweet"></i>
@@ -97,11 +107,11 @@ ui.includeCss("transferapp", "styles/transferSection.css")
     <div class="dialog-content">
         <div id="transfer-preview-body"></div>
         <div class="transfer-preview-actions">
-            <g:if test="${canCreateTransfer}">
+            <% if (canCreateTransfer) { %>
                 <button type="button" id="transfer-preview-submit" class="confirm">
                     ${ ui.message("transferapp.patient.transfers.submitToHie") }
                 </button>
-            </g:if>
+            <% } %>
             <button type="button" id="transfer-preview-close" class="cancel">
                 ${ ui.message("coreapps.close") }
             </button>
@@ -176,7 +186,7 @@ ui.includeCss("transferapp", "styles/transferSection.css")
   margin-bottom: 15px;
 }
 </style>
-</g:if>
+<% } %>
 
 <div class="info-section transfer-section">
     <div class="info-header">
@@ -187,7 +197,7 @@ ui.includeCss("transferapp", "styles/transferSection.css")
         </div>
     </div>
     <div class="info-body">
-        <g:if test="${canCreateTransfer && patientInsuranceAvailable}">
+        <% if (canCreateTransfer && patientInsuranceAvailable) { %>
             <div class="transfer-new-btn-wrap">
                 <a id="open-new-transfer-out"
                    class="transfer-new-btn"
@@ -204,9 +214,9 @@ ui.includeCss("transferapp", "styles/transferSection.css")
                     ${ ui.encodeHtmlContent(patientInsuranceNumber) }
                 </span>
             </div>
-        </g:if>
+        <% } %>
 
-        <g:if test="${hasTransfers}">
+        <% if (hasTransfers) { %>
             <div class="transfer-table-wrapper">
                 <table id="patient-transfers-table" class="transfer-datatable">
                     <thead>
@@ -251,12 +261,11 @@ ui.includeCss("transferapp", "styles/transferSection.css")
                 </div>
                 <% } %>
             </div>
-        </g:if>
+        <% } %>
     </div>
 </div>
-</g:if>
 
-<g:if test="${canCreateTransfer}">
+<% if (canCreateTransfer) { %>
 <script type="text/javascript">
     var newTransferOutDialog = null;
     var transferWizardOpenmrsPath = (typeof openmrsContextPath !== "undefined" ? openmrsContextPath : "/${ ui.encodeJavaScript(contextPath) }");
@@ -426,9 +435,9 @@ ui.includeCss("transferapp", "styles/transferSection.css")
         });
     });
 </script>
-</g:if>
+<% } %>
 
-<g:if test="${canListTransfers}">
+<% if (canListTransfers) { %>
 <script type="text/javascript">
     var transferOpenmrsPath = (typeof openmrsContextPath !== "undefined" ? openmrsContextPath : "/${ ui.encodeJavaScript(contextPath) }");
     window.transferOpenmrsPath = transferOpenmrsPath;
@@ -607,4 +616,5 @@ ui.includeCss("transferapp", "styles/transferSection.css")
         }
     });
 </script>
-</g:if>
+<% } %>
+<% } %>

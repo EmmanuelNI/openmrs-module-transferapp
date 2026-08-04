@@ -18,6 +18,7 @@ import org.openmrs.module.transferapp.TransferAppActivator;
 import org.openmrs.module.transferapp.model.FacilityTransferRecordItem;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
 import java.util.List;
 
 @Transactional
@@ -25,6 +26,7 @@ public interface FacilityTransferRecordsService {
 
 	@Authorized(TransferAppActivator.PRIVILEGE_LIST_TRANSFERS)
 	@Transactional(readOnly = true)
-	List<FacilityTransferRecordItem> getOutboundTransferRecords(Integer patientId);
+	List<FacilityTransferRecordItem> getOutboundTransferRecords(Integer patientId, Date startDate, Date endDate,
+			String receivingFacilityCode);
 
 }

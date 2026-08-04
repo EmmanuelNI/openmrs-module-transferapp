@@ -164,6 +164,7 @@ public class TransferServiceImpl implements TransferService {
 		transfer.setDateCreated(now);
 		transfer.setVoided(false);
 		transfer.setHieSent(false);
+		transfer.setReceivedFromHie(false);
 		applyFormExtras(transfer, formExtras);
 
 		return transferDao.saveTransfer(transfer);
