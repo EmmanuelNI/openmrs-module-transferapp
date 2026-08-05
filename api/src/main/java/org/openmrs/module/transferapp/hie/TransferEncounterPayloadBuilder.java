@@ -18,6 +18,8 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
 import org.openmrs.User;
+import org.openmrs.api.context.Context;
+import org.openmrs.module.transferapp.TransferAppConstants;
 import org.openmrs.module.transferapp.model.Transfer;
 
 import java.text.SimpleDateFormat;
@@ -103,6 +105,8 @@ public class TransferEncounterPayloadBuilder {
 		addInsuranceExtension(encounter, transfer.getHealthInsuranceType());
 		addCaregiverExtension(encounter, transfer);
 		addStringExtension(encounter, "http://example.org/fhir/StructureDefinition/vital-signs", formatVitals(transfer));
+		addStringExtension(encounter, "http://example.org/fhir/StructureDefinition/clinical-presentation",
+				transfer.getClinicalPresentation());
 		addTransportExtension(encounter, transfer.getTransportType());
 		addPatientDemographicsExtension(encounter, transfer);
 		addPatientAddressExtension(encounter, transfer);
@@ -129,7 +133,7 @@ public class TransferEncounterPayloadBuilder {
 		ObjectNode coding = addObjectNode(serviceType.putArray("coding"));
 		coding.put("system", "http://terminology.hl7.org/CodeSystem/service-type");
 		coding.put("code", "253");
-		coding.put("display", StringUtils.isNotBlank(receivingService) ? receivingService.trim() : "General medical practice");
+		coding.put("display", StringUtils.isNotBlank(receivingService) ? receivingService.trim() : "");
 	}
 
 	private void addSubject(ObjectNode encounter, String upi, String clientName) {
@@ -204,7 +208,7 @@ public class TransferEncounterPayloadBuilder {
 				: "Condition/transfer-diagnosis";
 		String display = StringUtils.isNotBlank(transfer.getDiagnosis())
 				? transfer.getDiagnosis().trim()
-				: "Primary Diagnosis";
+				: "";
 
 		ObjectNode diagnosis = addObjectNode(encounter.putArray("diagnosis"));
 		ObjectNode condition = diagnosis.putObject("condition");
@@ -221,7 +225,7 @@ public class TransferEncounterPayloadBuilder {
 		ObjectNode hospitalization = encounter.putObject("hospitalization");
 
 		ObjectNode origin = hospitalization.putObject("origin");
-		populateLocationReference(origin, null, transfer.getSendingFacility(), "Referring facility");
+		populateLocationReference(origin, resolveSendingFosaId(), transfer.getSendingFacility(), "Referring facility");
 
 		ObjectNode admitSource = hospitalization.putObject("admitSource");
 		ObjectNode admitCoding = addObjectNode(admitSource.putArray("coding"));
@@ -242,7 +246,7 @@ public class TransferEncounterPayloadBuilder {
 	private void addLocation(ObjectNode encounter, Transfer transfer, Date periodStart, Date periodEnd) {
 		ObjectNode locationEntry = addObjectNode(encounter.putArray("location"));
 		ObjectNode location = locationEntry.putObject("location");
-		populateLocationReference(location, null, transfer.getSendingFacility(), "Referring facility");
+		populateLocationReference(location, resolveSendingFosaId(), transfer.getSendingFacility(), "Referring facility");
 		locationEntry.put("status", "completed");
 
 		ObjectNode period = locationEntry.putObject("period");
@@ -282,8 +286,17 @@ public class TransferEncounterPayloadBuilder {
 		node.put("display", display);
 		if (StringUtils.isNotBlank(facilityCode)) {
 			node.put("reference", "Location/" + facilityCode.trim());
-			node.putObject("identifier").put("value", facilityCode.trim());
+			ObjectNode identifier = node.putObject("identifier");
+			identifier.put("system", "FOSAID");
+			identifier.put("value", facilityCode.trim());
 		}
+	}
+
+	private String resolveSendingFosaId() {
+		String fosaId = Context.getAdministrationService().getGlobalProperty(
+				TransferAppConstants.GP_SENDING_FOSA_ID,
+				TransferAppConstants.DEFAULT_SENDING_FOSA_ID);
+		return StringUtils.trimToNull(fosaId);
 	}
 
 	private void addTransferTypeExtension(ObjectNode encounter, String transferType) {

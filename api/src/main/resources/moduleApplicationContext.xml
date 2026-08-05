@@ -320,6 +320,37 @@
 		</property>
 	</bean>
 
+	<bean id="transferAppRegistrationObsServiceTarget"
+	      class="org.openmrs.module.transferapp.api.impl.TransferRegistrationObsServiceImpl">
+		<property name="patientService" ref="patientService" />
+		<property name="obsService" ref="obsService" />
+		<property name="transferHieSearchService" ref="transferAppHieSearchService" />
+	</bean>
+
+	<bean id="transferAppRegistrationObsService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="target">
+			<ref bean="transferAppRegistrationObsServiceTarget" />
+		</property>
+		<property name="preInterceptors">
+			<ref bean="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource">
+			<ref bean="transactionAttributeSource" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.TransferRegistrationObsService</value>
+				<ref bean="transferAppRegistrationObsService" />
+			</list>
+		</property>
+	</bean>
+
 	<bean id="transferFacilityRegistryServiceTarget"
 	      class="org.openmrs.module.transferapp.api.impl.TransferFacilityRegistryServiceImpl" />
 

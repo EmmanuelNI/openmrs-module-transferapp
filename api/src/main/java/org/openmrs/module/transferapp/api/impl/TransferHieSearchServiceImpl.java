@@ -16,8 +16,11 @@ package org.openmrs.module.transferapp.api.impl;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openmrs.api.context.Context;
 import org.openmrs.module.transferapp.TransferAppConstants;
 import org.openmrs.module.transferapp.api.TransferHieSearchService;
+import org.openmrs.module.transferapp.api.TransferRegistrationObsService;
+import org.openmrs.module.transferapp.api.TransferVerificationUrlService;
 import org.openmrs.module.transferapp.api.TransferSendingLocationResolver;
 import org.openmrs.module.transferapp.hie.HieApiException;
 import org.openmrs.module.transferapp.hie.HieBasicConnection;
@@ -176,6 +179,8 @@ public class TransferHieSearchServiceImpl implements TransferHieSearchService {
 		if (transfers == null) {
 			return Collections.emptyList();
 		}
+		TransferVerificationUrlService verificationUrlService = Context.getService(TransferVerificationUrlService.class);
+		TransferRegistrationObsService registrationObsService = Context.getService(TransferRegistrationObsService.class);
 		for (Map<String, Object> transfer : transfers) {
 			if (transfer == null) {
 				continue;
@@ -184,6 +189,20 @@ public class TransferHieSearchServiceImpl implements TransferHieSearchService {
 			String upid = asString(transfer.get("subject"));
 			transfer.put("uuid", uuid);
 			transfer.put("upid", upid);
+			transfer.put("hieTransferId", uuid);
+			transfer.put("receivedFromHie", Boolean.TRUE);
+			String destination = TransferRegistrationObsServiceImpl.resolveDestination(transfer);
+			transfer.put("destinationDisplay", destination);
+			if (registrationObsService != null) {
+				transfer.put("targetsCurrentFacility",
+						registrationObsService.destinationMatchesCurrentFacility(destination));
+			}
+			else {
+				transfer.put("targetsCurrentFacility", Boolean.FALSE);
+			}
+			if (verificationUrlService != null) {
+				verificationUrlService.enrichPreviewVerificationFields(transfer);
+			}
 		}
 		return transfers;
 	}

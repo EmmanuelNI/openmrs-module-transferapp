@@ -25,6 +25,16 @@ public final class TransferAppConstants {
 
 	public static final String DEFAULT_RECEIVED_TRANSFER_CONCEPT_UUID = "076b04e5-d62d-47da-83e2-0da6e7a119b4";
 
+	/** Fallback Transfer Id concept GP from rwandaemr (same UUID as receivedTransferConceptUuid). */
+	public static final String GP_RWANDAEMR_TRANSFER_ID_CONCEPT_UUID = "rwandaemr.hie.transfer_id";
+
+	public static final String GP_REGISTRATION_ENCOUNTER_TYPE_ID = "transferapp.registrationEncounterTypeId";
+
+	/** Prefer rwandaemr registration encounter type when transferapp GP is blank. */
+	public static final String GP_RWANDAEMR_REGISTRATION_ENCOUNTER_TYPE_ID = "rwandaemr.hie.registration_encounter_type_id";
+
+	public static final String DEFAULT_REGISTRATION_ENCOUNTER_TYPE_ID = "5";
+
 	public static final String GP_INSURANCE_TYPE_CONCEPT_UUID = "transferapp.insuranceTypeConceptUuid";
 
 	public static final String DEFAULT_INSURANCE_TYPE_CONCEPT_UUID = "8da67e73-776c-43f6-9758-79d1f6786db3";
@@ -55,7 +65,13 @@ public final class TransferAppConstants {
 
 	public static final String GP_DIAGNOSIS_CONCEPT_UUID = "transferapp.diagnosisConceptUuid";
 
-	public static final String DEFAULT_DIAGNOSIS_CONCEPT_UUID = "2dce81f9-3874-4247-b441-6369ca0725c2,afb8006f-e7c4-45bd-82bd-16f6e4b4b51d";
+	/** Primary ICD, Secondary ICD, then CIEL Coded Diagnosis (Visit Diagnoses construct). */
+	public static final String DEFAULT_DIAGNOSIS_CONCEPT_UUID =
+			"2dce81f9-3874-4247-b441-6369ca0725c2,afb8006f-e7c4-45bd-82bd-16f6e4b4b51d,3cd94c66-26fe-102b-80cb-0017a47871b2";
+
+	public static final String GP_CLINICAL_PRESENTATION_CONCEPT_UUID = "transferapp.ClinicalPresentationConceptUuid";
+
+	public static final String DEFAULT_CLINICAL_PRESENTATION_CONCEPT_UUID = "3ce2b170-26fe-102b-80cb-0017a47871b2";
 
 	public static final String GP_HEIGHT_CONCEPT_UUID = "transferapp.heightConceptUuid";
 
@@ -110,6 +126,10 @@ public final class TransferAppConstants {
 	public static final String GP_VERIFY_BASE_URL = "transferapp.verify_base_url";
 
 	public static final String DEFAULT_VERIFY_BASE_URL = "http://197.243.24.138:8081";
+
+	public static final String GP_SENDING_FOSA_ID = "transferapp.sendingFosaId";
+
+	public static final String DEFAULT_SENDING_FOSA_ID = "0074";
 
 	public static final String HIE_TRANSFER_ENCOUNTER_PATH = "/shr/Encounter/transfer";
 
