@@ -32,6 +32,8 @@ import org.openmrs.module.transferapp.model.ReceivingFacility;
 import org.openmrs.module.transferapp.model.Transfer;
 import org.openmrs.module.transferapp.model.TransferFormExtras;
 import org.openmrs.module.transferapp.model.TransferProfile;
+import org.openmrs.module.rwandaemr.queue.QueueService;
+import org.openmrs.module.rwandaemr.queue.model.QueueEntry;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -59,6 +61,8 @@ public class TransferServiceImpl implements TransferService {
 
 	private TransferProfileService transferProfileService;
 
+	private QueueService queueService;
+
 	private TransferPatientSnapshotResolver patientSnapshotResolver = new TransferPatientSnapshotResolver();
 
 	public void setTransferDao(TransferDao transferDao) {
@@ -79,6 +83,10 @@ public class TransferServiceImpl implements TransferService {
 
 	public void setTransferProfileService(TransferProfileService transferProfileService) {
 		this.transferProfileService = transferProfileService;
+	}
+
+	public void setQueueService(QueueService queueService) {
+		this.queueService = queueService;
 	}
 
 	@Override
@@ -166,7 +174,16 @@ public class TransferServiceImpl implements TransferService {
 		transfer.setHieSent(false);
 		applyFormExtras(transfer, formExtras);
 
-		return transferDao.saveTransfer(transfer);
+		Transfer savedTransfer = transferDao.saveTransfer(transfer);
+		markActiveQueueEntryTransferred(patient, savedTransfer, now);
+		return savedTransfer;
+	}
+
+	protected void markActiveQueueEntryTransferred(Patient patient, Transfer transfer, Date transferDate) {
+		QueueEntry queueEntry = queueService.getActiveQueueEntry(patient, transferDate);
+		if (queueEntry != null) {
+			queueService.markPatientTransferred(queueEntry, "External transfer created: " + transfer.getUuid());
+		}
 	}
 
 	private void applyFormExtras(Transfer transfer, TransferFormExtras formExtras) {

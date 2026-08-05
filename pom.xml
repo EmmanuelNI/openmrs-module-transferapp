@@ -35,6 +35,7 @@
 		<appuiVersion>1.7</appuiVersion>
 		<coreappsVersion>1.11.1</coreappsVersion>
 		<webservicesRestVersion>2.50.0</webservicesRestVersion>
+		<rwandaemrVersion>4.0.0-SNAPSHOT</rwandaemrVersion>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 

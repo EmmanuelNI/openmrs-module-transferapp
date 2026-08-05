@@ -106,6 +106,7 @@
 		<property name="transferAdminService" ref="transferAdminService" />
 		<property name="patientInsuranceService" ref="patientInsuranceService" />
 		<property name="transferProfileService" ref="transferProfileService" />
+		<property name="queueService" ref="queueService" />
 	</bean>
 
 	<bean id="transferService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">

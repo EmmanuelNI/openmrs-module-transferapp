@@ -12,6 +12,21 @@
 	<name>Transfer App Module API</name>
 	<description>API project for Transfer App</description>
 
+	<dependencies>
+		<dependency>
+			<groupId>org.openmrs.module</groupId>
+			<artifactId>rwandaemr-api</artifactId>
+			<version>${rwandaemrVersion}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.13.2</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
 	<build>
 		<resources>
 			<resource>
