@@ -13,27 +13,25 @@
  */
 package org.openmrs.module.transferapp.api;
 
-import org.openmrs.module.transferapp.model.Transfer;
+import org.openmrs.Encounter;
+import org.openmrs.Patient;
+import org.openmrs.annotation.Authorized;
+import org.openmrs.module.transferapp.TransferAppActivator;
 
 import java.util.Map;
 
 /**
- * Builds remote transfer verification URLs for QR codes.
+ * Saves Transfer Id observations on the patient's active registration encounter.
  */
-public interface TransferVerificationUrlService {
+public interface TransferRegistrationObsService {
 
-	String resolveVerificationTransferId(Transfer transfer);
+	String resolveCurrentFacilityName();
 
-	String buildRemoteVerifyUrl(Transfer transfer);
+	boolean destinationMatchesCurrentFacility(String destination);
 
-	boolean shouldShowVerificationQr(Transfer transfer);
+	Encounter findRegistrationEncounterMissingTransferId(Patient patient);
 
-	boolean isValidVerificationTransferId(String transferId);
-
-	String buildRemoteVerifyUrlForTransferId(String transferId);
-
-	String buildVerifyQrFormUrl(String transferId);
-
-	void enrichPreviewVerificationFields(Map<String, Object> preview);
+	@Authorized(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)
+	Map<String, Object> validateAndSaveTransferId(Integer patientId, String hieTransferId);
 
 }

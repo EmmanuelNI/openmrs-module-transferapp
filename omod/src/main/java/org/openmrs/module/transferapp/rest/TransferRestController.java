@@ -20,6 +20,7 @@ import org.openmrs.module.transferapp.TransferAppActivator;
 import org.openmrs.module.transferapp.TransferPrivilegeHelper;
 import org.openmrs.module.transferapp.api.TransferHieReceiveService;
 import org.openmrs.module.transferapp.api.TransferHieSearchService;
+import org.openmrs.module.transferapp.api.TransferRegistrationObsService;
 import org.openmrs.module.transferapp.model.Transfer;
 import org.openmrs.module.webservices.rest.SimpleObject;
 import org.openmrs.module.webservices.rest.web.response.IllegalRequestException;
@@ -150,12 +151,59 @@ public class TransferRestController {
 		return result;
 	}
 
+	@RequestMapping(value = "/rest/v1/transferapp/transfer/validate", method = RequestMethod.POST)
+	@ResponseBody
+	public Object validateTransfer(HttpServletResponse response,
+			@RequestParam("patientId") Integer patientId,
+			@RequestParam("hieTransferId") String hieTransferId) throws ResponseException {
+
+		if (patientId == null) {
+			throw new IllegalRequestException("patientId parameter is required");
+		}
+		if (hieTransferId == null || hieTransferId.trim().isEmpty()) {
+			throw new IllegalRequestException("hieTransferId parameter is required");
+		}
+
+		SimpleObject result = new SimpleObject();
+		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)) {
+			result.put("status", "error");
+			result.put("message", TransferPrivilegeHelper.requiredPrivilegeMessage(
+					TransferAppActivator.PRIVILEGE_CREATE_TRANSFER));
+			result.put("requiredPrivilege", TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return result;
+		}
+
+		try {
+			Map<String, Object> serviceResult = getTransferRegistrationObsService()
+					.validateAndSaveTransferId(patientId, hieTransferId.trim());
+			return toSimpleObject(serviceResult);
+		}
+		catch (Exception ex) {
+			log.error("Unable to validate and record HIE transfer on registration", ex);
+			result.put("status", "error");
+			result.put("message", TransferPrivilegeHelper.resolveUserFacingMessage(
+					ex,
+					TransferAppActivator.PRIVILEGE_CREATE_TRANSFER,
+					"Unable to validate transfer"));
+			if (TransferPrivilegeHelper.isPrivilegeException(ex)) {
+				result.put("requiredPrivilege", TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);
+				response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			}
+		}
+		return result;
+	}
+
 	private TransferHieSearchService getTransferHieSearchService() {
 		return Context.getService(TransferHieSearchService.class);
 	}
 
 	private TransferHieReceiveService getTransferHieReceiveService() {
 		return Context.getService(TransferHieReceiveService.class);
+	}
+
+	private TransferRegistrationObsService getTransferRegistrationObsService() {
+		return Context.getService(TransferRegistrationObsService.class);
 	}
 
 	@SuppressWarnings("unchecked")

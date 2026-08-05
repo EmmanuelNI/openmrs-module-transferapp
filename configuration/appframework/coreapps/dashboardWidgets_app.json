@@ -1,5 +1,26 @@
 [
     {
+        "id": "transferapp.hiePatientTransfer",
+        "description": "transferapp.patient.hieTransfer.description",
+        "label": "transferapp.patient.hieTransfer.title",
+        "icon": "icon-random",
+        "order": -1,
+        "config": {
+            "label": "Available Transfer"
+        },
+        "extensions": [
+            {
+                "id": "transferapp.hiePatientTransfer.clinicianDashboardFirstColumn",
+                "appId": "transferapp.hiePatientTransfer",
+                "extensionPointId": "patientDashboard.firstColumnFragments",
+                "extensionParams": {
+                    "provider": "transferapp",
+                    "fragment": "patient/hieTransferSection"
+                }
+            }
+        ]
+    },
+    {
         "id": "transferapp.patientTransfers",
         "description": "transferapp.patient.transfers.description",
         "label": "transferapp.patient.transfers.title",

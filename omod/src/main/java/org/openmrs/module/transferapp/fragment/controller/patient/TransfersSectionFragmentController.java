@@ -68,9 +68,10 @@ public class TransfersSectionFragmentController {
 		int totalPatientTransfers = 0;
 		if (canListTransfers) {
 			try {
-				ui.includeCss("transferapp", "styles/transferFormPreview.css");
-				ui.includeJavascript("transferapp", "scripts/transferMohLogo.js");
-				ui.includeJavascript("transferapp", "scripts/transferFormPreview.js");
+				ui.includeCss("transferapp", "transferFormPreview.css");
+				ui.includeCss("transferapp", "transferSection.css");
+				ui.includeJavascript("transferapp", "transferMohLogo.js");
+				ui.includeJavascript("transferapp", "transferFormPreview.js");
 				totalPatientTransfers = patientTransferListService.countPatientTransfers(patientWrapper.getPatient());
 				transfers = patientTransferListService.getPatientTransfers(
 						patientWrapper.getPatient(),

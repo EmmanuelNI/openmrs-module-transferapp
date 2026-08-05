@@ -1,7 +1,3 @@
-<%
-ui.includeCss("transferapp", "styles/transferSection.css")
-%>
-
 <% if (!(canListTransfers || canCreateTransfer)) { %>
 <div class="info-section">
     <div class="info-header">

@@ -90,6 +90,7 @@ public class TransferPatientSnapshotResolver {
 
 		transfer.setAdmissionAt(resolveAdmissionDatetime(patient));
 		transfer.setDiagnosis(resolveDiagnosis(patient));
+		transfer.setClinicalPresentation(resolveClinicalPresentation(patient));
 		applyVitalSignsSnapshot(transfer, patient);
 		transfer.setSendingFacility(resolveCurrentFacilityName());
 		transfer.setReferringUnit(resolveReferringUnit());
@@ -364,12 +365,9 @@ public class TransferPatientSnapshotResolver {
 			if (questionConcept == null) {
 				continue;
 			}
-			Obs latestObs = getLatestObservationForVisit(patient, activeVisit, questionConcept);
-			if (latestObs != null && latestObs.getValueCoded() != null) {
-				String diagnosisName = StringUtils.trimToNull(latestObs.getValueCoded().getDisplayString());
-				if (diagnosisName != null) {
-					diagnosisNames.add(diagnosisName);
-				}
+			String diagnosisName = resolveDiagnosisNameForConcept(patient, activeVisit, questionConcept);
+			if (diagnosisName != null && !diagnosisNames.contains(diagnosisName)) {
+				diagnosisNames.add(diagnosisName);
 			}
 		}
 
@@ -377,6 +375,170 @@ public class TransferPatientSnapshotResolver {
 			return null;
 		}
 		return joinDiagnosisNames(diagnosisNames);
+	}
+
+	/**
+	 * Picks the latest valid disease name for a question concept on the active visit.
+	 * Scans several recent obs in case the newest row is empty / order-only.
+	 */
+	private String resolveDiagnosisNameForConcept(Patient patient, Visit visit, Concept questionConcept) {
+		List<Obs> candidates = getRecentObservationsForVisit(patient, visit, questionConcept, 10);
+		for (Obs obs : candidates) {
+			String diagnosisName = extractCodedDiagnosisName(obs);
+			if (diagnosisName != null) {
+				return diagnosisName;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Prefer value_coded preferred name (e.g. "Malaria"), then value_text.
+	 * Skip diagnosis-order / certainty labels. For obs groups, prefer coded/non-coded
+	 * diagnosis members over order/certainty members.
+	 */
+	private String extractCodedDiagnosisName(Obs obs) {
+		if (obs == null || Boolean.TRUE.equals(obs.getVoided())) {
+			return null;
+		}
+
+		if (isDiagnosisOrderOrCertaintyQuestion(obs.getConcept())) {
+			return null;
+		}
+
+		String fromCoded = conceptPreferredName(obs.getValueCoded());
+		if (fromCoded != null && !isDiagnosisMetadataLabel(fromCoded)) {
+			return fromCoded;
+		}
+
+		String fromText = StringUtils.trimToNull(obs.getValueText());
+		if (fromText != null && !isDiagnosisMetadataLabel(fromText)) {
+			return fromText;
+		}
+
+		if (obs.hasGroupMembers(false)) {
+			Obs codedMember = null;
+			Obs nonCodedMember = null;
+			List<Obs> otherMembers = new ArrayList<Obs>();
+			for (Obs member : obs.getGroupMembers(false)) {
+				if (member == null || Boolean.TRUE.equals(member.getVoided())) {
+					continue;
+				}
+				if (isCodedDiagnosisQuestion(member.getConcept())) {
+					codedMember = member;
+				} else if (isNonCodedDiagnosisQuestion(member.getConcept())) {
+					nonCodedMember = member;
+				} else if (!isDiagnosisOrderOrCertaintyQuestion(member.getConcept())) {
+					otherMembers.add(member);
+				}
+			}
+			if (codedMember != null) {
+				String nested = extractCodedDiagnosisName(codedMember);
+				if (nested != null) {
+					return nested;
+				}
+			}
+			if (nonCodedMember != null) {
+				String nested = extractCodedDiagnosisName(nonCodedMember);
+				if (nested != null) {
+					return nested;
+				}
+			}
+			for (Obs member : otherMembers) {
+				String nested = extractCodedDiagnosisName(member);
+				if (nested != null) {
+					return nested;
+				}
+			}
+		}
+		return null;
+	}
+
+	private String conceptPreferredName(Concept concept) {
+		if (concept == null) {
+			return null;
+		}
+		if (concept.getName(Context.getLocale()) != null
+				&& StringUtils.isNotBlank(concept.getName(Context.getLocale()).getName())) {
+			return concept.getName(Context.getLocale()).getName().trim();
+		}
+		if (concept.getName() != null && StringUtils.isNotBlank(concept.getName().getName())) {
+			return concept.getName().getName().trim();
+		}
+		return StringUtils.trimToNull(concept.getDisplayString());
+	}
+
+	private boolean isDiagnosisMetadataLabel(String name) {
+		if (StringUtils.isBlank(name)) {
+			return true;
+		}
+		String normalized = name.trim().toLowerCase();
+		return "primary diagnosis".equals(normalized)
+				|| "secondary diagnosis".equals(normalized)
+				|| "primary".equals(normalized)
+				|| "secondary".equals(normalized)
+				|| "confirmed".equals(normalized)
+				|| "presumed".equals(normalized)
+				|| "provisional".equals(normalized)
+				|| normalized.contains("diagnosis order")
+				|| normalized.contains("diagnosis certainty");
+	}
+
+	private boolean isDiagnosisOrderOrCertaintyQuestion(Concept concept) {
+		String name = conceptPreferredName(concept);
+		if (name == null) {
+			return false;
+		}
+		String normalized = name.trim().toLowerCase();
+		return normalized.contains("diagnosis order")
+				|| normalized.contains("diagnosis certainty")
+				|| "order".equals(normalized)
+				|| "certainty".equals(normalized);
+	}
+
+	private boolean isCodedDiagnosisQuestion(Concept concept) {
+		String name = conceptPreferredName(concept);
+		if (name == null) {
+			return false;
+		}
+		String normalized = name.trim().toLowerCase();
+		if (normalized.contains("non-coded") || normalized.contains("non coded")) {
+			return false;
+		}
+		return "coded diagnosis".equals(normalized) || normalized.contains("coded diagnosis");
+	}
+
+	private boolean isNonCodedDiagnosisQuestion(Concept concept) {
+		String name = conceptPreferredName(concept);
+		if (name == null) {
+			return false;
+		}
+		String normalized = name.trim().toLowerCase();
+		return normalized.contains("non-coded diagnosis") || normalized.contains("non coded diagnosis");
+	}
+
+	/**
+	 * Resolves clinical presentation (chief complaint) from the latest observation
+	 * on the active visit for the configured concept UUID (value_text).
+	 */
+	public String resolveClinicalPresentation(Patient patient) {
+		Visit activeVisit = resolveActiveVisit(patient);
+		if (activeVisit == null) {
+			return null;
+		}
+
+		Concept questionConcept = getConceptByGlobalProperty(
+				TransferAppConstants.GP_CLINICAL_PRESENTATION_CONCEPT_UUID,
+				TransferAppConstants.DEFAULT_CLINICAL_PRESENTATION_CONCEPT_UUID);
+		if (questionConcept == null) {
+			return null;
+		}
+
+		Obs latestObs = getLatestObservationForVisit(patient, activeVisit, questionConcept);
+		if (latestObs == null) {
+			return null;
+		}
+		return StringUtils.trimToNull(latestObs.getValueText());
 	}
 
 	public void applyVitalSignsSnapshot(Transfer transfer, Patient patient) {
@@ -520,38 +682,90 @@ public class TransferPatientSnapshotResolver {
 	}
 
 	private Obs getLatestObservationForVisit(Patient patient, Visit visit, Concept questionConcept) {
-		List<Encounter> encounters = collectActiveEncounters(visit);
-		if (encounters.isEmpty()) {
-			return null;
-		}
-
-		List<Obs> observations = Context.getObsService().getObservations(
-				Collections.singletonList(patient),
-				encounters,
-				Collections.singletonList(questionConcept),
-				null,
-				null,
-				null,
-				null,
-				1,
-				null,
-				null,
-				null,
-				false);
-		if (observations == null || observations.isEmpty()) {
+		List<Obs> observations = getRecentObservationsForVisit(patient, visit, questionConcept, 1);
+		if (observations.isEmpty()) {
 			return null;
 		}
 		return observations.get(0);
 	}
 
+	/**
+	 * Load recent obs for a question on the active visit.
+	 * Uses EncounterService (visit.getEncounters() is often empty / lazy), sorts by
+	 * obsDatetime descending, and falls back to visit start/stop date window.
+	 */
+	private List<Obs> getRecentObservationsForVisit(Patient patient, Visit visit, Concept questionConcept,
+			int mostRecentN) {
+		if (patient == null || visit == null || questionConcept == null) {
+			return Collections.emptyList();
+		}
+
+		List<String> sort = Collections.singletonList("obsDatetime");
+		List<Encounter> encounters = collectActiveEncounters(visit);
+		List<Obs> observations = null;
+		if (!encounters.isEmpty()) {
+			observations = Context.getObsService().getObservations(
+					Collections.singletonList(patient),
+					encounters,
+					Collections.singletonList(questionConcept),
+					null,
+					null,
+					null,
+					sort,
+					mostRecentN,
+					null,
+					null,
+					null,
+					false);
+		}
+
+		if (observations == null || observations.isEmpty()) {
+			observations = Context.getObsService().getObservations(
+					Collections.singletonList(patient),
+					null,
+					Collections.singletonList(questionConcept),
+					null,
+					null,
+					null,
+					sort,
+					mostRecentN,
+					null,
+					visit.getStartDatetime(),
+					visit.getStopDatetime(),
+					false);
+		}
+
+		if (observations == null || observations.isEmpty()) {
+			return Collections.emptyList();
+		}
+		return observations;
+	}
+
 	private List<Encounter> collectActiveEncounters(Visit visit) {
 		List<Encounter> encounters = new ArrayList<Encounter>();
-		if (visit == null || visit.getEncounters() == null) {
+		if (visit == null) {
 			return encounters;
 		}
-		for (Encounter encounter : visit.getEncounters()) {
-			if (encounter != null && !Boolean.TRUE.equals(encounter.getVoided())) {
-				encounters.add(encounter);
+
+		// Prefer explicit service load — Visit.encounters is often uninitialized.
+		List<Encounter> byVisit = Context.getEncounterService().getEncountersByVisit(visit, false);
+		if (byVisit != null) {
+			for (Encounter encounter : byVisit) {
+				if (encounter != null && !Boolean.TRUE.equals(encounter.getVoided())) {
+					encounters.add(encounter);
+				}
+			}
+		}
+
+		if (!encounters.isEmpty()) {
+			return encounters;
+		}
+
+		if (visit.getEncounters() != null) {
+			for (Encounter encounter : visit.getEncounters()) {
+				if (encounter != null && !Boolean.TRUE.equals(encounter.getVoided())) {
+					encounters.add(encounter);
+				}
 			}
 		}
 		return encounters;

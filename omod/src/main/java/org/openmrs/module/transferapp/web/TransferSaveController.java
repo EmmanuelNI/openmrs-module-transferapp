@@ -177,7 +177,9 @@ public class TransferSaveController {
 	}
 
 	@RequestMapping(value = "/module/transferapp/transfer/verifyQr.form", method = RequestMethod.GET)
-	public void verifyQr(HttpServletResponse response, @RequestParam("uuid") String uuid) throws Exception {
+	public void verifyQr(HttpServletResponse response,
+			@RequestParam(value = "uuid", required = false) String uuid,
+			@RequestParam(value = "transferId", required = false) String transferId) throws Exception {
 		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_LIST_TRANSFERS)) {
 			response.sendError(HttpServletResponse.SC_FORBIDDEN,
 					TransferPrivilegeHelper.requiredPrivilegeMessage(TransferAppActivator.PRIVILEGE_LIST_TRANSFERS));
@@ -185,19 +187,20 @@ public class TransferSaveController {
 		}
 
 		try {
-			Transfer transfer = transferService.getTransferByUuid(uuid);
-			if (transfer == null) {
-				response.sendError(HttpServletResponse.SC_NOT_FOUND);
-				return;
-			}
-
 			TransferVerificationUrlService verificationUrlService = getTransferVerificationUrlService();
-			if (!verificationUrlService.shouldShowVerificationQr(transfer)) {
-				response.sendError(HttpServletResponse.SC_NOT_FOUND);
-				return;
+			String verifyUrl = null;
+
+			if (StringUtils.isNotBlank(uuid)) {
+				Transfer transfer = transferService.getTransferByUuid(uuid.trim());
+				if (transfer != null && verificationUrlService.shouldShowVerificationQr(transfer)) {
+					verifyUrl = verificationUrlService.buildRemoteVerifyUrl(transfer);
+				}
 			}
 
-			String verifyUrl = verificationUrlService.buildRemoteVerifyUrl(transfer);
+			if (StringUtils.isBlank(verifyUrl) && StringUtils.isNotBlank(transferId)) {
+				verifyUrl = verificationUrlService.buildRemoteVerifyUrlForTransferId(transferId.trim());
+			}
+
 			if (StringUtils.isBlank(verifyUrl)) {
 				response.sendError(HttpServletResponse.SC_NOT_FOUND);
 				return;
@@ -315,9 +318,10 @@ public class TransferSaveController {
 		boolean showVerificationQr = verificationUrlService.shouldShowVerificationQr(transfer);
 		preview.put("showVerificationQr", showVerificationQr);
 		if (showVerificationQr) {
-			preview.put("verificationTransferId", verificationUrlService.resolveVerificationTransferId(transfer));
+			String verificationTransferId = verificationUrlService.resolveVerificationTransferId(transfer);
+			preview.put("verificationTransferId", verificationTransferId);
 			preview.put("verifyRemoteUrl", verificationUrlService.buildRemoteVerifyUrl(transfer));
-			preview.put("verifyQrUrl", "/module/transferapp/transfer/verifyQr.form?uuid=" + transfer.getUuid());
+			preview.put("verifyQrUrl", verificationUrlService.buildVerifyQrFormUrl(verificationTransferId));
 		}
 		return preview;
 	}
