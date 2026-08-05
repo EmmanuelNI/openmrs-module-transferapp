@@ -12,6 +12,12 @@
 <div class="transfer-dashboard">
 ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "dashboard", app: "transferapp.dashboard" ]) }
 
+<% if (!canAccessDashboard) { %>
+<div class="transfer-records-empty" style="margin-top: 16px; padding: 12px; background: #fff8e6; border: 1px solid #f0d78c;">
+    ${ ui.encodeHtmlContent(dashboardAccessDeniedMessage) }
+</div>
+<% } else { %>
+
 <div class="transfer-dashboard-section">
     <h3 class="transfer-dashboard-section-title">${ ui.message("transferapp.dashboard.received.title") }</h3>
     <div class="transfer-stat-grid">
@@ -55,4 +61,5 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "dashb
         </div>
     </div>
 </div>
+<% } %>
 </div>

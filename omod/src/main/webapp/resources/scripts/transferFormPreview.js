@@ -25,9 +25,57 @@
 		return value === true || value === "true";
 	}
 
+	function isValidVerificationUuid(value) {
+		if (value === null || value === undefined) {
+			return false;
+		}
+		var normalized = String(value).trim();
+		if (normalized.charAt(0) === "{" && normalized.charAt(normalized.length - 1) === "}") {
+			normalized = normalized.substring(1, normalized.length - 1).trim();
+		}
+		return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(normalized);
+	}
+
+	function resolveVerificationTransferId(normalized) {
+		var candidates = [
+			normalized.verificationTransferId,
+			normalized.hieTransferId,
+			normalized.uuid,
+			normalized.id
+		];
+		for (var i = 0; i < candidates.length; i++) {
+			if (isValidVerificationUuid(candidates[i])) {
+				return String(candidates[i]).trim();
+			}
+		}
+		return "";
+	}
+
+	function buildVerifyQrFormUrl(transferId) {
+		if (!isValidVerificationUuid(transferId)) {
+			return "";
+		}
+		return "/module/transferapp/transfer/verifyQr.form?transferId="
+			+ encodeURIComponent(String(transferId).trim());
+	}
+
 	function normalizeTransferPreviewItem(item) {
 		var normalized = item || {};
 		var transferType = normalized.transferType || "";
+		var verificationTransferId = resolveVerificationTransferId(normalized);
+		var showVerificationQr = truthy(normalized.showVerificationQr);
+		if (!showVerificationQr && isValidVerificationUuid(verificationTransferId)) {
+			showVerificationQr = true;
+		}
+		var verifyQrUrl = normalized.verifyQrUrl;
+		if (showVerificationQr && !verifyQrUrl && verificationTransferId) {
+			verifyQrUrl = buildVerifyQrFormUrl(verificationTransferId);
+		}
+		var verifyRemoteUrl = normalized.verifyRemoteUrl;
+		if (showVerificationQr && !verifyRemoteUrl && verificationTransferId && global.transferVerifyBaseUrl) {
+			verifyRemoteUrl = String(global.transferVerifyBaseUrl).replace(/\/+$/, "")
+				+ "/verify/transfer/" + encodeURIComponent(verificationTransferId) + "/remote";
+		}
 
 		return {
 			province: normalized.province,
@@ -88,10 +136,12 @@
 			referringSignedTime: normalized.referringSignedTime || normalized.formTime,
 			referringProviderPhone: normalized.referringProviderPhone || normalized.providerPhone,
 			signatureAndStamp: normalized.signatureAndStamp,
-			showVerificationQr: truthy(normalized.showVerificationQr),
-			verifyQrUrl: normalized.verifyQrUrl,
-			verifyRemoteUrl: normalized.verifyRemoteUrl,
-			verificationTransferId: normalized.verificationTransferId
+			showVerificationQr: showVerificationQr,
+			verifyQrUrl: verifyQrUrl,
+			verifyRemoteUrl: verifyRemoteUrl,
+			verificationTransferId: verificationTransferId || normalized.verificationTransferId,
+			hieTransferId: normalized.hieTransferId || verificationTransferId,
+			uuid: normalized.uuid || normalized.id || verificationTransferId
 		};
 	}
 
@@ -144,7 +194,9 @@
 				+ "<td class='tf-bottom-fields'>" + bottomRows + "</td>"
 				+ "<td class='tf-qr-cell'>"
 				+ "<img class='tf-qr-image' src='" + escTransferPreview(resolveTransferPreviewQrUrl(p.verifyQrUrl))
-				+ "' alt='Scan to verify this transfer'/>"
+				+ "' alt='Scan to verify this transfer'"
+				+ (p.verifyRemoteUrl ? " title='" + escTransferPreview(p.verifyRemoteUrl) + "'" : "")
+				+ "/>"
 				+ "</td>"
 				+ "</tr>"
 				+ "</table>";
@@ -215,6 +267,80 @@
 			+ "</div></div>";
 	}
 
+	/**
+	 * Opens a print window for the MOH transfer form so the user can Save as PDF.
+	 * @param {string|HTMLElement|jQuery} contentOrSelector preview HTML or a container with .transfer-form-preview
+	 * @param {{fileName?: string}} [options]
+	 * @returns {boolean} true when the print window was opened
+	 */
+	function exportTransferFormPreviewPdf(contentOrSelector, options) {
+		var opts = options || {};
+		var contentHtml = "";
+		if (typeof contentOrSelector === "string") {
+			var trimmed = contentOrSelector.trim();
+			if (trimmed.charAt(0) === "<") {
+				contentHtml = trimmed;
+			} else if (global.jQuery || global.jq) {
+				var $ = global.jq || global.jQuery;
+				var el = $(trimmed);
+				if (el.length) {
+					var preview = el.find(".transfer-form-preview").first();
+					contentHtml = (preview.length ? preview : el).html() || "";
+					if (preview.length) {
+						contentHtml = preview[0].outerHTML;
+					}
+				}
+			}
+		} else if (contentOrSelector && contentOrSelector.nodeType === 1) {
+			var node = contentOrSelector;
+			var previewNode = node.querySelector
+				? node.querySelector(".transfer-form-preview")
+				: null;
+			contentHtml = previewNode ? previewNode.outerHTML : (node.outerHTML || node.innerHTML || "");
+		} else if (contentOrSelector && contentOrSelector.jquery && contentOrSelector.length) {
+			var previewEl = contentOrSelector.find(".transfer-form-preview").first();
+			contentHtml = previewEl.length
+				? previewEl[0].outerHTML
+				: (contentOrSelector.html() || "");
+		}
+
+		if (!contentHtml) {
+			return false;
+		}
+
+		var openmrsPath = global.transferOpenmrsPath
+			|| (typeof openmrsContextPath !== "undefined" ? openmrsContextPath : "/openmrs");
+		while (openmrsPath.length > 1 && openmrsPath.charAt(openmrsPath.length - 1) === "/") {
+			openmrsPath = openmrsPath.substring(0, openmrsPath.length - 1);
+		}
+		var cssHref = openmrsPath + "/moduleResources/transferapp/styles/transferFormPreview.css";
+		var title = opts.fileName || "External-Transfer-Form";
+		var popup = window.open("", "transfer_form_pdf_export", "width=1200,height=900");
+		if (!popup) {
+			return false;
+		}
+
+		popup.document.open();
+		popup.document.write(
+			"<!DOCTYPE html><html><head><meta charset='utf-8'/>"
+			+ "<title>" + escTransferPreview(title) + "</title>"
+			+ "<link rel='stylesheet' type='text/css' href='" + escTransferPreview(cssHref) + "'/>"
+			+ "<style>"
+			+ "body{margin:12px;background:#fff;}"
+			+ ".transfer-form-preview{max-width:100%;}"
+			+ "@media print{body{margin:0;} .tf-no-print{display:none !important;}}"
+			+ "</style></head><body>"
+			+ "<p class='tf-no-print' style='font-family:sans-serif;font-size:13px;color:#334155;margin:0 0 12px;'>"
+			+ "Use your browser print dialog and choose <strong>Save as PDF</strong> to keep a copy.</p>"
+			+ contentHtml
+			+ "<script>window.onload=function(){setTimeout(function(){window.focus();window.print();},250);};<\/script>"
+			+ "</body></html>"
+		);
+		popup.document.close();
+		return true;
+	}
+
 	global.escTransferPreview = escTransferPreview;
 	global.buildTransferFormPreviewHtml = buildTransferFormPreviewHtml;
+	global.exportTransferFormPreviewPdf = exportTransferFormPreviewPdf;
 })(window);

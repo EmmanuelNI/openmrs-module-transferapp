@@ -45,7 +45,13 @@
 	<globalProperty>
 		<property>transferapp.receivedTransferConceptUuid</property>
 		<defaultValue>076b04e5-d62d-47da-83e2-0da6e7a119b4</defaultValue>
-		<description>UUID of the observation concept used to count received patient transfers on the dashboard</description>
+		<description>UUID of the Transfer Id observation concept (value_text = HIE transfer UUID). Used by the HIE transfer patient fragment and dashboard received-transfer counts</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.registrationEncounterTypeId</property>
+		<defaultValue>5</defaultValue>
+		<description>Encounter type id for registration encounters used by the HIE transfer patient fragment. Falls back to rwandaemr.hie.registration_encounter_type_id when blank</description>
 	</globalProperty>
 
 	<globalProperty>
@@ -87,8 +93,14 @@
 
 	<globalProperty>
 		<property>transferapp.diagnosisConceptUuid</property>
-		<defaultValue>2dce81f9-3874-4247-b441-6369ca0725c2,afb8006f-e7c4-45bd-82bd-16f6e4b4b51d</defaultValue>
-		<description>Comma-separated observation concept UUIDs used to resolve diagnosis from the active visit</description>
+		<defaultValue>2dce81f9-3874-4247-b441-6369ca0725c2,afb8006f-e7c4-45bd-82bd-16f6e4b4b51d,3cd94c66-26fe-102b-80cb-0017a47871b2</defaultValue>
+		<description>Comma-separated observation concept UUIDs used to resolve diagnosis from the active visit (Primary ICD, Secondary ICD, Coded Diagnosis)</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.ClinicalPresentationConceptUuid</property>
+		<defaultValue>3ce2b170-26fe-102b-80cb-0017a47871b2</defaultValue>
+		<description>Observation concept UUID used to resolve clinical presentation (chief complaint) value_text from the active visit</description>
 	</globalProperty>
 
 	<globalProperty>
@@ -162,6 +174,12 @@
 		<description>Base URL for transfer verification QR codes (eTransfer verify endpoint)</description>
 	</globalProperty>
 
+	<globalProperty>
+		<property>transferapp.sendingFosaId</property>
+		<defaultValue>0074</defaultValue>
+		<description>4-digit FOSAID of the sending facility used as Encounter.hospitalization.origin.identifier.value when submitting transfers to HIE</description>
+	</globalProperty>
+
 	<privilege>
 		<name>App: transferapp.dashboard</name>
 		<description>Able to access the transfer dashboard</description>
@@ -175,6 +193,11 @@
 	<privilege>
 		<name>Task: transferapp.createTransfer</name>
 		<description>Create Transfer</description>
+	</privilege>
+
+	<privilege>
+		<name>Task: transferapp.listpending</name>
+		<description>List pending inbound transfers from HIE</description>
 	</privilege>
 
 </module>

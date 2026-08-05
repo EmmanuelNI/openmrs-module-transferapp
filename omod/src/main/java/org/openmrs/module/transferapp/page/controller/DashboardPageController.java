@@ -14,6 +14,8 @@
 package org.openmrs.module.transferapp.page.controller;
 
 import org.openmrs.module.appui.UiSessionContext;
+import org.openmrs.module.transferapp.TransferAppActivator;
+import org.openmrs.module.transferapp.TransferPrivilegeHelper;
 import org.openmrs.module.transferapp.api.TransferDashboardService;
 import org.openmrs.module.transferapp.api.TransferReceivedStatistics;
 import org.openmrs.ui.framework.annotation.SpringBean;
@@ -28,17 +30,49 @@ public class DashboardPageController {
 			@SpringBean("transferDashboardService") TransferDashboardService transferDashboardService) {
 		sessionContext.requireAuthentication();
 
-		TransferReceivedStatistics received = transferDashboardService.getReceivedTransferStatistics();
-		model.addAttribute("transfersReceivedToday", received.getToday());
-		model.addAttribute("transfersReceivedThisWeek", received.getThisWeek());
-		model.addAttribute("transfersReceivedTotal", received.getTotal());
-		model.addAttribute("transfersReceivedPending", received.getPending());
+		boolean canAccessDashboard = TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_DASHBOARD);
+		model.addAttribute("canAccessDashboard", canAccessDashboard);
+		model.addAttribute("requiredDashboardPrivilege", TransferAppActivator.PRIVILEGE_DASHBOARD);
+		model.addAttribute("dashboardAccessDeniedMessage",
+				TransferPrivilegeHelper.requiredPrivilegeMessage(TransferAppActivator.PRIVILEGE_DASHBOARD));
 
-		TransferReceivedStatistics sent = transferDashboardService.getSentTransferStatistics();
-		model.addAttribute("transfersSentToday", sent.getToday());
-		model.addAttribute("transfersSentThisWeek", sent.getThisWeek());
-		model.addAttribute("transfersSentTotal", sent.getTotal());
-		model.addAttribute("transfersSentPending", sent.getPending());
+		if (!canAccessDashboard) {
+			setZeroStats(model);
+			return;
+		}
+
+		try {
+			TransferReceivedStatistics received = transferDashboardService.getReceivedTransferStatistics();
+			model.addAttribute("transfersReceivedToday", received.getToday());
+			model.addAttribute("transfersReceivedThisWeek", received.getThisWeek());
+			model.addAttribute("transfersReceivedTotal", received.getTotal());
+			model.addAttribute("transfersReceivedPending", received.getPending());
+
+			TransferReceivedStatistics sent = transferDashboardService.getSentTransferStatistics();
+			model.addAttribute("transfersSentToday", sent.getToday());
+			model.addAttribute("transfersSentThisWeek", sent.getThisWeek());
+			model.addAttribute("transfersSentTotal", sent.getTotal());
+			model.addAttribute("transfersSentPending", sent.getPending());
+		}
+		catch (Exception ex) {
+			setZeroStats(model);
+			model.addAttribute("canAccessDashboard", false);
+			model.addAttribute("dashboardAccessDeniedMessage", TransferPrivilegeHelper.resolveUserFacingMessage(
+					ex,
+					TransferAppActivator.PRIVILEGE_DASHBOARD,
+					TransferPrivilegeHelper.requiredPrivilegeMessage(TransferAppActivator.PRIVILEGE_DASHBOARD)));
+		}
+	}
+
+	private void setZeroStats(PageModel model) {
+		model.addAttribute("transfersReceivedToday", 0);
+		model.addAttribute("transfersReceivedThisWeek", 0);
+		model.addAttribute("transfersReceivedTotal", 0);
+		model.addAttribute("transfersReceivedPending", 0);
+		model.addAttribute("transfersSentToday", 0);
+		model.addAttribute("transfersSentThisWeek", 0);
+		model.addAttribute("transfersSentTotal", 0);
+		model.addAttribute("transfersSentPending", 0);
 	}
 
 }

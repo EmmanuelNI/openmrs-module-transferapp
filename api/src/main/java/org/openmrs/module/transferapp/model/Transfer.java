@@ -182,7 +182,7 @@ public class Transfer extends BaseOpenmrsData {
 	@Column(name = "hie_transfer_id", length = 64)
 	private String hieTransferId;
 
-	@Column(name = "received_from_hie")
+	@Column(name = "received_from_hie", nullable = true)
 	private Boolean receivedFromHie;
 
 	@Column(name = "clinical_presentation")

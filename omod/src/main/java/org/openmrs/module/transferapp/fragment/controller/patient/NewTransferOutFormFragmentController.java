@@ -16,6 +16,8 @@ package org.openmrs.module.transferapp.fragment.controller.patient;
 import org.openmrs.Patient;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.transferapp.TransferAppActivator;
+import org.openmrs.module.transferapp.TransferPrivilegeHelper;
 import org.openmrs.module.transferapp.api.NewTransferOutService;
 import org.openmrs.module.transferapp.model.NewTransferOutFormData;
 import org.openmrs.ui.framework.UiUtils;
@@ -36,6 +38,12 @@ public class NewTransferOutFormFragmentController {
 		model.addAttribute("error", "");
 		model.addAttribute("formData", null);
 
+		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)) {
+			model.addAttribute("error",
+					TransferPrivilegeHelper.requiredPrivilegeMessage(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER));
+			return;
+		}
+
 		if (patientId == null) {
 			model.addAttribute("error", ui.message("transferapp.patient.transfers.wizard.missingPatient"));
 			return;
@@ -48,8 +56,16 @@ public class NewTransferOutFormFragmentController {
 			return;
 		}
 
-		NewTransferOutFormData formData = newTransferOutService.getNewTransferOutFormData(patient);
-		model.addAttribute("formData", formData);
+		try {
+			NewTransferOutFormData formData = newTransferOutService.getNewTransferOutFormData(patient);
+			model.addAttribute("formData", formData);
+		}
+		catch (Exception ex) {
+			model.addAttribute("error", TransferPrivilegeHelper.resolveUserFacingMessage(
+					ex,
+					TransferAppActivator.PRIVILEGE_CREATE_TRANSFER,
+					ui.message("transferapp.patient.transfers.wizard.loadError")));
+		}
 	}
 
 }

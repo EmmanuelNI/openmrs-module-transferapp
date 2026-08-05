@@ -22,6 +22,7 @@ import org.openmrs.module.transferapp.model.Transfer;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 public class FacilityTransferRecordsServiceImpl implements FacilityTransferRecordsService {
@@ -39,7 +40,8 @@ public class FacilityTransferRecordsServiceImpl implements FacilityTransferRecor
 	}
 
 	@Override
-	public List<FacilityTransferRecordItem> getOutboundTransferRecords(Integer patientId) {
+	public List<FacilityTransferRecordItem> getOutboundTransferRecords(Integer patientId, Date startDate, Date endDate,
+			String receivingFacilityCode) {
 		if (transferAdminService == null) {
 			return Collections.emptyList();
 		}
@@ -50,7 +52,8 @@ public class FacilityTransferRecordsServiceImpl implements FacilityTransferRecor
 		}
 
 		List<Transfer> transfers = transferDao.getOutboundTransfersBySendingFacility(
-				sendingFacility.trim(), patientId, null);
+				sendingFacility.trim(), patientId, null, startDate, endDate,
+				StringUtils.trimToNull(receivingFacilityCode));
 		if (transfers == null || transfers.isEmpty()) {
 			return Collections.emptyList();
 		}

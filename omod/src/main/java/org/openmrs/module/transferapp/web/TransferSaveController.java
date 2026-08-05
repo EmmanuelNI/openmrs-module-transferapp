@@ -16,6 +16,8 @@ package org.openmrs.module.transferapp.web;
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.transferapp.TransferAppActivator;
+import org.openmrs.module.transferapp.TransferPrivilegeHelper;
 import org.openmrs.module.transferapp.api.TransferAdminService;
 import org.openmrs.module.transferapp.api.TransferHieSubmissionService;
 import org.openmrs.module.transferapp.api.TransferQrCodeService;
@@ -64,6 +66,11 @@ public class TransferSaveController {
 
 		Map<String, Object> data = new HashMap<String, Object>();
 
+		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)) {
+			writePrivilegeDenied(response, data, TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);
+			return;
+		}
+
 		try {
 			Transfer transfer = getTransferHieSubmissionService().submitTransferToHie(uuid);
 			data.put("status", "success");
@@ -72,8 +79,7 @@ public class TransferSaveController {
 			data.put("hieSentAt", formatDateTime(transfer.getHieSentAt()));
 		}
 		catch (Exception e) {
-			data.put("status", "error");
-			data.put("message", e.getMessage() != null ? e.getMessage() : "Unable to submit transfer to HIE");
+			putError(data, e, TransferAppActivator.PRIVILEGE_CREATE_TRANSFER, "Unable to submit transfer to HIE");
 		}
 
 		writeJson(response, data);
@@ -106,6 +112,11 @@ public class TransferSaveController {
 
 		Map<String, Object> data = new HashMap<String, Object>();
 
+		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)) {
+			writePrivilegeDenied(response, data, TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);
+			return;
+		}
+
 		try {
 			TransferFormExtras formExtras = buildFormExtras(clinicalPresentation, disabilityType, laboratory,
 					proceduresTreatments, otherNotes, providerQualification, signedDate, signedTime);
@@ -131,8 +142,7 @@ public class TransferSaveController {
 			data.put("uuid", transfer.getUuid());
 		}
 		catch (Exception e) {
-			data.put("status", "error");
-			data.put("message", e.getMessage() != null ? e.getMessage() : "Unable to save transfer");
+			putError(data, e, TransferAppActivator.PRIVILEGE_CREATE_TRANSFER, "Unable to save transfer");
 		}
 
 		writeJson(response, data);
@@ -143,6 +153,11 @@ public class TransferSaveController {
 			@RequestParam("uuid") String uuid) throws Exception {
 
 		Map<String, Object> data = new HashMap<String, Object>();
+
+		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_LIST_TRANSFERS)) {
+			writePrivilegeDenied(response, data, TransferAppActivator.PRIVILEGE_LIST_TRANSFERS);
+			return;
+		}
 
 		try {
 			Transfer transfer = transferService.getTransferByUuid(uuid);
@@ -155,37 +170,59 @@ public class TransferSaveController {
 			}
 		}
 		catch (Exception e) {
-			data.put("status", "error");
-			data.put("message", e.getMessage() != null ? e.getMessage() : "Unable to load transfer");
+			putError(data, e, TransferAppActivator.PRIVILEGE_LIST_TRANSFERS, "Unable to load transfer");
 		}
 
 		writeJson(response, data);
 	}
 
 	@RequestMapping(value = "/module/transferapp/transfer/verifyQr.form", method = RequestMethod.GET)
-	public void verifyQr(HttpServletResponse response, @RequestParam("uuid") String uuid) throws Exception {
-		Transfer transfer = transferService.getTransferByUuid(uuid);
-		if (transfer == null) {
-			response.sendError(HttpServletResponse.SC_NOT_FOUND);
+	public void verifyQr(HttpServletResponse response,
+			@RequestParam(value = "uuid", required = false) String uuid,
+			@RequestParam(value = "transferId", required = false) String transferId) throws Exception {
+		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_LIST_TRANSFERS)) {
+			response.sendError(HttpServletResponse.SC_FORBIDDEN,
+					TransferPrivilegeHelper.requiredPrivilegeMessage(TransferAppActivator.PRIVILEGE_LIST_TRANSFERS));
 			return;
 		}
 
-		TransferVerificationUrlService verificationUrlService = getTransferVerificationUrlService();
-		if (!verificationUrlService.shouldShowVerificationQr(transfer)) {
-			response.sendError(HttpServletResponse.SC_NOT_FOUND);
-			return;
-		}
+		try {
+			TransferVerificationUrlService verificationUrlService = getTransferVerificationUrlService();
+			String verifyUrl = null;
 
-		String verifyUrl = verificationUrlService.buildRemoteVerifyUrl(transfer);
-		if (StringUtils.isBlank(verifyUrl)) {
-			response.sendError(HttpServletResponse.SC_NOT_FOUND);
-			return;
-		}
+			if (StringUtils.isNotBlank(uuid)) {
+				Transfer transfer = transferService.getTransferByUuid(uuid.trim());
+				if (transfer != null && verificationUrlService.shouldShowVerificationQr(transfer)) {
+					verifyUrl = verificationUrlService.buildRemoteVerifyUrl(transfer);
+				}
+			}
 
-		byte[] png = getTransferQrCodeService().generatePng(verifyUrl);
-		response.setContentType("image/png");
-		response.setHeader("Cache-Control", "no-store");
-		response.getOutputStream().write(png);
+			if (StringUtils.isBlank(verifyUrl) && StringUtils.isNotBlank(transferId)) {
+				verifyUrl = verificationUrlService.buildRemoteVerifyUrlForTransferId(transferId.trim());
+			}
+
+			if (StringUtils.isBlank(verifyUrl)) {
+				response.sendError(HttpServletResponse.SC_NOT_FOUND);
+				return;
+			}
+
+			byte[] png = getTransferQrCodeService().generatePng(verifyUrl);
+			response.setContentType("image/png");
+			response.setHeader("Cache-Control", "no-store");
+			response.getOutputStream().write(png);
+		}
+		catch (Exception e) {
+			if (TransferPrivilegeHelper.isPrivilegeException(e)) {
+				response.sendError(HttpServletResponse.SC_FORBIDDEN,
+						TransferPrivilegeHelper.resolveUserFacingMessage(
+								e,
+								TransferAppActivator.PRIVILEGE_LIST_TRANSFERS,
+								TransferPrivilegeHelper.requiredPrivilegeMessage(TransferAppActivator.PRIVILEGE_LIST_TRANSFERS)));
+				return;
+			}
+			response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+					e.getMessage() != null ? e.getMessage() : "Unable to generate QR code");
+		}
 	}
 
 	private Map<String, Object> toPreviewMap(Transfer transfer) {
@@ -281,9 +318,10 @@ public class TransferSaveController {
 		boolean showVerificationQr = verificationUrlService.shouldShowVerificationQr(transfer);
 		preview.put("showVerificationQr", showVerificationQr);
 		if (showVerificationQr) {
-			preview.put("verificationTransferId", verificationUrlService.resolveVerificationTransferId(transfer));
+			String verificationTransferId = verificationUrlService.resolveVerificationTransferId(transfer);
+			preview.put("verificationTransferId", verificationTransferId);
 			preview.put("verifyRemoteUrl", verificationUrlService.buildRemoteVerifyUrl(transfer));
-			preview.put("verifyQrUrl", "/module/transferapp/transfer/verifyQr.form?uuid=" + transfer.getUuid());
+			preview.put("verifyQrUrl", verificationUrlService.buildVerifyQrFormUrl(verificationTransferId));
 		}
 		return preview;
 	}
@@ -357,6 +395,23 @@ public class TransferSaveController {
 			return "";
 		}
 		return new SimpleDateFormat("HH:mm:ss").format(date);
+	}
+
+	private void writePrivilegeDenied(HttpServletResponse response, Map<String, Object> data, String privilege)
+			throws Exception {
+		data.put("status", "error");
+		data.put("message", TransferPrivilegeHelper.requiredPrivilegeMessage(privilege));
+		data.put("requiredPrivilege", privilege);
+		response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+		writeJson(response, data);
+	}
+
+	private void putError(Map<String, Object> data, Exception exception, String requiredPrivilege, String fallback) {
+		data.put("status", "error");
+		data.put("message", TransferPrivilegeHelper.resolveUserFacingMessage(exception, requiredPrivilege, fallback));
+		if (TransferPrivilegeHelper.isPrivilegeException(exception)) {
+			data.put("requiredPrivilege", requiredPrivilege);
+		}
 	}
 
 	private void writeJson(HttpServletResponse response, Map<String, Object> data) throws Exception {

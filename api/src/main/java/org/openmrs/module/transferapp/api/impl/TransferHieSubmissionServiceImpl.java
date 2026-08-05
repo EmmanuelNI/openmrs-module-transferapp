@@ -19,6 +19,7 @@ import org.openmrs.api.APIException;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.transferapp.api.TransferAdminService;
 import org.openmrs.module.transferapp.api.TransferHieSubmissionService;
+import org.openmrs.module.transferapp.api.TransferPatientSnapshotResolver;
 import org.openmrs.module.transferapp.api.dao.TransferDao;
 import org.openmrs.module.transferapp.hie.HieApiException;
 import org.openmrs.module.transferapp.hie.HieBasicConnection;
@@ -41,6 +42,8 @@ public class TransferHieSubmissionServiceImpl implements TransferHieSubmissionSe
 	private HieShrClient hieShrClient = new HieShrClient();
 
 	private TransferEncounterPayloadBuilder payloadBuilder = new TransferEncounterPayloadBuilder();
+
+	private TransferPatientSnapshotResolver patientSnapshotResolver = new TransferPatientSnapshotResolver();
 
 	public void setTransferDao(TransferDao transferDao) {
 		this.transferDao = transferDao;
@@ -65,6 +68,7 @@ public class TransferHieSubmissionServiceImpl implements TransferHieSubmissionSe
 		}
 
 		try {
+			refreshDiagnosisFromObsIfNeeded(transfer);
 			HieBasicConnection connection = hieConnectionResolver.resolveConnection();
 			String receivingFacilityLabel = resolveReceivingFacilityLabel(transfer);
 			User currentUser = Context.getAuthenticatedUser();
@@ -89,6 +93,26 @@ public class TransferHieSubmissionServiceImpl implements TransferHieSubmissionSe
 		catch (RuntimeException ex) {
 			recordSubmissionFailure(transfer, ex.getMessage());
 			throw ex;
+		}
+	}
+
+	private void refreshDiagnosisFromObsIfNeeded(Transfer transfer) {
+		if (transfer == null || transfer.getPatient() == null) {
+			return;
+		}
+		String current = StringUtils.trimToEmpty(transfer.getDiagnosis());
+		boolean needsRefresh = StringUtils.isBlank(current)
+				|| "Primary Diagnosis".equalsIgnoreCase(current)
+				|| "Secondary Diagnosis".equalsIgnoreCase(current);
+		if (!needsRefresh) {
+			return;
+		}
+		String resolved = patientSnapshotResolver.resolveDiagnosis(transfer.getPatient());
+		if (StringUtils.isNotBlank(resolved)) {
+			transfer.setDiagnosis(resolved);
+		} else if ("Primary Diagnosis".equalsIgnoreCase(current)
+				|| "Secondary Diagnosis".equalsIgnoreCase(current)) {
+			transfer.setDiagnosis(null);
 		}
 	}
 

@@ -17,6 +17,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.transferapp.TransferAppActivator;
+import org.openmrs.module.transferapp.TransferPrivilegeHelper;
 import org.openmrs.module.transferapp.api.TransferAdminService;
 import org.openmrs.module.transferapp.api.TransferFacilityRegistryService;
 import org.openmrs.module.transferapp.model.ReceivingFacility;
@@ -49,6 +51,10 @@ public class TransferAdminController {
 	@RequestMapping(value = "/module/transferapp/admin/facilityRegistry.form", method = RequestMethod.GET)
 	public void listFacilityRegistry(HttpServletResponse response) throws Exception {
 		Map<String, Object> data = new HashMap<String, Object>();
+		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_DASHBOARD)) {
+			writePrivilegeDenied(response, data, TransferAppActivator.PRIVILEGE_DASHBOARD);
+			return;
+		}
 		try {
 			List<RegistryFacility> facilities = getTransferFacilityRegistryService().listReceivingFacilitiesFromHie();
 			data.put("status", "success");
@@ -57,7 +63,8 @@ public class TransferAdminController {
 		catch (Exception e) {
 			log.error("Unable to load facilities from HIE registry", e);
 			data.put("status", "error");
-			data.put("message", resolveErrorMessage(e, "Unable to load facilities from HIE registry"));
+			data.put("message", resolveErrorMessage(e, TransferAppActivator.PRIVILEGE_DASHBOARD,
+					"Unable to load facilities from HIE registry"));
 			data.put("facilities", new ArrayList<Map<String, Object>>());
 		}
 		writeJson(response, data);
@@ -87,7 +94,7 @@ public class TransferAdminController {
 		catch (Exception e) {
 			log.error("Unable to save receiving facility", e);
 			data.put("status", "error");
-			data.put("message", resolveErrorMessage(e, "Unable to save receiving facility"));
+			data.put("message", resolveErrorMessage(e, null, "Unable to save receiving facility"));
 		}
 		writeJson(response, data);
 	}
@@ -104,7 +111,7 @@ public class TransferAdminController {
 		catch (Exception e) {
 			log.error("Unable to remove receiving facility", e);
 			data.put("status", "error");
-			data.put("message", resolveErrorMessage(e, "Unable to remove receiving facility"));
+			data.put("message", resolveErrorMessage(e, null, "Unable to remove receiving facility"));
 		}
 		writeJson(response, data);
 	}
@@ -124,7 +131,7 @@ public class TransferAdminController {
 		catch (Exception e) {
 			log.error("Unable to save receiving service", e);
 			data.put("status", "error");
-			data.put("message", resolveErrorMessage(e, "Unable to save receiving service"));
+			data.put("message", resolveErrorMessage(e, null, "Unable to save receiving service"));
 		}
 		writeJson(response, data);
 	}
@@ -141,7 +148,7 @@ public class TransferAdminController {
 		catch (Exception e) {
 			log.error("Unable to remove receiving service", e);
 			data.put("status", "error");
-			data.put("message", resolveErrorMessage(e, "Unable to remove receiving service"));
+			data.put("message", resolveErrorMessage(e, null, "Unable to remove receiving service"));
 		}
 		writeJson(response, data);
 	}
@@ -159,7 +166,7 @@ public class TransferAdminController {
 		catch (Exception e) {
 			log.error("Unable to load receiving services", e);
 			data.put("status", "error");
-			data.put("message", resolveErrorMessage(e, "Unable to load receiving services"));
+			data.put("message", resolveErrorMessage(e, null, "Unable to load receiving services"));
 			data.put("services", new ArrayList<String>());
 		}
 		writeJson(response, data);
@@ -183,15 +190,18 @@ public class TransferAdminController {
 		return rows;
 	}
 
-	private String resolveErrorMessage(Exception exception, String fallback) {
-		Throwable current = exception;
-		while (current != null) {
-			if (current.getMessage() != null && current.getMessage().trim().length() > 0) {
-				return current.getMessage();
-			}
-			current = current.getCause();
-		}
-		return fallback;
+	private String resolveErrorMessage(Exception exception, String requiredPrivilege, String fallback) {
+		return TransferPrivilegeHelper.resolveUserFacingMessage(exception, requiredPrivilege, fallback);
+	}
+
+	private void writePrivilegeDenied(HttpServletResponse response, Map<String, Object> data, String privilege)
+			throws Exception {
+		data.put("status", "error");
+		data.put("message", TransferPrivilegeHelper.requiredPrivilegeMessage(privilege));
+		data.put("requiredPrivilege", privilege);
+		data.put("facilities", new ArrayList<Map<String, Object>>());
+		response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+		writeJson(response, data);
 	}
 
 	private void writeJson(HttpServletResponse response, Map<String, Object> data) throws Exception {

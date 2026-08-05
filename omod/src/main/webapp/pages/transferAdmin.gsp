@@ -15,6 +15,12 @@
 <div class="transfer-admin">
 ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "admin", app: "transferapp.dashboard" ]) }
 
+<% if (!canAccessAdmin) { %>
+<div class="transfer-admin-empty" style="margin-top: 16px; padding: 12px; background: #fff8e6; border: 1px solid #f0d78c;">
+    ${ ui.encodeHtmlContent(adminAccessDeniedMessage) }
+</div>
+<% } else { %>
+
 <p class="transfer-admin-intro">${ ui.message("transferapp.admin.description") }</p>
 
 <div class="transfer-admin-location">
@@ -176,6 +182,7 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "admin
     <% } %>
 </div>
 
+<% } %>
 <% } %>
 </div>
 

@@ -16,8 +16,11 @@ package org.openmrs.module.transferapp.rest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.transferapp.TransferAppActivator;
+import org.openmrs.module.transferapp.TransferPrivilegeHelper;
 import org.openmrs.module.transferapp.api.TransferHieReceiveService;
 import org.openmrs.module.transferapp.api.TransferHieSearchService;
+import org.openmrs.module.transferapp.api.TransferRegistrationObsService;
 import org.openmrs.module.transferapp.model.Transfer;
 import org.openmrs.module.webservices.rest.SimpleObject;
 import org.openmrs.module.webservices.rest.web.response.IllegalRequestException;
@@ -53,6 +56,16 @@ public class TransferRestController {
 					"UPID parameter is required. Usage: /rest/v1/transferapp/transfer?upid=<patient-upid>[&activeOnly=true]");
 		}
 
+		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_LIST_TRANSFERS)) {
+			SimpleObject denied = new SimpleObject();
+			denied.put("status", "error");
+			denied.put("message", TransferPrivilegeHelper.requiredPrivilegeMessage(
+					TransferAppActivator.PRIVILEGE_LIST_TRANSFERS));
+			denied.put("requiredPrivilege", TransferAppActivator.PRIVILEGE_LIST_TRANSFERS);
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return denied;
+		}
+
 		upid = upid.trim();
 		String transferId = request.getParameter("transferId");
 		if (transferId != null) {
@@ -70,13 +83,32 @@ public class TransferRestController {
 
 		log.info("Transfer REST API endpoint called for UPID: " + upid + ", activeOnly: " + activeOnly);
 
-		Map<String, Object> searchResult = getTransferHieSearchService().searchTransfers(upid, transferId, activeOnly);
-		return toSimpleObject(searchResult);
+		try {
+			Map<String, Object> searchResult = getTransferHieSearchService().searchTransfers(upid, transferId, activeOnly);
+			return toSimpleObject(searchResult);
+		}
+		catch (Exception ex) {
+			log.error("Unable to search transfers from HIE", ex);
+			SimpleObject error = new SimpleObject();
+			error.put("status", "error");
+			error.put("message", TransferPrivilegeHelper.resolveUserFacingMessage(
+					ex,
+					TransferAppActivator.PRIVILEGE_LIST_TRANSFERS,
+					"Unable to search transfers"));
+			if (TransferPrivilegeHelper.isPrivilegeException(ex)) {
+				error.put("requiredPrivilege", TransferAppActivator.PRIVILEGE_LIST_TRANSFERS);
+				response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			} else {
+				response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			}
+			return error;
+		}
 	}
 
 	@RequestMapping(value = "/rest/v1/transferapp/transfer/receive", method = RequestMethod.POST)
 	@ResponseBody
-	public Object receiveTransfer(@RequestParam("patientId") Integer patientId,
+	public Object receiveTransfer(HttpServletResponse response,
+			@RequestParam("patientId") Integer patientId,
 			@RequestParam("hieTransferId") String hieTransferId) throws ResponseException {
 
 		if (patientId == null) {
@@ -87,6 +119,15 @@ public class TransferRestController {
 		}
 
 		SimpleObject result = new SimpleObject();
+		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)) {
+			result.put("status", "error");
+			result.put("message", TransferPrivilegeHelper.requiredPrivilegeMessage(
+					TransferAppActivator.PRIVILEGE_CREATE_TRANSFER));
+			result.put("requiredPrivilege", TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return result;
+		}
+
 		try {
 			Transfer transfer = getTransferHieReceiveService().receiveTransferFromHie(patientId, hieTransferId.trim());
 			result.put("status", "success");
@@ -98,7 +139,57 @@ public class TransferRestController {
 		catch (Exception ex) {
 			log.error("Unable to store received transfer from HIE", ex);
 			result.put("status", "error");
-			result.put("message", ex.getMessage() != null ? ex.getMessage() : "Unable to store received transfer");
+			result.put("message", TransferPrivilegeHelper.resolveUserFacingMessage(
+					ex,
+					TransferAppActivator.PRIVILEGE_CREATE_TRANSFER,
+					"Unable to store received transfer"));
+			if (TransferPrivilegeHelper.isPrivilegeException(ex)) {
+				result.put("requiredPrivilege", TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);
+				response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			}
+		}
+		return result;
+	}
+
+	@RequestMapping(value = "/rest/v1/transferapp/transfer/validate", method = RequestMethod.POST)
+	@ResponseBody
+	public Object validateTransfer(HttpServletResponse response,
+			@RequestParam("patientId") Integer patientId,
+			@RequestParam("hieTransferId") String hieTransferId) throws ResponseException {
+
+		if (patientId == null) {
+			throw new IllegalRequestException("patientId parameter is required");
+		}
+		if (hieTransferId == null || hieTransferId.trim().isEmpty()) {
+			throw new IllegalRequestException("hieTransferId parameter is required");
+		}
+
+		SimpleObject result = new SimpleObject();
+		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)) {
+			result.put("status", "error");
+			result.put("message", TransferPrivilegeHelper.requiredPrivilegeMessage(
+					TransferAppActivator.PRIVILEGE_CREATE_TRANSFER));
+			result.put("requiredPrivilege", TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return result;
+		}
+
+		try {
+			Map<String, Object> serviceResult = getTransferRegistrationObsService()
+					.validateAndSaveTransferId(patientId, hieTransferId.trim());
+			return toSimpleObject(serviceResult);
+		}
+		catch (Exception ex) {
+			log.error("Unable to validate and record HIE transfer on registration", ex);
+			result.put("status", "error");
+			result.put("message", TransferPrivilegeHelper.resolveUserFacingMessage(
+					ex,
+					TransferAppActivator.PRIVILEGE_CREATE_TRANSFER,
+					"Unable to validate transfer"));
+			if (TransferPrivilegeHelper.isPrivilegeException(ex)) {
+				result.put("requiredPrivilege", TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);
+				response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			}
 		}
 		return result;
 	}
@@ -109,6 +200,10 @@ public class TransferRestController {
 
 	private TransferHieReceiveService getTransferHieReceiveService() {
 		return Context.getService(TransferHieReceiveService.class);
+	}
+
+	private TransferRegistrationObsService getTransferRegistrationObsService() {
+		return Context.getService(TransferRegistrationObsService.class);
 	}
 
 	@SuppressWarnings("unchecked")

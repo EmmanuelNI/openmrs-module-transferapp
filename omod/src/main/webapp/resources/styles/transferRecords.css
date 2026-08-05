@@ -5,10 +5,79 @@
 }
 
 .transfer-records-title {
-  margin: 0 0 8px;
+  margin: 0 0 16px;
   font-size: 22px;
   font-weight: 600;
   color: #00473f;
+}
+
+.transfer-records-filters {
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  background: #f4faf9;
+  border: 1px solid #c7e7e2;
+  border-radius: 6px;
+}
+
+.transfer-records-filters-grid {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) minmax(220px, 2fr) auto;
+  gap: 14px 16px;
+  align-items: end;
+}
+
+.transfer-records-filter-field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f766e;
+}
+
+.transfer-records-date-input,
+.transfer-records-destination-select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  border: 1px solid #c7e7e2;
+  border-radius: 4px;
+  font-size: 13px;
+  background: #fff;
+}
+
+.transfer-records-filter-actions {
+  display: flex;
+  align-items: flex-end;
+}
+
+.transfer-records-filter-actions .confirm {
+  white-space: nowrap;
+  padding: 8px 16px;
+}
+
+.transfer-records-patient-filter {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  background: #eef8f6;
+  border: 1px solid #c7e7e2;
+  border-radius: 4px;
+  color: #0f766e;
+}
+
+.transfer-records-patient-filter a {
+  margin-left: 12px;
+  color: #2a7ae2;
+}
+
+@media (max-width: 900px) {
+  .transfer-records-filters-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .transfer-records-filter-field-destination,
+  .transfer-records-filter-actions {
+    grid-column: 1 / -1;
+  }
 }
 
 .transfer-records-intro {
@@ -43,12 +112,86 @@
   margin: 10px 0;
 }
 
+#transfer-records-table_wrapper .dataTables_length,
+#transfer-records-table_wrapper .dataTables_filter {
+  float: none;
+  width: auto;
+}
+
+#transfer-records-table_wrapper .dataTables_info {
+  float: left;
+  width: auto;
+  padding-top: 2px;
+}
+
+#transfer-records-table_wrapper .dataTables_paginate {
+  float: right;
+  width: auto !important;
+  clear: none;
+  white-space: nowrap;
+}
+
+#transfer-records-table_wrapper .paging_two_button,
+#transfer-records-table_wrapper .paging_full_numbers {
+  width: auto !important;
+}
+
+#transfer-records-table_wrapper .dataTables_paginate .paginate_button,
+#transfer-records-table_wrapper .dataTables_paginate .paginate_active,
+#transfer-records-table_wrapper .dataTables_paginate .paginate_enabled,
+#transfer-records-table_wrapper .dataTables_paginate .paginate_disabled,
+#transfer-records-table_wrapper .dataTables_paginate .fg-button {
+  display: inline-block !important;
+  float: none !important;
+  position: static !important;
+  box-sizing: border-box;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0;
+  margin: 0 3px;
+  padding: 4px 10px;
+  line-height: 1.4;
+  vertical-align: middle;
+  cursor: pointer;
+  border: 1px solid #c7e7e2;
+  border-radius: 4px;
+  background: #fff;
+  color: #0f766e;
+  text-decoration: none !important;
+}
+
+#transfer-records-table_wrapper .dataTables_paginate .paginate_button.current,
+#transfer-records-table_wrapper .dataTables_paginate .paginate_active {
+  background: #0f766e;
+  color: #fff !important;
+  border-color: #0a5c52;
+  font-weight: 600;
+}
+
+#transfer-records-table_wrapper .dataTables_paginate .paginate_button.disabled,
+#transfer-records-table_wrapper .dataTables_paginate .paginate_disabled,
+#transfer-records-table_wrapper .dataTables_paginate .paginate_button.paginate_button_disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#transfer-records-table_wrapper .fg-buttonset {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+#transfer-records-table_wrapper::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
 #transfer-preview-dialog.transfer-preview-dialog.dialog {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 10001;
+  z-index: 20001;
   background: white;
   border: 1px solid #00473f;
   border-radius: 4px;
@@ -59,6 +202,10 @@
   display: flex;
   flex-direction: column;
   margin: 0;
+}
+
+#transfer-preview-overlay {
+  z-index: 20000 !important;
 }
 
 #transfer-preview-dialog .dialog-header {

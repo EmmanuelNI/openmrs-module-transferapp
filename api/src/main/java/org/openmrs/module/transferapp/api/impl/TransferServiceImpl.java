@@ -172,6 +172,7 @@ public class TransferServiceImpl implements TransferService {
 		transfer.setDateCreated(now);
 		transfer.setVoided(false);
 		transfer.setHieSent(false);
+		transfer.setReceivedFromHie(false);
 		applyFormExtras(transfer, formExtras);
 
 		Transfer savedTransfer = transferDao.saveTransfer(transfer);
@@ -188,7 +189,10 @@ public class TransferServiceImpl implements TransferService {
 
 	private void applyFormExtras(Transfer transfer, TransferFormExtras formExtras) {
 		if (formExtras != null) {
-			transfer.setClinicalPresentation(StringUtils.trimToNull(formExtras.getClinicalPresentation()));
+			// Keep obs-resolved clinical presentation unless the form explicitly provides one.
+			if (StringUtils.isNotBlank(formExtras.getClinicalPresentation())) {
+				transfer.setClinicalPresentation(StringUtils.trimToNull(formExtras.getClinicalPresentation()));
+			}
 			transfer.setDisabilityType(StringUtils.trimToNull(formExtras.getDisabilityType()));
 			transfer.setLaboratory(StringUtils.trimToNull(formExtras.getLaboratory()));
 			transfer.setProceduresTreatments(StringUtils.trimToNull(formExtras.getProceduresTreatments()));

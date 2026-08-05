@@ -30,6 +30,8 @@ public class TransferAppActivator extends BaseModuleActivator {
 
 	public static final String PRIVILEGE_CREATE_TRANSFER = "Task: transferapp.createTransfer";
 
+	public static final String PRIVILEGE_LIST_PENDING = "Task: transferapp.listpending";
+
 	private static final String[] DEFAULT_PRIVILEGE_ROLES = new String[] { "System Developer", "System Administrator" };
 
 	@Override
@@ -43,7 +45,8 @@ public class TransferAppActivator extends BaseModuleActivator {
 		for (String privilegeName : new String[] {
 				PRIVILEGE_DASHBOARD,
 				PRIVILEGE_LIST_TRANSFERS,
-				PRIVILEGE_CREATE_TRANSFER }) {
+				PRIVILEGE_CREATE_TRANSFER,
+				PRIVILEGE_LIST_PENDING }) {
 			grantPrivilegeToRoles(userService, privilegeName, DEFAULT_PRIVILEGE_ROLES);
 		}
 	}

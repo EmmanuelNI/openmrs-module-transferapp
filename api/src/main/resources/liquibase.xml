@@ -552,4 +552,18 @@
         </insert>
     </changeSet>
 
+    <changeSet id="transferapp-20250705-received-from-hie-nullable-default" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfers"/>
+                <columnExists tableName="transfers" columnName="received_from_hie"/>
+            </and>
+        </preConditions>
+        <comment>Allow received_from_hie to be nullable with default false so outbound transfers can be created</comment>
+        <sql>
+            UPDATE transfers SET received_from_hie = 0 WHERE received_from_hie IS NULL;
+            ALTER TABLE transfers MODIFY COLUMN received_from_hie TINYINT(1) NULL DEFAULT 0;
+        </sql>
+    </changeSet>
+
 </databaseChangeLog>
