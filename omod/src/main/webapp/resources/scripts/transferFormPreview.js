@@ -25,6 +25,39 @@
 		return value === true || value === "true";
 	}
 
+	function firstNonBlank() {
+		for (var i = 0; i < arguments.length; i++) {
+			var value = arguments[i];
+			if (value !== null && value !== undefined && String(value).trim() !== "") {
+				return String(value).trim();
+			}
+		}
+		return "";
+	}
+
+	function resolveFlag(value, fallback) {
+		if (value === null || value === undefined || value === "") {
+			return !!fallback;
+		}
+		return truthy(value);
+	}
+
+	function normalizeTransportType(normalized) {
+		return String(normalized.transportationType || normalized.transportType || "").trim().toUpperCase();
+	}
+
+	function resolveOtherTransportSpec(normalized, transportType) {
+		var other = firstNonBlank(normalized.transportationOtherSpec, normalized.otherTransportType);
+		if (!other) {
+			return "";
+		}
+		var upper = other.toUpperCase();
+		if (upper === "NA" || upper === "N/A" || upper === "AMBULANCE" || transportType === "NA" || transportType === "AMBULANCE") {
+			return firstNonBlank(normalized.transportationOtherSpec);
+		}
+		return other;
+	}
+
 	function isValidVerificationUuid(value) {
 		if (value === null || value === undefined) {
 			return false;
@@ -61,7 +94,8 @@
 
 	function normalizeTransferPreviewItem(item) {
 		var normalized = item || {};
-		var transferType = normalized.transferType || "";
+		var transferType = String(normalized.transferType || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+		var transportType = normalizeTransportType(normalized);
 		var verificationTransferId = resolveVerificationTransferId(normalized);
 		var showVerificationQr = truthy(normalized.showVerificationQr);
 		if (!showVerificationQr && isValidVerificationUuid(verificationTransferId)) {
@@ -81,33 +115,41 @@
 			province: normalized.province,
 			district: normalized.district || normalized.clientDistrict,
 			hospitalName: normalized.hospitalName || normalized.sendingFacility,
-			referringFacilityName: normalized.referringFacilityName || normalized.sendingFacility,
-			referringUnit: normalized.referringUnit,
+			referringFacilityName: normalized.referringFacilityName || normalized.sendingFacility || normalized.origin,
+			referringUnit: normalized.referringUnit || normalized.admitSource,
 			receivingClinicianPhone: normalized.receivingClinicianPhone || normalized.staffContactedPhone,
 			clientName: normalized.clientName,
-			serialNumberEmr: normalized.serialNumberEmr || normalized.emrId,
-			clientTelephone: normalized.clientTelephone,
+			serialNumberEmr: firstNonBlank(
+				normalized.serialNumberEmr,
+				normalized.serialNumberOrEmrId,
+				normalized.emrId,
+				normalized.upid,
+				normalized.subject
+			),
+			clientTelephone: firstNonBlank(normalized.clientTelephone, normalized.telephone),
 			ageOrDob: normalized.ageOrDob || normalized.ageDob,
 			sex: normalized.sex,
 			caregiverName: normalized.caregiverName,
-			caregiverTelephone: normalized.caregiverTelephone,
-			clientDistrict: normalized.clientDistrict || normalized.district,
+			caregiverTelephone: firstNonBlank(normalized.caregiverTelephone, normalized.telephone),
+			clientDistrict: firstNonBlank(normalized.clientDistrict, normalized.patientDistrict),
 			sector: normalized.sector || normalized.patientSector,
 			cell: normalized.cell || normalized.patientCell,
 			village: normalized.village || normalized.patientVillage,
 			admissionAt: normalized.admissionAt || normalized.admissionDatetime,
 			decisionToTransferAt: normalized.decisionToTransferAt || normalized.transferDecisionDatetime,
-			receivingFacility: normalized.receivingFacility,
+			receivingFacility: normalized.receivingFacility || normalized.destination || normalized.hospitalName,
 			receivingService: normalized.receivingService,
 			callingTime: normalized.callingTime,
 			staffContactedName: normalized.staffContactedName || normalized.staffContactedAtReceivingFacility,
 			staffContactedPhone: normalized.staffContactedPhone || normalized.staffContactPhone,
-			isEmergency: normalized.isEmergency != null ? truthy(normalized.isEmergency) : transferType === "EMERGENCY",
-			isNonEmergency: normalized.isNonEmergency != null ? truthy(normalized.isNonEmergency) : transferType === "NOT_EMERGENCY",
-			isFollowUp: normalized.isFollowUp != null ? truthy(normalized.isFollowUp) : transferType === "FOLLOW_UP",
+			isEmergency: resolveFlag(normalized.isEmergency, transferType === "EMERGENCY"),
+			isNonEmergency: resolveFlag(normalized.isNonEmergency,
+				transferType === "NOT_EMERGENCY" || transferType === "NON_EMERGENCY"),
+			isFollowUp: resolveFlag(normalized.isFollowUp, transferType === "FOLLOW_UP" || transferType === "FOLLOWUP"),
 			ambulanceCalledTime: normalized.ambulanceCalledTime,
 			departureFromReferringTime: normalized.departureFromReferringTime || normalized.departureTime,
 			reasonForTransfer: normalized.reasonForTransfer,
+			significantFindings: normalized.significantFindings,
 			clinicalPresentation: normalized.clinicalPresentation,
 			disabilityType: normalized.disabilityType,
 			vitalTemp: normalized.vitalTemp || normalized.temperature,
@@ -122,14 +164,15 @@
 			othersNotes: normalized.othersNotes || normalized.others,
 			diagnosis: normalized.diagnosis,
 			proceduresAndTreatments: normalized.proceduresAndTreatments,
-			isAmbulanceTransport: normalized.isAmbulanceTransport != null ? truthy(normalized.isAmbulanceTransport) : normalized.transportationType === "AMBULANCE",
-			transportationOtherSpec: normalized.transportationOtherSpec || normalized.otherTransportType,
-			isNaTransport: normalized.isNaTransport != null ? truthy(normalized.isNaTransport) : normalized.transportationType === "NA",
-			isCbhiInsurance: normalized.isCbhiInsurance != null ? truthy(normalized.isCbhiInsurance) : normalized.healthInsuranceType === "CBHI",
-			isRssbInsurance: normalized.isRssbInsurance != null ? truthy(normalized.isRssbInsurance) : normalized.healthInsuranceType === "RSSB",
-			isMmiInsurance: normalized.isMmiInsurance != null ? truthy(normalized.isMmiInsurance) : normalized.healthInsuranceType === "MMI",
+			isAmbulanceTransport: resolveFlag(normalized.isAmbulanceTransport,
+				transportType === "AMBULANCE" || transportType.indexOf("AMBULANCE") >= 0),
+			transportationOtherSpec: resolveOtherTransportSpec(normalized, transportType),
+			isNaTransport: resolveFlag(normalized.isNaTransport, transportType === "NA" || transportType === "N/A"),
+			isCbhiInsurance: resolveFlag(normalized.isCbhiInsurance, normalized.healthInsuranceType === "CBHI"),
+			isRssbInsurance: resolveFlag(normalized.isRssbInsurance, normalized.healthInsuranceType === "RSSB"),
+			isMmiInsurance: resolveFlag(normalized.isMmiInsurance, normalized.healthInsuranceType === "MMI"),
 			otherInsurance: normalized.otherInsurance || normalized.healthInsuranceOtherSpec,
-			isNoInsurance: normalized.isNoInsurance != null ? truthy(normalized.isNoInsurance) : normalized.healthInsuranceType === "NONE",
+			isNoInsurance: resolveFlag(normalized.isNoInsurance, normalized.healthInsuranceType === "NONE"),
 			referringProviderName: normalized.referringProviderName,
 			referringProviderQualification: normalized.referringProviderQualification,
 			referringSignedDate: normalized.referringSignedDate || normalized.formDate,
@@ -226,7 +269,7 @@
 			+ " <strong>Telephone:</strong> " + line(p.clientTelephone, 180) + "</div>"
 			+ "<div class='tf-row'><strong>Age(DOB):</strong> " + line(p.ageOrDob, 150)
 			+ " <strong>Sex:</strong> " + line(p.sex, 90)
-			+ " <strong>Name of caregiver:</strong> " + line(p.referringProviderName, 270)
+			+ " <strong>Name of caregiver:</strong> " + line(p.caregiverName, 270)
 			+ " <strong>Caregiver telephone:</strong> " + line(p.caregiverTelephone, 180) + "</div>"
 			+ "<div class='tf-row'><strong>District:</strong> " + line(p.clientDistrict, 200)
 			+ " <strong>Sector:</strong> " + line(p.sector, 170)
@@ -249,6 +292,7 @@
 			+ "<div class='tf-row'><strong>Reason for Transfer:</strong> " + line(p.reasonForTransfer, 830) + "</div>"
 
 			+ "<div class='tf-section-title'>Significant Findings:</div>"
+			+ (p.significantFindings ? "<div class='tf-row'>" + line(p.significantFindings, 900) + "</div>" : "")
 			+ "<div class='tf-row'><strong>Clinical Presentation:</strong> " + line(p.clinicalPresentation, 780) + "</div>"
 			+ "<div class='tf-lines-block'></div><div class='tf-lines-block'></div><div class='tf-lines-block'></div>"
 			+ "<div class='tf-row'><strong>If person with disability, record the type of disability:</strong> " + line(p.disabilityType, 470) + "</div>"
