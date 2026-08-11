@@ -92,6 +92,7 @@
             var startInput = document.getElementById("records-filter-start-date");
             var endInput = document.getElementById("records-filter-end-date");
             var destinationSelect = jq("#records-filter-destination");
+            var formTypeSelect = jq("#records-filter-form-type");
             var filterForm = jq("#transfer-records-filter-form");
 
             if (!filterForm.length) {
@@ -131,6 +132,17 @@
                 });
             }
 
+            if (formTypeSelect.length) {
+                formTypeSelect.on("change", function() {
+                    if (!validateDateRange(
+                            jq("#records-filter-start-date").val(),
+                            jq("#records-filter-end-date").val())) {
+                        return;
+                    }
+                    filterForm.trigger("submit");
+                });
+            }
+
             filterForm.on("submit", function(e) {
                 if (!validateDateRange(
                         jq("#records-filter-start-date").val(),
@@ -151,7 +163,7 @@
                 "sPaginationType": "full_numbers",
                 "aaSorting": [[0, "desc"]],
                 "aoColumnDefs": [
-                    { "bSortable": false, "aTargets": [6] }
+                    { "bSortable": false, "aTargets": [7] }
                 ]
             });
         }
@@ -166,12 +178,18 @@
         var transferPreviewScriptsLoading = null;
         var currentPreviewTransferUuid = null;
         var currentPreviewTransferSent = false;
+        var currentPreviewFormType = "External";
 
         function syncTransferPreviewSubmitButton() {
             var submitBtn = jq("#transfer-preview-submit");
             if (!submitBtn.length) {
                 return;
             }
+            if (currentPreviewFormType === "Maternity" || currentPreviewFormType === "Neonatal") {
+                submitBtn.hide();
+                return;
+            }
+            submitBtn.show();
             if (currentPreviewTransferSent) {
                 submitBtn.prop("disabled", true).text("Sent to HIE");
             } else {
@@ -205,11 +223,21 @@
         }
 
         function renderTransferPreview(transfer) {
-            var previewHtml = typeof buildTransferFormPreviewHtml === "function"
-                ? buildTransferFormPreviewHtml(transfer)
-                : "<p style='color:red;'>Preview renderer not loaded.</p>";
+            var formType = (transfer && transfer.formType) || "External";
+            currentPreviewFormType = (formType === "Maternity" || formType === "Neonatal") ? formType : "External";
+            var previewHtml;
+            if (currentPreviewFormType === "Maternity" && typeof buildMaternityTransferFormPreviewHtml === "function") {
+                previewHtml = buildMaternityTransferFormPreviewHtml(transfer);
+            } else if (currentPreviewFormType === "Neonatal" && typeof buildNeonatalTransferFormPreviewHtml === "function") {
+                previewHtml = buildNeonatalTransferFormPreviewHtml(transfer);
+            } else if (currentPreviewFormType === "External" && typeof buildTransferFormPreviewHtml === "function") {
+                previewHtml = buildTransferFormPreviewHtml(transfer);
+            } else {
+                previewHtml = "<p style='color:red;'>Preview renderer not loaded.</p>";
+            }
             jq("#transfer-preview-body").html(previewHtml);
-            currentPreviewTransferSent = !!(transfer && (transfer.hieSent === true || transfer.hieSent === "true"));
+            currentPreviewTransferSent = currentPreviewFormType === "External"
+                && !!(transfer && (transfer.hieSent === true || transfer.hieSent === "true"));
             syncTransferPreviewSubmitButton();
         }
 
@@ -250,7 +278,7 @@
             jq("#transfer-preview-overlay").hide();
         }
 
-        function showTransferPreview(transferUuid) {
+        function showTransferPreview(transferUuid, formType) {
             if (!transferUuid) {
                 if (typeof emr !== "undefined" && typeof emr.errorMessage === "function") {
                     emr.errorMessage("Transfer id is missing.");
@@ -260,13 +288,14 @@
             jq("#transfer-preview-body").html("<div style='padding:10px;'><i class='icon-spinner icon-spin'></i> Loading...</div>");
             currentPreviewTransferUuid = transferUuid;
             currentPreviewTransferSent = false;
+            currentPreviewFormType = (formType === "Maternity" || formType === "Neonatal") ? formType : "External";
             syncTransferPreviewSubmitButton();
             showTransferPreviewDialog();
 
             jq.ajax({
                 url: transferPreviewUrl,
                 type: "GET",
-                data: { uuid: transferUuid },
+                data: { uuid: transferUuid, formType: currentPreviewFormType },
                 dataType: "json"
             }).done(function(response) {
                 if (response && response.status === "success" && response.transfer) {
@@ -290,11 +319,13 @@
             e.preventDefault();
             e.stopPropagation();
             var link = jq(this);
+            var $row = link.closest("tr.transfer-row");
             var transferUuid = link.attr("data-uuid")
                 || link.attr("data-transfer-id")
-                || link.closest("tr.transfer-row").attr("data-uuid")
-                || link.closest("tr.transfer-row").attr("data-transfer-id");
-            showTransferPreview(transferUuid);
+                || $row.attr("data-uuid")
+                || $row.attr("data-transfer-id");
+            var formType = link.attr("data-form-type") || $row.attr("data-form-type") || "External";
+            showTransferPreview(transferUuid, formType);
         });
 
         jq(document).on("click", "#transfer-preview-close, #transfer-preview-overlay", function(e) {
