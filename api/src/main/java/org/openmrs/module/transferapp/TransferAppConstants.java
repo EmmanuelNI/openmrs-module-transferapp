@@ -131,6 +131,9 @@ public final class TransferAppConstants {
 
 	public static final String DEFAULT_SENDING_FOSA_ID = "0074";
 
+	/** Display name of this facility used for HIE targetOrg / outbound sendingFacility matching. */
+	public static final String GP_SENDING_FACILITY_NAME = "transferapp.sendingFacilityName";
+
 	public static final String HIE_TRANSFER_ENCOUNTER_PATH = "/shr/Encounter/transfer";
 
 	public static final String HIE_LIST_TRANSFERS_PATH = "/shr/Encounter/$list-transfers";

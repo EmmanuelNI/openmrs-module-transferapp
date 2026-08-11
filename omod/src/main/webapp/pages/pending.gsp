@@ -1,14 +1,14 @@
 <%
     ui.decorateWith("appui", "standardEmrPage")
     ui.includeCss("transferapp", "dashboard.css")
-    ui.includeCss("transferapp", "styles/transferSection.css")
-    ui.includeCss("transferapp", "styles/transferRecords.css")
-    ui.includeCss("transferapp", "styles/transferFormPreview.css")
-    ui.includeCss("uicommons", "styles/datatables/dataTables.jqueryui.css")
-    ui.includeJavascript("uicommons", "scripts/datatables/jquery.dataTables.min.js")
-    ui.includeJavascript("transferapp", "scripts/transferMohLogo.js")
-    ui.includeJavascript("transferapp", "scripts/transferFormPreview.js")
-    ui.includeJavascript("transferapp", "scripts/transferPending.js")
+    ui.includeCss("transferapp", "transferSection.css")
+    ui.includeCss("transferapp", "transferRecords.css")
+    ui.includeCss("transferapp", "transferFormPreview.css")
+    ui.includeCss("uicommons", "datatables/dataTables_jui.css")
+    ui.includeJavascript("uicommons", "datatables/jquery.dataTables.min.js")
+    ui.includeJavascript("transferapp", "transferMohLogo.js")
+    ui.includeJavascript("transferapp", "transferFormPreview.js")
+    ui.includeJavascript("transferapp", "transferPending.js")
 %>
 <script type="text/javascript">
     var breadcrumbs = [

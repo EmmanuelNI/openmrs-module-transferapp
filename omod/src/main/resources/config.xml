@@ -180,6 +180,12 @@
 		<description>4-digit FOSAID of the sending facility used as Encounter.hospitalization.origin.identifier.value when submitting transfers to HIE</description>
 	</globalProperty>
 
+	<globalProperty>
+		<property>transferapp.sendingFacilityName</property>
+		<defaultValue></defaultValue>
+		<description>Facility display name used for HIE pending-transfer targetOrg and outbound sendingFacility matching. When blank, falls back to the session location parent name (or the location name)</description>
+	</globalProperty>
+
 	<privilege>
 		<name>App: transferapp.dashboard</name>
 		<description>Able to access the transfer dashboard</description>
