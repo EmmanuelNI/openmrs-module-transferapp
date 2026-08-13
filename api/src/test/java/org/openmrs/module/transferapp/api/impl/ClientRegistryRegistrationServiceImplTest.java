@@ -24,6 +24,8 @@ import org.openmrs.PersonAttributeType;
 import org.openmrs.PersonName;
 import org.openmrs.api.LocationService;
 import org.openmrs.api.PatientService;
+import org.openmrs.module.addresshierarchy.AddressHierarchyEntry;
+import org.openmrs.module.addresshierarchy.service.AddressHierarchyService;
 import org.openmrs.module.rwandaemr.RwandaEmrConfig;
 import org.openmrs.module.rwandaemr.integration.ClientRegistryPatient;
 import org.openmrs.module.rwandaemr.integration.ClientRegistryPatientProvider;
@@ -176,6 +178,89 @@ public class ClientRegistryRegistrationServiceImplTest {
 	}
 
 	@Test
+	public void findRegistrationFieldsByUpidRejectsIncompleteAddressBeforePreview() {
+		PatientIdentifierType upidType = identifierType("upid");
+		PatientIdentifierType nationalIdType = identifierType("national-id");
+		ClientRegistryPatient registryPatient = new ClientRegistryPatient(new org.hl7.fhir.r4.model.Patient());
+		ClientRegistryPatientProvider provider = mock(ClientRegistryPatientProvider.class);
+		when(provider.fetchPatientFromClientRegistry("UPI-123", IntegrationConfig.IDENTIFIER_SYSTEM_UPI))
+				.thenReturn(registryPatient);
+
+		Patient translatedPatient = new Patient();
+		PersonAddress incompleteAddress = rwandaAddress();
+		incompleteAddress.setAddress1(null);
+		translatedPatient.addAddress(incompleteAddress);
+		ClientRegistryPatientTranslator translator = mock(ClientRegistryPatientTranslator.class);
+		when(translator.toPatient(registryPatient)).thenReturn(translatedPatient);
+		ClientRegistryRegistrationServiceImpl service = registrationService(
+				upidType, nationalIdType, mock(PatientService.class), provider, translator,
+				mock(RegistrationCoreService.class));
+		service.setAddressHierarchyService(mock(AddressHierarchyService.class));
+
+		try {
+			service.findRegistrationFieldsByUpid("UPI-123");
+			fail("Expected an incomplete address to prevent the registration preview");
+		}
+		catch (org.openmrs.api.APIException ex) {
+			assertEquals(ClientRegistryRegistrationServiceImpl.INVALID_ADDRESS_MESSAGE, ex.getMessage());
+		}
+	}
+
+	@Test
+	public void registerPatientByUpidRejectsAddressOutsideConfiguredHierarchy() {
+		PatientIdentifierType upidType = identifierType("upid");
+		PatientIdentifierType nationalIdType = identifierType("national-id");
+		PatientService patientService = mock(PatientService.class);
+		when(patientService.getPatients(null, "UPI-123", Collections.singletonList(upidType), true))
+				.thenReturn(Collections.<Patient>emptyList());
+
+		ClientRegistryPatient registryPatient = new ClientRegistryPatient(new org.hl7.fhir.r4.model.Patient());
+		ClientRegistryPatientProvider provider = mock(ClientRegistryPatientProvider.class);
+		when(provider.fetchPatientFromClientRegistry("UPI-123", IntegrationConfig.IDENTIFIER_SYSTEM_UPI))
+				.thenReturn(registryPatient);
+		Patient translatedPatient = new Patient();
+		translatedPatient.addAddress(rwandaAddress());
+		ClientRegistryPatientTranslator translator = mock(ClientRegistryPatientTranslator.class);
+		when(translator.toPatient(registryPatient)).thenReturn(translatedPatient);
+		RegistrationCoreService registrationCoreService = mock(RegistrationCoreService.class);
+		ClientRegistryRegistrationServiceImpl service = registrationService(
+				upidType, nationalIdType, patientService, provider, translator, registrationCoreService);
+		service.setAddressHierarchyService(addressHierarchy(false));
+
+		try {
+			service.registerPatientByUpid("UPI-123", new Location());
+			fail("Expected an address outside the configured hierarchy to prevent patient registration");
+		}
+		catch (org.openmrs.api.APIException ex) {
+			assertEquals(ClientRegistryRegistrationServiceImpl.INVALID_ADDRESS_MESSAGE, ex.getMessage());
+		}
+		verify(registrationCoreService, never()).registerPatient(eq(translatedPatient), anyList(),
+				org.mockito.ArgumentMatchers.any(Location.class));
+	}
+
+	@Test
+	public void validateAddressAllowsEmptyAddressAndAcceptsCompleteConfiguredHierarchy() {
+		ClientRegistryRegistrationServiceImpl service = new ClientRegistryRegistrationServiceImpl();
+		service.setAddressHierarchyService(addressHierarchy(true));
+
+		Patient patientWithoutAddress = new Patient();
+		service.validateAddress(patientWithoutAddress);
+
+		Patient patientWithBlankAddress = new Patient();
+		PersonAddress blankAddress = new PersonAddress();
+		blankAddress.setCountry("   ");
+		patientWithBlankAddress.addAddress(blankAddress);
+		service.validateAddress(patientWithBlankAddress);
+		assertNull(patientWithBlankAddress.getPersonAddress());
+
+		Patient patientWithValidAddress = new Patient();
+		PersonAddress validAddress = rwandaAddress();
+		patientWithValidAddress.addAddress(validAddress);
+		service.validateAddress(patientWithValidAddress);
+		assertSame(validAddress, patientWithValidAddress.getPersonAddress());
+	}
+
+	@Test
 	public void toRegistrationFieldsKeepsSeparateFhirGivenAndMiddleNames() {
 		org.hl7.fhir.r4.model.Patient fhirPatient = new org.hl7.fhir.r4.model.Patient();
 		fhirPatient.addName().addGiven("Alice").addGiven("Marie").addGiven("Grace").setFamily("Uwase");
@@ -305,6 +390,34 @@ public class ClientRegistryRegistrationServiceImplTest {
 		attribute.setAttributeType(type);
 		attribute.setValue(value);
 		return attribute;
+	}
+
+	private PersonAddress rwandaAddress() {
+		PersonAddress address = new PersonAddress();
+		address.setCountry("Rwanda");
+		address.setStateProvince("Kigali Province");
+		address.setCountyDistrict("Nyarugenge");
+		address.setCityVillage("Gitega");
+		address.setAddress3("Akabahizi");
+		address.setAddress1("Gihanga");
+		return address;
+	}
+
+	private AddressHierarchyService addressHierarchy(boolean includeVillage) {
+		AddressHierarchyService service = mock(AddressHierarchyService.class);
+		AddressHierarchyEntry country = mock(AddressHierarchyEntry.class);
+		AddressHierarchyEntry province = mock(AddressHierarchyEntry.class);
+		AddressHierarchyEntry district = mock(AddressHierarchyEntry.class);
+		AddressHierarchyEntry sector = mock(AddressHierarchyEntry.class);
+		AddressHierarchyEntry cell = mock(AddressHierarchyEntry.class);
+		AddressHierarchyEntry village = includeVillage ? mock(AddressHierarchyEntry.class) : null;
+		when(service.getChildAddressHierarchyEntryByName(null, "Rwanda")).thenReturn(country);
+		when(service.getChildAddressHierarchyEntryByName(country, "Kigali Province")).thenReturn(province);
+		when(service.getChildAddressHierarchyEntryByName(province, "Nyarugenge")).thenReturn(district);
+		when(service.getChildAddressHierarchyEntryByName(district, "Gitega")).thenReturn(sector);
+		when(service.getChildAddressHierarchyEntryByName(sector, "Akabahizi")).thenReturn(cell);
+		when(service.getChildAddressHierarchyEntryByName(cell, "Gihanga")).thenReturn(village);
+		return service;
 	}
 
 	private void assertInvalidNationalIdRejected(String nationalId) {

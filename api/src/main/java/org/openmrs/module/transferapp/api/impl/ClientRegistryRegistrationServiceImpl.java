@@ -27,6 +27,9 @@ import org.openmrs.PersonName;
 import org.openmrs.api.APIException;
 import org.openmrs.api.LocationService;
 import org.openmrs.api.PatientService;
+import org.openmrs.api.context.Context;
+import org.openmrs.module.addresshierarchy.AddressHierarchyEntry;
+import org.openmrs.module.addresshierarchy.service.AddressHierarchyService;
 import org.openmrs.module.rwandaemr.RwandaEmrConfig;
 import org.openmrs.module.rwandaemr.integration.ClientRegistryPatient;
 import org.openmrs.module.rwandaemr.integration.ClientRegistryPatientProvider;
@@ -52,6 +55,9 @@ public class ClientRegistryRegistrationServiceImpl implements ClientRegistryRegi
 	static final String INVALID_NATIONAL_ID_MESSAGE =
 			"National ID is invalid. It must contain exactly 16 digits.";
 
+	static final String INVALID_ADDRESS_MESSAGE =
+			"Address is invalid. Country, Province, District, Sector, Cell, and Village must match the Rwanda address hierarchy.";
+
 	private IntegrationConfig integrationConfig;
 
 	private ClientRegistryPatientProvider clientRegistryPatientProvider;
@@ -65,6 +71,8 @@ public class ClientRegistryRegistrationServiceImpl implements ClientRegistryRegi
 	private LocationService locationService;
 
 	private RegistrationCoreService registrationCoreService;
+
+	private AddressHierarchyService addressHierarchyService;
 
 	@Override
 	public boolean isHieEnabled() {
@@ -89,6 +97,7 @@ public class ClientRegistryRegistrationServiceImpl implements ClientRegistryRegi
 
 		Patient patient = clientRegistryPatientTranslator.toPatient(registryPatient);
 		validateNationalId(patient);
+		validateAddress(patient);
 		Map<String, Object> fields = toRegistrationFields(registryPatient, patient);
 		fields.put("upid", normalizedUpid);
 		return fields;
@@ -123,6 +132,7 @@ public class ClientRegistryRegistrationServiceImpl implements ClientRegistryRegi
 		Patient patient = clientRegistryPatientTranslator.toPatient(registryPatient);
 		applyRegistryName(registryPatient, patient);
 		validateNationalId(patient);
+		validateAddress(patient);
 		Location resolvedLocation = identifierLocation != null ? identifierLocation : locationService.getDefaultLocation();
 		ensureIdentifier(patient, normalizedUpid, upidType, resolvedLocation);
 		for (PatientIdentifier identifier : patient.getIdentifiers()) {
@@ -156,6 +166,59 @@ public class ClientRegistryRegistrationServiceImpl implements ClientRegistryRegi
 		for (PatientIdentifier emptyNationalId : emptyNationalIds) {
 			patient.removeIdentifier(emptyNationalId);
 		}
+	}
+
+	void validateAddress(Patient patient) {
+		if (patient == null || patient.getAddresses() == null) {
+			return;
+		}
+
+		List<PersonAddress> emptyAddresses = new ArrayList<PersonAddress>();
+		for (PersonAddress address : patient.getAddresses()) {
+			if (Boolean.TRUE.equals(address.getVoided())) {
+				continue;
+			}
+
+			String country = StringUtils.trimToNull(address.getCountry());
+			String province = StringUtils.trimToNull(address.getStateProvince());
+			String district = StringUtils.trimToNull(address.getCountyDistrict());
+			String sector = StringUtils.trimToNull(address.getCityVillage());
+			String cell = StringUtils.trimToNull(address.getAddress3());
+			String village = StringUtils.trimToNull(address.getAddress1());
+
+			if (country == null && province == null && district == null && sector == null
+					&& cell == null && village == null) {
+				emptyAddresses.add(address);
+				continue;
+			}
+			if (country == null || province == null || district == null || sector == null
+					|| cell == null || village == null) {
+				throw new APIException(INVALID_ADDRESS_MESSAGE);
+			}
+
+			AddressHierarchyService hierarchyService = getAddressHierarchyService();
+			AddressHierarchyEntry hierarchyEntry = hierarchyService
+					.getChildAddressHierarchyEntryByName(null, country);
+			String[] childNames = { province, district, sector, cell, village };
+			for (String childName : childNames) {
+				if (hierarchyEntry == null) {
+					throw new APIException(INVALID_ADDRESS_MESSAGE);
+				}
+				hierarchyEntry = hierarchyService.getChildAddressHierarchyEntryByName(hierarchyEntry, childName);
+			}
+			if (hierarchyEntry == null) {
+				throw new APIException(INVALID_ADDRESS_MESSAGE);
+			}
+		}
+
+		for (PersonAddress emptyAddress : emptyAddresses) {
+			patient.removeAddress(emptyAddress);
+		}
+	}
+
+	private AddressHierarchyService getAddressHierarchyService() {
+		return addressHierarchyService != null ? addressHierarchyService
+				: Context.getService(AddressHierarchyService.class);
 	}
 
 	private Patient findPatientByIdentifier(String identifier, PatientIdentifierType identifierType) {
@@ -343,5 +406,9 @@ public class ClientRegistryRegistrationServiceImpl implements ClientRegistryRegi
 
 	public void setRegistrationCoreService(RegistrationCoreService registrationCoreService) {
 		this.registrationCoreService = registrationCoreService;
+	}
+
+	public void setAddressHierarchyService(AddressHierarchyService addressHierarchyService) {
+		this.addressHierarchyService = addressHierarchyService;
 	}
 }
