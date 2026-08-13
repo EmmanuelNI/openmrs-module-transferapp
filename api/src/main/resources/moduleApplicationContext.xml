@@ -394,6 +394,17 @@
 	<bean id="transferQrCodeServiceTarget"
 	      class="org.openmrs.module.transferapp.api.impl.TransferQrCodeServiceImpl" />
 
+	<bean id="transferAppClientRegistryRegistrationService"
+	      class="org.openmrs.module.transferapp.api.impl.ClientRegistryRegistrationServiceImpl">
+		<property name="integrationConfig" ref="integrationConfig" />
+		<property name="clientRegistryPatientProvider" ref="clientRegistryPatientProvider" />
+		<property name="clientRegistryPatientTranslator" ref="clientRegistryPatientTranslator" />
+		<property name="rwandaEmrConfig" ref="rwandaEmrConfig" />
+		<property name="patientService" ref="patientService" />
+		<property name="locationService" ref="locationService" />
+		<property name="registrationCoreService" ref="registrationCoreService" />
+	</bean>
+
 	<bean parent="serviceContext">
 		<property name="moduleService">
 			<list>

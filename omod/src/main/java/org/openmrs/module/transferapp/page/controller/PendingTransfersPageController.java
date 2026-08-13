@@ -13,9 +13,12 @@
  */
 package org.openmrs.module.transferapp.page.controller;
 
+import org.openmrs.api.PatientService;
 import org.openmrs.module.appui.UiSessionContext;
+import org.openmrs.module.transferapp.TransferAppConstants;
 import org.openmrs.module.transferapp.TransferAppActivator;
 import org.openmrs.module.transferapp.TransferPrivilegeHelper;
+import org.openmrs.module.transferapp.api.PendingTransferPatientStatusResolver;
 import org.openmrs.module.transferapp.api.TransferHieSearchService;
 import org.openmrs.ui.framework.annotation.SpringBean;
 import org.openmrs.ui.framework.page.PageModel;
@@ -30,6 +33,7 @@ public class PendingTransfersPageController {
 	public void get(UiSessionContext sessionContext,
 			PageModel model,
 			@SpringBean("transferAppHieSearchService") TransferHieSearchService transferHieSearchService,
+			@SpringBean("patientService") PatientService patientService,
 			@RequestParam(value = "app", required = false) String app) {
 
 		sessionContext.requireAuthentication();
@@ -38,6 +42,8 @@ public class PendingTransfersPageController {
 		model.addAttribute("canListPending", canListPending);
 		model.addAttribute("requiredPendingPrivilege", TransferAppActivator.PRIVILEGE_LIST_PENDING);
 		model.addAttribute("appId", app != null ? app : "transferapp.dashboard");
+		model.addAttribute("rwandaEmrModuleId", TransferAppConstants.RWANDAEMR_MODULE_ID);
+		model.addAttribute("requestAppointmentPage", TransferAppConstants.REQUEST_APPOINTMENT_PAGE);
 
 		if (!canListPending) {
 			model.addAttribute("pendingAccessDeniedMessage",
@@ -56,6 +62,7 @@ public class PendingTransfersPageController {
 			List<Map<String, Object>> data = result.get("data") instanceof List
 					? (List<Map<String, Object>>) result.get("data")
 					: Collections.<Map<String, Object>>emptyList();
+			data = PendingTransferPatientStatusResolver.addPatientStatus(data, patientService);
 
 			model.addAttribute("pendingTransfers", data);
 			model.addAttribute("hasPendingTransfers", data != null && !data.isEmpty());

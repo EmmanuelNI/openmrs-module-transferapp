@@ -134,6 +134,16 @@ public final class TransferAppConstants {
 	/** Display name of this facility used for HIE targetOrg / outbound sendingFacility matching. */
 	public static final String GP_SENDING_FACILITY_NAME = "transferapp.sendingFacilityName";
 
+	public static final String UPID_IDENTIFIER_TYPE_NAME = "UPID";
+
+	public static final String PENDING_TRANSFER_EXISTING_PATIENT_KEY = "existingPatient";
+
+	public static final String PENDING_TRANSFER_PATIENT_REFERENCE_KEY = "existingPatientReference";
+
+	public static final String RWANDAEMR_MODULE_ID = "rwandaemr";
+
+	public static final String REQUEST_APPOINTMENT_PAGE = "appointment/requestAppointment";
+
 	public static final String HIE_TRANSFER_ENCOUNTER_PATH = "/shr/Encounter/transfer";
 
 	public static final String HIE_LIST_TRANSFERS_PATH = "/shr/Encounter/$list-transfers";

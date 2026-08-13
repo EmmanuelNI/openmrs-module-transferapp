@@ -70,12 +70,20 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "pendi
             <% pendingTransfers.each { transfer ->
                 def uuid = (transfer.uuid ?: transfer.id ?: "") as String
                 def upid = (transfer.upid ?: transfer.subject ?: "") as String
+                def existingPatient = transfer.existingPatient == true
+                def existingPatientReference = (transfer.existingPatientReference ?: "") as String
+                def pendingReturnUrl = ui.pageLinkWithoutContextPath("transferapp", "pending", [app: appId])
             %>
             <tr class="transfer-row"
                 data-uuid="${ ui.encodeHtmlAttribute(uuid) }"
                 data-upid="${ ui.encodeHtmlAttribute(upid) }">
                 <td>${ ui.encodeHtmlContent((transfer.date ?: "") as String) }</td>
-                <td>${ ui.encodeHtmlContent((transfer.clientName ?: "") as String) }</td>
+                <td>
+                    <span>${ ui.encodeHtmlContent((transfer.clientName ?: "") as String) }</span>
+                    <span class="transfer-patient-badge ${ existingPatient ? 'transfer-patient-badge-existing' : 'transfer-patient-badge-new' }">
+                        ${ existingPatient ? ui.message("transferapp.pending.patient.existing") : ui.message("transferapp.pending.patient.new") }
+                    </span>
+                </td>
                 <td>${ ui.encodeHtmlContent(upid) }</td>
                 <td>${ ui.encodeHtmlContent((transfer.origin ?: transfer.referringFacilityName ?: "") as String) }</td>
                 <td>${ ui.encodeHtmlContent((transfer.receivingService ?: "") as String) }</td>
@@ -83,12 +91,25 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "pendi
                     <span class="transfer-status-pending">${ ui.encodeHtmlContent((transfer.status ?: "pending") as String) }</span>
                 </td>
                 <td>
-                    <a class="transfer-pending-view-link"
-                       href="javascript:void(0);"
-                       data-uuid="${ ui.encodeHtmlAttribute(uuid) }"
-                       data-upid="${ ui.encodeHtmlAttribute(upid) }">
-                        <i class="icon-share-alt"></i> ${ ui.message("transferapp.patient.transfers.view") }
-                    </a>
+                    <div class="transfer-pending-actions">
+                        <a class="transfer-pending-view-link"
+                           href="javascript:void(0);"
+                           data-uuid="${ ui.encodeHtmlAttribute(uuid) }"
+                           data-upid="${ ui.encodeHtmlAttribute(upid) }">
+                            <i class="icon-share-alt"></i> ${ ui.message("transferapp.patient.transfers.view") }
+                        </a>
+                        <% if (existingPatient && existingPatientReference) { %>
+                            <a class="button transfer-pending-workflow-button"
+                               href="${ ui.pageLink(rwandaEmrModuleId, requestAppointmentPage, [patientId: existingPatientReference]) }">
+                                <i class="icon-calendar"></i> ${ ui.message("transferapp.pending.action.schedule") }
+                            </a>
+                        <% } else if (!existingPatient) { %>
+                            <a class="button confirm transfer-pending-workflow-button"
+                               href="${ ui.pageLink('transferapp', 'registerPatientFromHie', [upid: upid, returnUrl: pendingReturnUrl]) }">
+                                <i class="icon-user"></i> ${ ui.message("transferapp.pending.action.register") }
+                            </a>
+                        <% } %>
+                    </div>
                 </td>
             </tr>
             <% } %>

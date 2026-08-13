@@ -36,6 +36,9 @@
 		<coreappsVersion>1.11.1</coreappsVersion>
 		<webservicesRestVersion>2.50.0</webservicesRestVersion>
 		<rwandaemrVersion>4.1.0-SNAPSHOT</rwandaemrVersion>
+		<fhir2Version>2.9.1-SNAPSHOT</fhir2Version>
+		<registrationcoreVersion>1.13.0</registrationcoreVersion>
+		<initializerVersion>2.10.0</initializerVersion>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
@@ -108,6 +111,13 @@
 			<groupId>org.openmrs.module</groupId>
 			<artifactId>uicommons-api</artifactId>
 			<version>${uicommonsVersion}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.openmrs.module</groupId>
+			<artifactId>registrationcore-api</artifactId>
+			<version>${registrationcoreVersion}</version>
 			<scope>provided</scope>
 		</dependency>
 

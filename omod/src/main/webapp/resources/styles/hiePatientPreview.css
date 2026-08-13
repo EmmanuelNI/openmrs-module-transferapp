@@ -1,0 +1,121 @@
+.transfer-hie-preview {
+  max-width: 1080px;
+  margin: 24px auto 48px;
+  color: #2d3748;
+}
+
+.transfer-hie-preview-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 18px;
+  border-bottom: 3px solid #007fff;
+}
+
+.transfer-hie-preview-header h1 {
+  margin: 0 0 6px;
+  font-size: 28px;
+  letter-spacing: 0;
+}
+
+.transfer-hie-preview-header p {
+  margin: 0;
+  color: #5f6b7a;
+}
+
+.transfer-hie-preview-upid {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid #a9b7c6;
+  border-radius: 4px;
+  background: #f5f7fa;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.transfer-hie-preview-section {
+  padding: 22px 0;
+  border-bottom: 1px solid #d7dee7;
+}
+
+.transfer-hie-preview-section h2 {
+  margin: 0 0 14px;
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.transfer-hie-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 28px;
+  margin: 0;
+}
+
+.transfer-hie-preview-grid > div {
+  min-width: 0;
+}
+
+.transfer-hie-preview-grid dt {
+  margin-bottom: 4px;
+  color: #657384;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.transfer-hie-preview-grid dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #1a202c;
+  font-size: 15px;
+}
+
+.transfer-hie-preview-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 24px;
+}
+
+.transfer-hie-preview-actions form {
+  margin: 0;
+}
+
+.transfer-hie-preview-actions .button {
+  box-sizing: border-box;
+  margin: 0;
+  text-decoration: none;
+}
+
+@media (max-width: 800px) {
+  .transfer-hie-preview {
+    margin-top: 16px;
+  }
+
+  .transfer-hie-preview-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .transfer-hie-preview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .transfer-hie-preview-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .transfer-hie-preview-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .transfer-hie-preview-actions .button {
+    display: block;
+    width: 100%;
+    text-align: center;
+  }
+}
