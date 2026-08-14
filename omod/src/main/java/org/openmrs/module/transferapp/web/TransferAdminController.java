@@ -77,12 +77,13 @@ public class TransferAdminController {
 			@RequestParam("facilityName") String facilityName,
 			@RequestParam(value = "distance", required = false) Integer distance,
 			@RequestParam("province") String province,
-			@RequestParam("district") String district) throws Exception {
+			@RequestParam("district") String district,
+			@RequestParam(value = "external", required = false) Boolean external) throws Exception {
 
 		Map<String, Object> data = new HashMap<String, Object>();
 		try {
 			ReceivingFacility facility = getTransferAdminService().saveReceivingFacility(
-					sendingLocationId, facilityCode, facilityName, distance, province, district);
+					sendingLocationId, facilityCode, facilityName, distance, province, district, external);
 			data.put("status", "success");
 			data.put("receivingFacilityId", facility.getReceivingFacilityId());
 			data.put("facilityCode", facility.getFacilityCode());
@@ -90,6 +91,7 @@ public class TransferAdminController {
 			data.put("distance", facility.getDistance());
 			data.put("province", facility.getProvince());
 			data.put("district", facility.getDistrict());
+			data.put("external", facility.isExternal());
 		}
 		catch (Exception e) {
 			log.error("Unable to save receiving facility", e);
@@ -119,14 +121,17 @@ public class TransferAdminController {
 	@RequestMapping(value = "/module/transferapp/admin/saveService.form", method = RequestMethod.POST)
 	public void saveService(HttpServletResponse response,
 			@RequestParam("receivingFacilityId") Integer receivingFacilityId,
-			@RequestParam("serviceName") String serviceName) throws Exception {
+			@RequestParam("serviceName") String serviceName,
+			@RequestParam(value = "receivingServiceId", required = false) Integer receivingServiceId) throws Exception {
 
 		Map<String, Object> data = new HashMap<String, Object>();
 		try {
-			ReceivingService service = getTransferAdminService().saveReceivingService(receivingFacilityId, serviceName);
+			ReceivingService service = getTransferAdminService().saveReceivingService(
+					receivingFacilityId, serviceName, receivingServiceId);
 			data.put("status", "success");
 			data.put("receivingServiceId", service.getReceivingServiceId());
 			data.put("serviceName", service.getServiceName());
+			data.put("updated", receivingServiceId != null);
 		}
 		catch (Exception e) {
 			log.error("Unable to save receiving service", e);

@@ -130,6 +130,21 @@
   border-color: #93c5fd;
 }
 
+.transfer-status-awaiting {
+  color: #a16207;
+  font-weight: 600;
+}
+
+.transfer-status-approved {
+  color: #166534;
+  font-weight: 600;
+}
+
+.transfer-status-rejected {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
 .transfer-pending-actions {
   display: flex;
   align-items: center;

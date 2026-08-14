@@ -10,7 +10,9 @@
 </div>
 <% } else { %>
 <% if (canCreateTransfer) { %>
-<div id="new-transfer-out-dialog" class="dialog transfer-wizard-dialog" style="display: none">
+<div id="new-transfer-out-dialog" class="dialog transfer-wizard-dialog" style="display: none"
+     data-provider-profile-complete="${ providerProfileComplete ? 'true' : 'false' }"
+     data-profile-incomplete-message="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.profileIncomplete')) }">
     <div class="dialog-header" style="display: none;">
         <i class="icon-retweet"></i>
         <h3 id="new-transfer-out-title">
@@ -45,41 +47,54 @@
   border: 1px solid #d8e0ea;
   border-radius: 12px;
   box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
-  max-width: 95% !important;
-  max-height: 94vh !important;
   width: 1100px !important;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  max-width: 95% !important;
+  height: 94vh !important;
+  max-height: 94vh !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* Only show when explicitly opened — never override jQuery .hide() with display:!important */
+#new-transfer-out-dialog.transfer-wizard-dialog.dialog.transfer-wizard-open {
+  display: flex !important;
 }
 
 #new-transfer-out-dialog .dialog-content {
   padding: 0 !important;
-  overflow: hidden;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  display: block !important;
   background: #fff;
 }
 
 #new-transfer-out-data {
-  flex: 1;
   min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  display: block;
 }
 
 #new-transfer-out-data .transfer-wizard-shell {
-  min-height: 0;
-  max-height: 100%;
-  height: 100%;
-  overflow: hidden;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  display: block !important;
+}
+
+#new-transfer-out-data .transfer-wizard-page-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 #new-transfer-out-data .transfer-wizard-panel {
+  overflow: visible !important;
+  max-height: none !important;
   padding-right: 0.35rem;
+  padding-bottom: 0.75rem;
 }
 
 #new-transfer-out-dialog .dialog-footer {
@@ -87,6 +102,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 0.5rem;
+  flex: 0 0 auto !important;
   padding: 0.5rem 0.75rem;
   border-top: 1px solid #e2e8f0;
   background: #fff;
@@ -200,6 +216,8 @@
                    href="javascript:void(0);"
                    role="button"
                    data-load-url="${ ui.encodeHtmlAttribute(ui.pageLink('transferapp', 'patient/newTransferOutForm') + '?patientId=' + patient.patient.patientId) }"
+                   data-provider-profile-complete="${ providerProfileComplete ? 'true' : 'false' }"
+                   data-profile-incomplete-message="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.profileIncomplete')) }"
                    title="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.newTransferOut')) }">
                     ${ ui.message("transferapp.patient.transfers.newTransferOut") }
                 </a>
@@ -210,6 +228,8 @@
                     ${ ui.encodeHtmlContent(patientInsuranceNumber) }
                 </span>
             </div>
+        <% } else if (canCreateTransfer) { %>
+            <p class="transfer-insurance-missing">${ ui.message("transferapp.patient.transfers.insuranceRequired") }</p>
         <% } %>
 
         <% if (hasTransfers) { %>
@@ -244,6 +264,15 @@
                                        title="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.view')) }">
                                         <i class="icon-share-alt"></i> ${ ui.message("transferapp.patient.transfers.view") }
                                     </a>
+                                    <% if (canCreateTransfer) { %>
+                                    <a class="transfer-edit-link"
+                                       href="javascript:void(0);"
+                                       data-transfer-id="${ ui.encodeHtmlAttribute(transfer.id) }"
+                                       data-load-url="${ ui.encodeHtmlAttribute(ui.pageLink('transferapp', 'patient/newTransferOutForm') + '?patientId=' + patient.patient.patientId + '&transferUuid=' + transfer.id) }"
+                                       title="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.edit')) }">
+                                        <i class="icon-pencil"></i> ${ ui.message("transferapp.patient.transfers.edit") }
+                                    </a>
+                                    <% } %>
                                 </td>
                             </tr>
                         <% } %>
@@ -329,7 +358,7 @@
                 newTransferOutDialog.close();
             }
         } catch (ignoreClose) {}
-        jq("#new-transfer-out-dialog").hide();
+        jq("#new-transfer-out-dialog").removeClass("transfer-wizard-open").hide();
     }
 
     function showNewTransferOutDialog(loadUrl) {
@@ -346,26 +375,35 @@
 
         jq("#new-transfer-out-data").html("<div style='padding: 10px;'><i class='icon-spinner icon-spin'></i> ${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.wizard.loading')) }</div>");
 
-        if (loadUrl) {
+        if (!loadUrl) {
+            jq("#new-transfer-out-data").html("<p style='color:red;'>${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.wizard.loadError')) }</p>");
+        } else {
             var fullUrl = loadUrl;
             if (fullUrl.indexOf("http") !== 0) {
                 fullUrl = window.location.origin + fullUrl;
             }
-            jq("#new-transfer-out-data").load(fullUrl, function(response, status) {
-                if (status === "error") {
-                    jq("#new-transfer-out-data").html("<p style='color:red;'>${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.wizard.loadError')) }</p>");
-                } else {
-                    ensureTransferWizardAssets(function() {
+            jq.ajax({
+                url: fullUrl,
+                type: "GET",
+                dataType: "html",
+                timeout: 30000
+            }).done(function(html) {
+                jq("#new-transfer-out-data").html(html);
+                ensureTransferWizardAssets(function() {
+                    if (typeof initTransferWizardModal === "function") {
                         initTransferWizardModal();
-                    });
-                }
+                    }
+                    jq("#new-transfer-out-dialog .dialog-content").scrollTop(0);
+                });
+            }).fail(function() {
+                jq("#new-transfer-out-data").html("<p style='color:red;'>${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.wizard.loadError')) }</p>");
             });
         }
 
-        if (newTransferOutDialog) {
+        jq("#new-transfer-out-dialog").addClass("transfer-wizard-open").show().css("display", "flex");
+        if (newTransferOutDialog && typeof newTransferOutDialog.show === "function") {
             newTransferOutDialog.show();
-        } else {
-            jq("#new-transfer-out-dialog").show();
+            jq("#new-transfer-out-dialog").addClass("transfer-wizard-open").css("display", "flex");
         }
     }
 
@@ -375,6 +413,26 @@
     jq(document).ready(function() {
         jq(document).on("click", "#open-new-transfer-out", function(e) {
             e.preventDefault();
+            var profileComplete = jq(this).attr("data-provider-profile-complete") === "true";
+            if (!profileComplete) {
+                var incompleteMessage = jq(this).attr("data-profile-incomplete-message")
+                    || "Please complete My Profile with phone number, qualification, and speciality before creating a transfer.";
+                alert(incompleteMessage);
+                return;
+            }
+            var loadUrl = jq(this).attr("data-load-url");
+            showNewTransferOutDialog(loadUrl);
+        });
+
+        jq(document).on("click", ".transfer-edit-link", function(e) {
+            e.preventDefault();
+            var gateEl = jq("#new-transfer-out-dialog");
+            if (gateEl.attr("data-provider-profile-complete") === "false") {
+                var incompleteMessage = gateEl.attr("data-profile-incomplete-message")
+                    || "${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.profileIncomplete')) }";
+                alert(incompleteMessage);
+                return;
+            }
             var loadUrl = jq(this).attr("data-load-url");
             showNewTransferOutDialog(loadUrl);
         });
@@ -394,6 +452,10 @@
 
             var submitBtn = jq(this);
             submitBtn.prop("disabled", true);
+            var isEditing = wizardForm.attr("data-editing") === "true";
+            var successMessage = isEditing
+                ? "${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.updateSuccess')) }"
+                : "${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.submitSuccess')) }";
 
             jq.ajax({
                 url: transferSaveUrl,
@@ -403,7 +465,7 @@
             }).done(function(response) {
                 if (response && response.status === "success") {
                     if (typeof emr !== "undefined" && typeof emr.successMessage === "function") {
-                        emr.successMessage("${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.submitSuccess')) }");
+                        emr.successMessage(successMessage);
                     }
                     closeNewTransferOutDialog();
                     if (response.uuid) {
@@ -455,6 +517,24 @@
             submitBtn.prop("disabled", true).text("${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.alreadySent')) }");
         } else {
             submitBtn.prop("disabled", false).text("${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.submitToHie')) }");
+        }
+    }
+
+    function markTransferRowHieStatus(transferUuid, sentToHie) {
+        if (!transferUuid) {
+            return;
+        }
+        var row = jq("tr.transfer-row[data-transfer-id='" + transferUuid + "']");
+        if (!row.length) {
+            return;
+        }
+        row.attr("data-hie-sent", sentToHie ? "true" : "false");
+        if (sentToHie) {
+            row.addClass("transfer-row-sent");
+            row.find("td").eq(3).html("<span class='transfer-status-sent'>${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.statusSent')) }</span>");
+        } else {
+            row.removeClass("transfer-row-sent");
+            row.find("td").eq(3).html("<span class='transfer-status-pending'>${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.statusPending')) }</span>");
         }
     }
 
@@ -564,6 +644,9 @@
                 dataType: "json"
             }).done(function(response) {
                 if (response && response.status === "success") {
+                    currentPreviewTransferSent = true;
+                    syncTransferPreviewSubmitButton();
+                    markTransferRowHieStatus(currentPreviewTransferUuid, true);
                     if (typeof emr !== "undefined" && typeof emr.successMessage === "function") {
                         emr.successMessage("${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.submitToHieSuccess')) }");
                     }

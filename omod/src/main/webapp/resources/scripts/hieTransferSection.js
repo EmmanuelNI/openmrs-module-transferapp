@@ -270,9 +270,21 @@
             var date = item.date || item.transferDecisionDatetime || item.admissionDatetime || "";
             var from = item.origin || item.referringFacilityName || item.hospitalName || "";
             var destination = resolveDestination(item);
+            var status = item.status || "";
+            var statusClass = "transfer-status-pending";
+            if (item.agentRejected === true || item.agentRejected === "true") {
+                statusClass = "transfer-status-rejected";
+            } else if (item.agentDecisionApproved === true || item.agentDecisionApproved === "true") {
+                statusClass = "transfer-status-approved";
+            } else if (item.needsInsuranceApproval === true || item.needsInsuranceApproval === "true") {
+                statusClass = "transfer-status-awaiting";
+            }
+            var statusHtml = status
+                ? "<div class='" + statusClass + "' style='font-size:12px;margin-top:4px;'>" + esc(status) + "</div>"
+                : "";
             return ""
                 + "<tr class='hie-transfer-row' data-uuid='" + esc(uuid) + "' data-upid='" + esc(upid) + "'>"
-                + "<td>" + esc(date) + "</td>"
+                + "<td>" + esc(date) + statusHtml + "</td>"
                 + "<td>" + esc(from) + "</td>"
                 + "<td>" + esc(destination) + "</td>"
                 + "<td><a href='javascript:void(0);' class='hie-transfer-view-link' "

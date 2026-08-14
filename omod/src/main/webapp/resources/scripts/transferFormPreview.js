@@ -184,8 +184,48 @@
 			verifyRemoteUrl: verifyRemoteUrl,
 			verificationTransferId: verificationTransferId || normalized.verificationTransferId,
 			hieTransferId: normalized.hieTransferId || verificationTransferId,
-			uuid: normalized.uuid || normalized.id || verificationTransferId
+			uuid: normalized.uuid || normalized.id || verificationTransferId,
+			requiresInsuranceAgentVerification: resolveFlag(normalized.requiresInsuranceAgentVerification, false),
+			hasAgentApprovedExtension: resolveFlag(normalized.hasAgentApprovedExtension, false),
+			agentApproved: resolveFlag(normalized.agentApproved, false),
+			agentComment: firstNonBlank(normalized.agentComment, ""),
+			agentRejected: resolveFlag(normalized.agentRejected,
+				resolveFlag(normalized.hasAgentApprovedExtension, false)
+					&& !resolveFlag(normalized.agentApproved, false)),
+			agentDecisionApproved: resolveFlag(normalized.agentDecisionApproved,
+				resolveFlag(normalized.hasAgentApprovedExtension, false)
+					&& resolveFlag(normalized.agentApproved, false)),
+			needsInsuranceApproval: resolveFlag(normalized.needsInsuranceApproval,
+				resolveFlag(normalized.requiresInsuranceAgentVerification, false)
+					&& !resolveFlag(normalized.hasAgentApprovedExtension, false))
 		};
+	}
+
+	function buildInsuranceAgentDecisionBannerHtml(p) {
+		if (p.agentRejected) {
+			var rejectedComment = p.agentComment
+				? "<div class='tf-insurance-decision-comment'>" + escTransferPreview(p.agentComment) + "</div>"
+				: "";
+			return "<div class='tf-insurance-decision tf-insurance-decision--rejected' role='status'>"
+				+ "<strong>Rejected by insurance</strong>"
+				+ rejectedComment
+				+ "</div>";
+		}
+		if (p.agentDecisionApproved) {
+			var approvedComment = p.agentComment
+				? "<div class='tf-insurance-decision-comment'>" + escTransferPreview(p.agentComment) + "</div>"
+				: "";
+			return "<div class='tf-insurance-decision tf-insurance-decision--approved' role='status'>"
+				+ "<strong>Approved by insurance</strong>"
+				+ approvedComment
+				+ "</div>";
+		}
+		if (p.needsInsuranceApproval) {
+			return "<div class='tf-insurance-decision tf-insurance-decision--pending' role='status'>"
+				+ "<strong>Awaiting insurance agent decision</strong>"
+				+ "</div>";
+		}
+		return "";
 	}
 
 	function resolveTransferPreviewQrUrl(verifyQrUrl) {
@@ -245,7 +285,15 @@
 				+ "</table>";
 		}
 
-		return "<div class='transfer-form-preview'><div class='tf-sheet'>"
+		return "<div class='transfer-form-preview'"
+			+ " data-requires-insurance-agent-verification='" + (p.requiresInsuranceAgentVerification ? "true" : "false") + "'"
+			+ " data-has-agent-approved='" + (p.hasAgentApprovedExtension ? "true" : "false") + "'"
+			+ " data-agent-approved='" + (p.agentApproved ? "true" : "false") + "'"
+			+ " data-agent-rejected='" + (p.agentRejected ? "true" : "false") + "'"
+			+ " data-agent-comment='" + escTransferPreview(p.agentComment || "") + "'"
+			+ ">"
+			+ buildInsuranceAgentDecisionBannerHtml(p)
+			+ "<div class='tf-sheet'>"
 			+ "<div class='tf-head'>"
 			+ "<div class='tf-left'>"
 			+ "<div class='tf-row'><strong>REPUBLIC OF RWANDA</strong></div>"

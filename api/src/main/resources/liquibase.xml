@@ -566,4 +566,51 @@
         </sql>
     </changeSet>
 
+    <changeSet id="transferapp-20250813-transfer-profile-speciality" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfer_profile"/>
+                <not>
+                    <columnExists tableName="transfer_profile" columnName="speciality"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Provider speciality shown with qualification on transfer forms, e.g. Nurse A2(Midwife)</comment>
+        <addColumn tableName="transfer_profile">
+            <column name="speciality" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="transferapp-20250813-transfer-provider-phone" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfers"/>
+                <not>
+                    <columnExists tableName="transfers" columnName="provider_phone"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Referring care provider phone number copied from transfer My Profile</comment>
+        <addColumn tableName="transfers">
+            <column name="provider_phone" type="varchar(64)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="transferapp-20250813-receiving-facility-external" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfer_receiving_facilities"/>
+                <not>
+                    <columnExists tableName="transfer_receiving_facilities" columnName="external"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Mark destinations that require insurance-agent verification routing on HIE</comment>
+        <addColumn tableName="transfer_receiving_facilities">
+            <column name="external" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
 </databaseChangeLog>

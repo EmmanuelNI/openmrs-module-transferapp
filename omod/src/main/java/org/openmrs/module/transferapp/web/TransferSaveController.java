@@ -88,6 +88,7 @@ public class TransferSaveController {
 	@RequestMapping(value = "/module/transferapp/transfer/save.form", method = RequestMethod.POST)
 	public void saveReferralTransfer(HttpServletResponse response,
 			@RequestParam("patientId") Integer patientId,
+			@RequestParam(value = "transferUuid", required = false) String transferUuid,
 			@RequestParam(value = "decisionToTransferAt", required = false) String decisionToTransferAt,
 			@RequestParam(value = "callingTime", required = false) String callingTime,
 			@RequestParam(value = "receivingFacilityCode", required = false) String receivingFacilityCode,
@@ -106,6 +107,7 @@ public class TransferSaveController {
 			@RequestParam(value = "laboratory", required = false) String laboratory,
 			@RequestParam(value = "proceduresTreatments", required = false) String proceduresTreatments,
 			@RequestParam(value = "otherNotes", required = false) String otherNotes,
+			@RequestParam(value = "diagnosis", required = false) String diagnosis,
 			@RequestParam(value = "providerQualification", required = false) String providerQualification,
 			@RequestParam(value = "signedDate", required = false) String signedDate,
 			@RequestParam(value = "signedTime", required = false) String signedTime) throws Exception {
@@ -119,9 +121,10 @@ public class TransferSaveController {
 
 		try {
 			TransferFormExtras formExtras = buildFormExtras(clinicalPresentation, disabilityType, laboratory,
-					proceduresTreatments, otherNotes, providerQualification, signedDate, signedTime);
+					proceduresTreatments, otherNotes, diagnosis, providerQualification, signedDate, signedTime);
 			Transfer transfer = transferService.saveReferralTransfer(
 					patientId,
+					transferUuid,
 					decisionToTransferAt,
 					callingTime,
 					receivingFacilityCode,
@@ -140,6 +143,8 @@ public class TransferSaveController {
 			data.put("status", "success");
 			data.put("transferId", transfer.getTransferId());
 			data.put("uuid", transfer.getUuid());
+			data.put("hieSent", transfer.isSentToHie());
+			data.put("updated", StringUtils.isNotBlank(transferUuid));
 		}
 		catch (Exception e) {
 			putError(data, e, TransferAppActivator.PRIVILEGE_CREATE_TRANSFER, "Unable to save transfer");
@@ -305,7 +310,7 @@ public class TransferSaveController {
 		preview.put("referringProviderQualification", nullToEmpty(transfer.getProviderQualification()));
 		preview.put("referringSignedDate", formatDateOnly(transfer.getSignedDate()));
 		preview.put("referringSignedTime", nullToEmpty(transfer.getSignedTime()));
-		preview.put("referringProviderPhone", "");
+		preview.put("referringProviderPhone", nullToEmpty(transfer.getProviderPhone()));
 		preview.put("signatureAndStamp", "");
 		preview.put("dateCreated", formatDateTime(transfer.getDateCreated()));
 		preview.put("hieSent", transfer.isSentToHie());
@@ -370,11 +375,12 @@ public class TransferSaveController {
 	}
 
 	private TransferFormExtras buildFormExtras(String clinicalPresentation, String disabilityType, String laboratory,
-			String proceduresTreatments, String otherNotes, String providerQualification, String signedDate,
-			String signedTime) {
+			String proceduresTreatments, String otherNotes, String diagnosis, String providerQualification,
+			String signedDate, String signedTime) {
 		if (StringUtils.isBlank(clinicalPresentation) && StringUtils.isBlank(disabilityType)
 				&& StringUtils.isBlank(laboratory) && StringUtils.isBlank(proceduresTreatments)
-				&& StringUtils.isBlank(otherNotes) && StringUtils.isBlank(providerQualification)
+				&& StringUtils.isBlank(otherNotes) && StringUtils.isBlank(diagnosis)
+				&& StringUtils.isBlank(providerQualification)
 				&& StringUtils.isBlank(signedDate) && StringUtils.isBlank(signedTime)) {
 			return null;
 		}
@@ -384,6 +390,7 @@ public class TransferSaveController {
 		extras.setLaboratory(laboratory);
 		extras.setProceduresTreatments(proceduresTreatments);
 		extras.setOtherNotes(otherNotes);
+		extras.setDiagnosis(diagnosis);
 		extras.setProviderQualification(providerQualification);
 		extras.setSignedDate(signedDate);
 		extras.setSignedTime(signedTime);

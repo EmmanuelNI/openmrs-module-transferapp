@@ -46,9 +46,14 @@ public interface TransferAdminService {
 	ReceivingFacility saveReceivingFacility(Integer sendingLocationId, String facilityCode, String facilityName,
 			Integer distance, String province, String district);
 
+	ReceivingFacility saveReceivingFacility(Integer sendingLocationId, String facilityCode, String facilityName,
+			Integer distance, String province, String district, Boolean external);
+
 	void voidReceivingFacility(Integer receivingFacilityId, String reason);
 
 	ReceivingService saveReceivingService(Integer receivingFacilityId, String serviceName);
+
+	ReceivingService saveReceivingService(Integer receivingFacilityId, String serviceName, Integer receivingServiceId);
 
 	void voidReceivingService(Integer receivingServiceId, String reason);
 

@@ -20,6 +20,7 @@ import org.openmrs.api.context.Context;
 import org.openmrs.module.transferapp.api.TransferAdminService;
 import org.openmrs.module.transferapp.api.TransferHieSubmissionService;
 import org.openmrs.module.transferapp.api.TransferPatientSnapshotResolver;
+import org.openmrs.module.transferapp.api.TransferProfileService;
 import org.openmrs.module.transferapp.api.dao.TransferDao;
 import org.openmrs.module.transferapp.hie.HieApiException;
 import org.openmrs.module.transferapp.hie.HieBasicConnection;
@@ -28,6 +29,7 @@ import org.openmrs.module.transferapp.hie.HieConnectionResolver;
 import org.openmrs.module.transferapp.hie.HieShrClient;
 import org.openmrs.module.transferapp.hie.TransferEncounterPayloadBuilder;
 import org.openmrs.module.transferapp.model.Transfer;
+import org.openmrs.module.transferapp.model.TransferProfile;
 
 import java.util.Date;
 
@@ -36,6 +38,8 @@ public class TransferHieSubmissionServiceImpl implements TransferHieSubmissionSe
 	private TransferDao transferDao;
 
 	private TransferAdminService transferAdminService;
+
+	private TransferProfileService transferProfileService;
 
 	private HieConnectionResolver hieConnectionResolver = new HieConnectionResolver();
 
@@ -51,6 +55,14 @@ public class TransferHieSubmissionServiceImpl implements TransferHieSubmissionSe
 
 	public void setTransferAdminService(TransferAdminService transferAdminService) {
 		this.transferAdminService = transferAdminService;
+	}
+
+	public void setTransferProfileService(TransferProfileService transferProfileService) {
+		this.transferProfileService = transferProfileService;
+	}
+
+	public void setPayloadBuilder(TransferEncounterPayloadBuilder payloadBuilder) {
+		this.payloadBuilder = payloadBuilder;
 	}
 
 	@Override
@@ -69,9 +81,14 @@ public class TransferHieSubmissionServiceImpl implements TransferHieSubmissionSe
 
 		try {
 			refreshDiagnosisFromObsIfNeeded(transfer);
+			applyProviderQualificationWithSpeciality(transfer);
+			applyCaregiverFromCurrentUser(transfer);
 			HieBasicConnection connection = hieConnectionResolver.resolveConnection();
 			String receivingFacilityLabel = resolveReceivingFacilityLabel(transfer);
+			ensurePayloadBuilderConfigured();
 			User currentUser = Context.getAuthenticatedUser();
+			// External flag is resolved inside the payload builder from Destinations config
+			// for the selected receiving facility code.
 			String encounterJson = payloadBuilder.buildEncounterJson(transfer, currentUser, receivingFacilityLabel);
 			hieShrClient.postTransferEncounter(connection, encounterJson);
 
@@ -93,6 +110,54 @@ public class TransferHieSubmissionServiceImpl implements TransferHieSubmissionSe
 		catch (RuntimeException ex) {
 			recordSubmissionFailure(transfer, ex.getMessage());
 			throw ex;
+		}
+	}
+
+	private void applyProviderQualificationWithSpeciality(Transfer transfer) {
+		if (transfer == null || transferProfileService == null) {
+			return;
+		}
+		User user = Context.getAuthenticatedUser();
+		if (user == null) {
+			return;
+		}
+		TransferProfile profile = transferProfileService.getProfileForUser(user);
+		if (profile == null) {
+			return;
+		}
+		String combined = StringUtils.trimToNull(profile.getQualificationWithSpeciality());
+		if (combined != null) {
+			transfer.setProviderQualification(combined);
+		}
+		String phone = StringUtils.trimToNull(profile.getPhoneNumber());
+		if (phone != null) {
+			transfer.setProviderPhone(phone);
+		}
+	}
+
+	private void applyCaregiverFromCurrentUser(Transfer transfer) {
+		if (transfer == null) {
+			return;
+		}
+		User user = Context.getAuthenticatedUser();
+		if (user == null) {
+			return;
+		}
+		String userName = null;
+		if (user.getPerson() != null && user.getPerson().getPersonName() != null) {
+			userName = StringUtils.trimToNull(user.getPerson().getPersonName().getFullName());
+		}
+		if (userName == null) {
+			userName = StringUtils.trimToNull(user.getUsername());
+		}
+		if (userName != null) {
+			transfer.setCaregiverName(userName);
+		}
+		if (transferProfileService != null) {
+			TransferProfile profile = transferProfileService.getProfileForUser(user);
+			if (profile != null && StringUtils.isNotBlank(profile.getPhoneNumber())) {
+				transfer.setCaregiverTelephone(StringUtils.trimToNull(profile.getPhoneNumber()));
+			}
 		}
 	}
 
@@ -137,6 +202,15 @@ public class TransferHieSubmissionServiceImpl implements TransferHieSubmissionSe
 			}
 		}
 		return defaultFacilityLabel(facilityCode);
+	}
+
+	private void ensurePayloadBuilderConfigured() {
+		if (payloadBuilder == null) {
+			payloadBuilder = new TransferEncounterPayloadBuilder();
+		}
+		if (transferAdminService != null) {
+			payloadBuilder.setTransferAdminService(transferAdminService);
+		}
 	}
 
 	private static String defaultFacilityLabel(String facilityCode) {

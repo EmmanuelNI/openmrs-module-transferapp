@@ -126,6 +126,29 @@ public class TransferServiceImpl implements TransferService {
 			String transportationOtherSpec,
 			String reasonForTransfer,
 			TransferFormExtras formExtras) {
+		return saveReferralTransfer(patientId, null, decisionToTransferAt, callingTime, receivingFacilityCode,
+				receivingFacilityId, receivingService, staffContactedName, staffContactedPhone, transferType,
+				ambulanceCalledTime, departureFromReferringTime, transportationType, transportationOtherSpec,
+				reasonForTransfer, formExtras);
+	}
+
+	@Override
+	public Transfer saveReferralTransfer(Integer patientId,
+			String transferUuid,
+			String decisionToTransferAt,
+			String callingTime,
+			String receivingFacilityCode,
+			Integer receivingFacilityId,
+			String receivingService,
+			String staffContactedName,
+			String staffContactedPhone,
+			String transferType,
+			String ambulanceCalledTime,
+			String departureFromReferringTime,
+			String transportationType,
+			String transportationOtherSpec,
+			String reasonForTransfer,
+			TransferFormExtras formExtras) {
 
 		if (patientId == null) {
 			throw new APIException("Patient is required");
@@ -141,9 +164,30 @@ public class TransferServiceImpl implements TransferService {
 		validateTransportationFields(normalizedTransferType, transportationType, transportationOtherSpec);
 		ensureReceivingServiceConfigured(receivingFacilityCode, receivingFacilityId, receivingService);
 
-		Transfer transfer = new Transfer();
-		transfer.setUuid(UUID.randomUUID().toString());
-		transfer.setPatient(patient);
+		boolean isUpdate = StringUtils.isNotBlank(transferUuid);
+		Transfer transfer;
+		if (isUpdate) {
+			transfer = transferDao.getTransferByUuid(transferUuid.trim());
+			if (transfer == null || transfer.isVoided()) {
+				throw new APIException("Transfer not found");
+			}
+			if (transfer.getPatient() == null
+					|| transfer.getPatient().getPatientId() == null
+					|| !transfer.getPatient().getPatientId().equals(patientId)) {
+				throw new APIException("Transfer does not belong to this patient");
+			}
+		}
+		else {
+			transfer = new Transfer();
+			transfer.setUuid(UUID.randomUUID().toString());
+			transfer.setPatient(patient);
+			transfer.setCreator(Context.getAuthenticatedUser());
+			transfer.setDateCreated(new Date());
+			transfer.setVoided(false);
+			transfer.setHieSent(false);
+			transfer.setReceivedFromHie(false);
+		}
+
 		transfer.setDecisionToTransferAt(parseDateTimeLocal(decisionToTransferAt));
 		transfer.setCallingTime(StringUtils.trimToNull(callingTime));
 		transfer.setReceivingFacilityCode(StringUtils.trimToNull(receivingFacilityCode));
@@ -156,27 +200,44 @@ public class TransferServiceImpl implements TransferService {
 			transfer.setAmbulanceCallTime(StringUtils.trimToNull(ambulanceCalledTime));
 			transfer.setDepartRefTime(StringUtils.trimToNull(departureFromReferringTime));
 		}
+		else {
+			transfer.setAmbulanceCallTime(null);
+			transfer.setDepartRefTime(null);
+		}
 		applyTransportationSnapshot(transfer, normalizedTransferType, transportationType, transportationOtherSpec);
 		transfer.setReasonForTransfer(StringUtils.trimToNull(reasonForTransfer));
-		applyHealthInsuranceSnapshot(transfer, patient);
-		patientSnapshotResolver.applyPatientSnapshot(transfer, patient, transferDao);
-
-		PersonAddress personAddress = transferDao.getPreferredPersonAddress(patient.getPatientId());
-		if (personAddress == null) {
-			personAddress = patientSnapshotResolver.resolveActivePersonAddress(patient);
+		if (StringUtils.isBlank(transfer.getReasonForTransfer())) {
+			throw new APIException("Reason for Transfer is required");
 		}
-		patientSnapshotResolver.applyPersonAddressSnapshot(transfer, personAddress);
 
-		transfer.setCreator(Context.getAuthenticatedUser());
+		if (!isUpdate) {
+			applyHealthInsuranceSnapshot(transfer, patient);
+			patientSnapshotResolver.applyPatientSnapshot(transfer, patient, transferDao);
+
+			PersonAddress personAddress = transferDao.getPreferredPersonAddress(patient.getPatientId());
+			if (personAddress == null) {
+				personAddress = patientSnapshotResolver.resolveActivePersonAddress(patient);
+			}
+			patientSnapshotResolver.applyPersonAddressSnapshot(transfer, personAddress);
+		}
+
+		applyFormExtras(transfer, formExtras, isUpdate);
+		validateRequiredClinicalFields(transfer);
+
 		Date now = new Date();
-		transfer.setDateCreated(now);
-		transfer.setVoided(false);
-		transfer.setHieSent(false);
-		transfer.setReceivedFromHie(false);
-		applyFormExtras(transfer, formExtras);
+		if (isUpdate) {
+			transfer.setChangedBy(Context.getAuthenticatedUser());
+			transfer.setDateChanged(now);
+			// Any local correction must be submitted to HIE again.
+			transfer.setHieSent(false);
+			transfer.setHieSentAt(null);
+			transfer.setHieSendError(null);
+		}
 
 		Transfer savedTransfer = transferDao.saveTransfer(transfer);
-		markActiveQueueEntryTransferred(patient, savedTransfer, now);
+		if (!isUpdate) {
+			markActiveQueueEntryTransferred(patient, savedTransfer, now);
+		}
 		return savedTransfer;
 	}
 
@@ -187,30 +248,27 @@ public class TransferServiceImpl implements TransferService {
 		}
 	}
 
-	private void applyFormExtras(Transfer transfer, TransferFormExtras formExtras) {
+	private void applyFormExtras(Transfer transfer, TransferFormExtras formExtras, boolean replaceClinicalFields) {
 		if (formExtras != null) {
-			// Keep obs-resolved clinical presentation unless the form explicitly provides one.
-			if (StringUtils.isNotBlank(formExtras.getClinicalPresentation())) {
+			if (replaceClinicalFields || StringUtils.isNotBlank(formExtras.getClinicalPresentation())) {
 				transfer.setClinicalPresentation(StringUtils.trimToNull(formExtras.getClinicalPresentation()));
 			}
 			transfer.setDisabilityType(StringUtils.trimToNull(formExtras.getDisabilityType()));
 			transfer.setLaboratory(StringUtils.trimToNull(formExtras.getLaboratory()));
 			transfer.setProceduresTreatments(StringUtils.trimToNull(formExtras.getProceduresTreatments()));
 			transfer.setOtherNotes(StringUtils.trimToNull(formExtras.getOtherNotes()));
-			transfer.setProviderQualification(StringUtils.trimToNull(formExtras.getProviderQualification()));
+			if (replaceClinicalFields || StringUtils.isNotBlank(formExtras.getDiagnosis())) {
+				transfer.setDiagnosis(StringUtils.trimToNull(formExtras.getDiagnosis()));
+			}
+			if (StringUtils.isNotBlank(formExtras.getProviderQualification())) {
+				transfer.setProviderQualification(StringUtils.trimToNull(formExtras.getProviderQualification()));
+			}
 			transfer.setSignedDate(parseDateValue(formExtras.getSignedDate()));
 			transfer.setSignedTime(StringUtils.trimToNull(formExtras.getSignedTime()));
 		}
 
-		if (StringUtils.isBlank(transfer.getProviderQualification()) && transferProfileService != null) {
-			User user = Context.getAuthenticatedUser();
-			if (user != null) {
-				TransferProfile profile = transferProfileService.getProfileForUser(user);
-				if (profile != null) {
-					transfer.setProviderQualification(StringUtils.trimToNull(profile.getQualification()));
-				}
-			}
-		}
+		applyProviderProfileDetails(transfer);
+		applyCaregiverFromCurrentUser(transfer);
 
 		if (transfer.getSignedDate() == null) {
 			transfer.setSignedDate(transfer.getDateCreated());
@@ -218,6 +276,63 @@ public class TransferServiceImpl implements TransferService {
 		if (StringUtils.isBlank(transfer.getSignedTime()) && transfer.getDateCreated() != null) {
 			transfer.setSignedTime(new SimpleDateFormat(TIME_PATTERN).format(transfer.getDateCreated()));
 		}
+	}
+
+	private void validateRequiredClinicalFields(Transfer transfer) {
+		if (StringUtils.isBlank(transfer.getClinicalPresentation())) {
+			throw new APIException("Clinical Presentation is required");
+		}
+		if (StringUtils.isBlank(transfer.getDiagnosis())) {
+			throw new APIException("Diagnosis is required");
+		}
+	}
+
+	private void applyCaregiverFromCurrentUser(Transfer transfer) {
+		if (transfer == null) {
+			return;
+		}
+		User user = Context.getAuthenticatedUser();
+		if (user == null) {
+			return;
+		}
+		String userName = null;
+		if (user.getPerson() != null && user.getPerson().getPersonName() != null) {
+			userName = StringUtils.trimToNull(user.getPerson().getPersonName().getFullName());
+		}
+		if (userName == null) {
+			userName = StringUtils.trimToNull(user.getUsername());
+		}
+		if (userName != null) {
+			transfer.setCaregiverName(userName);
+		}
+
+		if (transferProfileService != null) {
+			TransferProfile profile = transferProfileService.getProfileForUser(user);
+			if (profile != null && StringUtils.isNotBlank(profile.getPhoneNumber())) {
+				transfer.setCaregiverTelephone(StringUtils.trimToNull(profile.getPhoneNumber()));
+			}
+		}
+	}
+
+	private void applyProviderProfileDetails(Transfer transfer) {
+		if (transfer == null || transferProfileService == null) {
+			return;
+		}
+		User user = Context.getAuthenticatedUser();
+		if (user == null) {
+			return;
+		}
+		TransferProfile profile = transferProfileService.getProfileForUser(user);
+		if (profile == null) {
+			throw new APIException(
+					"Please complete My Profile with phone number, qualification, and speciality before creating a transfer");
+		}
+		if (!profile.isCompleteForTransfer()) {
+			throw new APIException(
+					"Please complete My Profile with phone number, qualification, and speciality before creating a transfer");
+		}
+		transfer.setProviderQualification(StringUtils.trimToNull(profile.getQualificationWithSpeciality()));
+		transfer.setProviderPhone(StringUtils.trimToNull(profile.getPhoneNumber()));
 	}
 
 	protected Date parseDateValue(String value) {

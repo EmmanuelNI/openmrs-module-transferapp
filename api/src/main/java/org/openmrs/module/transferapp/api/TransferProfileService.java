@@ -23,6 +23,7 @@ public interface TransferProfileService {
 	@Transactional(readOnly = true)
 	TransferProfile getProfileForUser(User user);
 
-	TransferProfile saveProfileForCurrentUser(String licenseNumber, String phoneNumber, String qualification);
+	TransferProfile saveProfileForCurrentUser(String licenseNumber, String phoneNumber, String qualification,
+			String speciality);
 
 }

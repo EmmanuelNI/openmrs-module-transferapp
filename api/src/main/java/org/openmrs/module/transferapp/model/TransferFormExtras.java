@@ -28,6 +28,8 @@ public class TransferFormExtras {
 
 	private String otherNotes;
 
+	private String diagnosis;
+
 	private String providerQualification;
 
 	private String signedDate;
@@ -72,6 +74,14 @@ public class TransferFormExtras {
 
 	public void setOtherNotes(String otherNotes) {
 		this.otherNotes = otherNotes;
+	}
+
+	public String getDiagnosis() {
+		return diagnosis;
+	}
+
+	public void setDiagnosis(String diagnosis) {
+		this.diagnosis = diagnosis;
 	}
 
 	public String getProviderQualification() {

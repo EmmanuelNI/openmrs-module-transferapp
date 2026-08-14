@@ -42,6 +42,8 @@ public class TransferProfilePageController {
 		model.addAttribute("licenseNumber", profile != null ? profile.getLicenseNumber() : "");
 		model.addAttribute("phoneNumber", profile != null ? profile.getPhoneNumber() : "");
 		model.addAttribute("qualification", profile != null ? profile.getQualification() : "");
+		model.addAttribute("speciality", profile != null ? profile.getSpeciality() : "");
+		model.addAttribute("qualificationDisplay", profile != null ? profile.getQualificationWithSpeciality() : "");
 	}
 
 }

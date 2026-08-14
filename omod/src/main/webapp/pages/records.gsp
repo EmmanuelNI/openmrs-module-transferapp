@@ -163,6 +163,13 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "recor
                        data-uuid="${ ui.encodeHtmlAttribute(record.id) }">
                         <i class="icon-share-alt"></i> ${ ui.message("transferapp.patient.transfers.view") }
                     </a>
+                    <% if (canCreateTransfer && record.patientId != null) { %>
+                    <a class="transfer-edit-link"
+                       href="${ ui.pageLink('coreapps', 'clinicianfacing/patient') }?patientId=${ record.patientId }"
+                       title="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.edit')) }">
+                        <i class="icon-pencil"></i> ${ ui.message("transferapp.patient.transfers.edit") }
+                    </a>
+                    <% } %>
                 </td>
             </tr>
             <% } %>

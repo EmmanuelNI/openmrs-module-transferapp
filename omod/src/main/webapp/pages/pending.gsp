@@ -73,10 +73,19 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "pendi
                 def existingPatient = transfer.existingPatient == true
                 def existingPatientReference = (transfer.existingPatientReference ?: "") as String
                 def pendingReturnUrl = ui.pageLinkWithoutContextPath("transferapp", "pending", [app: appId])
+                def agentRejected = transfer.agentRejected == true || transfer.agentRejected == "true"
+                def agentApproved = transfer.agentDecisionApproved == true || transfer.agentDecisionApproved == "true"
+                def needsApproval = transfer.needsInsuranceApproval == true || transfer.needsInsuranceApproval == "true"
+                def statusClass = agentRejected ? "transfer-status-rejected"
+                        : (agentApproved ? "transfer-status-approved"
+                        : (needsApproval ? "transfer-status-awaiting" : "transfer-status-pending"))
+                def statusLabel = (transfer.status ?: "pending") as String
             %>
             <tr class="transfer-row"
                 data-uuid="${ ui.encodeHtmlAttribute(uuid) }"
-                data-upid="${ ui.encodeHtmlAttribute(upid) }">
+                data-upid="${ ui.encodeHtmlAttribute(upid) }"
+                data-agent-approved="${ ui.encodeHtmlAttribute(String.valueOf(transfer.agentApproved == true || transfer.agentApproved == 'true')) }"
+                data-agent-comment="${ ui.encodeHtmlAttribute((transfer.agentComment ?: '') as String) }">
                 <td>${ ui.encodeHtmlContent((transfer.date ?: "") as String) }</td>
                 <td>
                     <span>${ ui.encodeHtmlContent((transfer.clientName ?: "") as String) }</span>
@@ -88,7 +97,7 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "pendi
                 <td>${ ui.encodeHtmlContent((transfer.origin ?: transfer.referringFacilityName ?: "") as String) }</td>
                 <td>${ ui.encodeHtmlContent((transfer.receivingService ?: "") as String) }</td>
                 <td>
-                    <span class="transfer-status-pending">${ ui.encodeHtmlContent((transfer.status ?: "pending") as String) }</span>
+                    <span class="${ statusClass }">${ ui.encodeHtmlContent(statusLabel) }</span>
                 </td>
                 <td>
                     <div class="transfer-pending-actions">

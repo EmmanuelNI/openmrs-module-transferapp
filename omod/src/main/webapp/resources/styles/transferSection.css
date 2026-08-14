@@ -17,17 +17,17 @@
 a.transfer-new-btn.transfer-new-btn-disabled,
 .transfer-new-btn.transfer-new-btn-disabled {
   display: inline-block;
-  margin: 4px 0 0;
-  padding: 10px 20px;
-  font-size: 15px;
+  margin: 2px 0 0;
+  padding: 5px 10px;
+  font-size: 12px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.42857143;
   color: #fff !important;
   text-decoration: none !important;
   text-align: center;
   background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%);
   border: 1px solid #64748b;
-  border-radius: 6px;
+  border-radius: 3px;
   box-shadow: none;
   cursor: not-allowed;
   opacity: 0.85;
@@ -54,18 +54,18 @@ a.transfer-new-btn.transfer-new-btn-disabled,
 
 a.transfer-new-btn {
   display: inline-block;
-  margin: 4px 0 12px 0;
-  padding: 10px 20px;
-  font-size: 15px;
+  margin: 2px 0 8px 0;
+  padding: 5px 10px;
+  font-size: 12px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.42857143;
   color: #fff !important;
   text-decoration: none !important;
   text-align: center;
   background: linear-gradient(180deg, #0d9488 0%, #0f766e 100%);
   border: 1px solid #0a5c52;
-  border-radius: 6px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  border-radius: 3px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
 }
@@ -134,6 +134,21 @@ table.transfer-datatable tbody tr.transfer-row-sent:hover {
   color: #64748b;
 }
 
+.transfer-status-awaiting {
+  color: #a16207;
+  font-weight: 600;
+}
+
+.transfer-status-approved {
+  color: #166534;
+  font-weight: 600;
+}
+
+.transfer-status-rejected {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
 a.transfer-view-link {
   color: #0f766e;
   font-weight: 600;
@@ -141,6 +156,18 @@ a.transfer-view-link {
 }
 
 a.transfer-view-link:hover {
+  color: #0d9488;
+  text-decoration: underline;
+}
+
+a.transfer-edit-link {
+  margin-left: 12px;
+  color: #0f766e;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+a.transfer-edit-link:hover {
   color: #0d9488;
   text-decoration: underline;
 }

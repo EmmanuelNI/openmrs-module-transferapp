@@ -14,6 +14,8 @@
 package org.openmrs.module.transferapp.fragment.controller.patient;
 
 import org.openmrs.Patient;
+import org.openmrs.User;
+import org.openmrs.api.context.Context;
 import org.openmrs.module.appframework.domain.AppDescriptor;
 import org.openmrs.module.appui.UiSessionContext;
 import org.openmrs.module.emrapi.patient.PatientDomainWrapper;
@@ -22,8 +24,10 @@ import org.openmrs.module.transferapp.TransferAppActivator;
 import org.openmrs.module.transferapp.TransferPrivilegeHelper;
 import org.openmrs.module.transferapp.api.PatientInsuranceService;
 import org.openmrs.module.transferapp.api.PatientTransferListService;
+import org.openmrs.module.transferapp.api.TransferProfileService;
 import org.openmrs.module.transferapp.model.PatientInsuranceInfo;
 import org.openmrs.module.transferapp.model.PatientTransferListItem;
+import org.openmrs.module.transferapp.model.TransferProfile;
 import org.openmrs.ui.framework.UiUtils;
 import org.openmrs.ui.framework.annotation.FragmentParam;
 import org.openmrs.ui.framework.annotation.InjectBeans;
@@ -48,7 +52,8 @@ public class TransfersSectionFragmentController {
 			@FragmentParam("app") AppDescriptor appDescriptor,
 			@InjectBeans PatientDomainWrapper patientWrapper,
 			@SpringBean("patientTransferListService") PatientTransferListService patientTransferListService,
-			@SpringBean("patientInsuranceService") PatientInsuranceService patientInsuranceService) {
+			@SpringBean("patientInsuranceService") PatientInsuranceService patientInsuranceService,
+			@SpringBean("transferProfileService") TransferProfileService transferProfileService) {
 
 		config.require("patient");
 		Object patient = config.get("patient");
@@ -62,6 +67,8 @@ public class TransfersSectionFragmentController {
 
 		boolean canListTransfers = TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_LIST_TRANSFERS);
 		boolean canCreateTransfer = TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);
+		boolean patientInsuranceAvailable = false;
+		boolean providerProfileComplete = false;
 		String accessDeniedMessage = null;
 
 		List<PatientTransferListItem> transfers = Collections.emptyList();
@@ -96,7 +103,12 @@ public class TransfersSectionFragmentController {
 				PatientInsuranceInfo patientInsurance = patientInsuranceService.getPatientInsurance(patientWrapper.getPatient());
 				model.addAttribute("patientInsuranceType", patientInsurance.getInsuranceType());
 				model.addAttribute("patientInsuranceNumber", patientInsurance.getInsuranceNumber());
-				model.addAttribute("patientInsuranceAvailable", patientInsurance.isAvailable());
+				patientInsuranceAvailable = patientInsurance.isAvailable();
+				model.addAttribute("patientInsuranceAvailable", patientInsuranceAvailable);
+
+				User user = Context.getAuthenticatedUser();
+				TransferProfile profile = user != null ? transferProfileService.getProfileForUser(user) : null;
+				providerProfileComplete = profile != null && profile.isCompleteForTransfer();
 			}
 			catch (Exception ex) {
 				canCreateTransfer = false;
@@ -128,6 +140,7 @@ public class TransfersSectionFragmentController {
 		model.addAttribute("recordsPageUrl", recordsPageUrl);
 		model.addAttribute("canListTransfers", canListTransfers);
 		model.addAttribute("canCreateTransfer", canCreateTransfer);
+		model.addAttribute("providerProfileComplete", providerProfileComplete);
 		model.addAttribute("requiredListPrivilege", TransferAppActivator.PRIVILEGE_LIST_TRANSFERS);
 		model.addAttribute("requiredCreatePrivilege", TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);
 		model.addAttribute("accessDeniedMessage", accessDeniedMessage);

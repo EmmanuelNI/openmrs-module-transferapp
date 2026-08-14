@@ -47,6 +47,13 @@
     border-radius: 4px;
 }
 
+.transfer-profile-hint {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.4;
+}
+
 .transfer-profile-actions {
     margin-top: 8px;
 }
