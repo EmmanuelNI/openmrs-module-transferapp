@@ -14,6 +14,7 @@
 package org.openmrs.module.transferapp.api.impl;
 
 import org.apache.commons.lang.StringUtils;
+import org.hl7.fhir.r4.model.Attachment;
 import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.StringType;
 import org.openmrs.Patient;
@@ -24,6 +25,7 @@ import org.openmrs.PersonAddress;
 import org.openmrs.PersonAttribute;
 import org.openmrs.PersonAttributeType;
 import org.openmrs.PersonName;
+import org.openmrs.api.AdministrationService;
 import org.openmrs.api.APIException;
 import org.openmrs.api.LocationService;
 import org.openmrs.api.PatientService;
@@ -35,12 +37,16 @@ import org.openmrs.module.rwandaemr.integration.ClientRegistryPatient;
 import org.openmrs.module.rwandaemr.integration.ClientRegistryPatientProvider;
 import org.openmrs.module.rwandaemr.integration.ClientRegistryPatientTranslator;
 import org.openmrs.module.rwandaemr.integration.IntegrationConfig;
+import org.openmrs.module.transferapp.TransferAppConstants;
 import org.openmrs.module.transferapp.api.ClientRegistryRegistrationService;
 import org.openmrs.module.transferapp.api.HiePatientRegistrationResult;
 import org.openmrs.module.registrationcore.api.RegistrationCoreService;
+import org.openmrs.util.OpenmrsConstants;
 
+import java.text.Normalizer;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -74,9 +80,17 @@ public class ClientRegistryRegistrationServiceImpl implements ClientRegistryRegi
 
 	private AddressHierarchyService addressHierarchyService;
 
+	private AdministrationService administrationService;
+
 	@Override
 	public boolean isHieEnabled() {
 		return integrationConfig != null && integrationConfig.isHieEnabled();
+	}
+
+	@Override
+	public String getUpidIdentifierTypeUuid() {
+		PatientIdentifierType upidType = rwandaEmrConfig != null ? rwandaEmrConfig.getUPID() : null;
+		return upidType != null ? StringUtils.trimToEmpty(upidType.getUuid()) : "";
 	}
 
 	@Override
@@ -100,6 +114,7 @@ public class ClientRegistryRegistrationServiceImpl implements ClientRegistryRegi
 		validateAddress(patient);
 		Map<String, Object> fields = toRegistrationFields(registryPatient, patient);
 		fields.put("upid", normalizedUpid);
+		putIfNotBlank(fields, "photo", findFhirPhoto(registryPatient));
 		return fields;
 	}
 
@@ -131,6 +146,7 @@ public class ClientRegistryRegistrationServiceImpl implements ClientRegistryRegi
 
 		Patient patient = clientRegistryPatientTranslator.toPatient(registryPatient);
 		applyRegistryName(registryPatient, patient);
+		normalizePatientNamesForConfiguredValidation(patient);
 		validateNationalId(patient);
 		validateAddress(patient);
 		Location resolvedLocation = identifierLocation != null ? identifierLocation : locationService.getDefaultLocation();
@@ -169,7 +185,8 @@ public class ClientRegistryRegistrationServiceImpl implements ClientRegistryRegi
 	}
 
 	void validateAddress(Patient patient) {
-		if (patient == null || patient.getAddresses() == null) {
+		if (patient == null || patient.getAddresses() == null || patient.getAddresses().isEmpty()
+				|| !isPatientAddressValidationEnabled()) {
 			return;
 		}
 
@@ -219,6 +236,16 @@ public class ClientRegistryRegistrationServiceImpl implements ClientRegistryRegi
 	private AddressHierarchyService getAddressHierarchyService() {
 		return addressHierarchyService != null ? addressHierarchyService
 				: Context.getService(AddressHierarchyService.class);
+	}
+
+	boolean isPatientAddressValidationEnabled() {
+		String configuredValue = getAdministrationService().getGlobalProperty(
+				TransferAppConstants.GP_HIE_VALIDATE_PATIENT_ADDRESS);
+		return Boolean.parseBoolean(StringUtils.trimToEmpty(configuredValue));
+	}
+
+	private AdministrationService getAdministrationService() {
+		return administrationService != null ? administrationService : Context.getAdministrationService();
 	}
 
 	private Patient findPatientByIdentifier(String identifier, PatientIdentifierType identifierType) {
@@ -271,6 +298,47 @@ public class ClientRegistryRegistrationServiceImpl implements ClientRegistryRegi
 		}
 		if (StringUtils.isNotBlank(registryName.getFamily())) {
 			patientName.setFamilyName(registryName.getFamily());
+		}
+	}
+
+	void normalizePatientNamesForConfiguredValidation(Patient patient) {
+		if (patient == null || patient.getNames() == null || patient.getNames().isEmpty()) {
+			return;
+		}
+
+		String namePattern = StringUtils.trimToNull(getAdministrationService().getGlobalProperty(
+				OpenmrsConstants.GLOBAL_PROPERTY_PATIENT_NAME_REGEX));
+		if (namePattern == null) {
+			return;
+		}
+
+		for (PersonName name : patient.getNames()) {
+			if (name == null || Boolean.TRUE.equals(name.getVoided())) {
+				continue;
+			}
+			name.setGivenName(normalizeNameForValidation(name.getGivenName(), namePattern));
+			name.setMiddleName(normalizeNameForValidation(name.getMiddleName(), namePattern));
+			name.setFamilyName(normalizeNameForValidation(name.getFamilyName(), namePattern));
+			name.setFamilyName2(normalizeNameForValidation(name.getFamilyName2(), namePattern));
+		}
+	}
+
+	static String normalizeNameForValidation(String value, String namePattern) {
+		String trimmed = StringUtils.trimToNull(value);
+		if (trimmed == null || StringUtils.isBlank(namePattern)) {
+			return trimmed;
+		}
+		try {
+			if (trimmed.matches(namePattern)) {
+				return trimmed;
+			}
+			String withoutAccents = Normalizer.normalize(trimmed, Normalizer.Form.NFD)
+					.replaceAll("\\p{M}+", "");
+			return withoutAccents.matches(namePattern) ? withoutAccents : trimmed;
+		}
+		catch (RuntimeException ignored) {
+			// Let OpenMRS report a malformed configured pattern through its normal validator.
+			return trimmed;
 		}
 	}
 
@@ -380,6 +448,132 @@ public class ClientRegistryRegistrationServiceImpl implements ClientRegistryRegi
 		}
 	}
 
+	private String findFhirPhoto(ClientRegistryPatient registryPatient) {
+		if (registryPatient == null || registryPatient.getPatient() == null
+				|| !registryPatient.getPatient().hasPhoto()) {
+			return null;
+		}
+
+		for (Attachment attachment : registryPatient.getPatient().getPhoto()) {
+			if (attachment == null) {
+				continue;
+			}
+			if (attachment.hasData()) {
+				byte[] data = attachment.getData();
+				String contentType = resolveImageContentType(attachment.getContentType(), data);
+				if (data != null && data.length > 0 && contentType != null) {
+					return "data:" + contentType + ";base64," + Base64.getEncoder().encodeToString(data);
+				}
+			}
+			if (attachment.hasUrl()) {
+				String photo = normalizePhotoForBrowser(attachment.getUrl());
+				if (StringUtils.isNotBlank(photo)) {
+					return photo;
+				}
+			}
+		}
+		return null;
+	}
+
+	private String normalizePhotoForBrowser(String photo) {
+		String trimmed = StringUtils.trimToNull(photo);
+		if (trimmed == null) {
+			return null;
+		}
+		String lower = trimmed.toLowerCase();
+		if (lower.startsWith("http://") || lower.startsWith("https://") || trimmed.startsWith("/")) {
+			return trimmed;
+		}
+		if (isSupportedImageDataUri(lower)) {
+			return trimmed;
+		}
+
+		String compact = trimmed.replaceAll("\\s", "");
+		String contentType = resolveBase64ImageContentType(compact);
+		if (contentType != null && hasOnlyBase64Characters(compact)) {
+			return "data:" + contentType + ";base64," + compact;
+		}
+		return null;
+	}
+
+	private boolean isSupportedImageDataUri(String lowerValue) {
+		return lowerValue.startsWith("data:image/jpeg;base64,")
+				|| lowerValue.startsWith("data:image/jpg;base64,")
+				|| lowerValue.startsWith("data:image/png;base64,")
+				|| lowerValue.startsWith("data:image/gif;base64,")
+				|| lowerValue.startsWith("data:image/webp;base64,");
+	}
+
+	private String resolveImageContentType(String configuredType, byte[] data) {
+		String normalized = StringUtils.trimToNull(configuredType);
+		if (normalized != null) {
+			normalized = normalized.toLowerCase();
+			int parameters = normalized.indexOf(';');
+			if (parameters >= 0) {
+				normalized = normalized.substring(0, parameters).trim();
+			}
+			if ("image/jpeg".equals(normalized) || "image/jpg".equals(normalized)
+					|| "image/png".equals(normalized) || "image/gif".equals(normalized)
+					|| "image/webp".equals(normalized)) {
+				return normalized;
+			}
+		}
+		return resolveBinaryImageContentType(data);
+	}
+
+	private String resolveBinaryImageContentType(byte[] data) {
+		if (data == null || data.length < 4) {
+			return null;
+		}
+		if ((data[0] & 0xff) == 0xff && (data[1] & 0xff) == 0xd8 && (data[2] & 0xff) == 0xff) {
+			return "image/jpeg";
+		}
+		if ((data[0] & 0xff) == 0x89 && data[1] == 0x50 && data[2] == 0x4e && data[3] == 0x47) {
+			return "image/png";
+		}
+		if (data[0] == 'G' && data[1] == 'I' && data[2] == 'F') {
+			return "image/gif";
+		}
+		if (data.length >= 12 && data[0] == 'R' && data[1] == 'I' && data[2] == 'F' && data[3] == 'F'
+				&& data[8] == 'W' && data[9] == 'E' && data[10] == 'B' && data[11] == 'P') {
+			return "image/webp";
+		}
+		return null;
+	}
+
+	private String resolveBase64ImageContentType(String value) {
+		if (StringUtils.isBlank(value) || value.length() < 8) {
+			return null;
+		}
+		if (value.startsWith("/9j/")) {
+			return "image/jpeg";
+		}
+		if (value.startsWith("iVBOR")) {
+			return "image/png";
+		}
+		if (value.startsWith("R0lGOD")) {
+			return "image/gif";
+		}
+		if (value.startsWith("UklGR")) {
+			return "image/webp";
+		}
+		return null;
+	}
+
+	private boolean hasOnlyBase64Characters(String value) {
+		for (int i = 0; i < value.length(); i++) {
+			char character = value.charAt(i);
+			boolean valid = (character >= 'a' && character <= 'z')
+					|| (character >= 'A' && character <= 'Z')
+					|| (character >= '0' && character <= '9')
+					|| character == '+' || character == '/' || character == '=';
+			if (!valid) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	public void setIntegrationConfig(IntegrationConfig integrationConfig) {
 		this.integrationConfig = integrationConfig;
 	}
@@ -410,5 +604,9 @@ public class ClientRegistryRegistrationServiceImpl implements ClientRegistryRegi
 
 	public void setAddressHierarchyService(AddressHierarchyService addressHierarchyService) {
 		this.addressHierarchyService = addressHierarchyService;
+	}
+
+	public void setAdministrationService(AdministrationService administrationService) {
+		this.administrationService = administrationService;
 	}
 }

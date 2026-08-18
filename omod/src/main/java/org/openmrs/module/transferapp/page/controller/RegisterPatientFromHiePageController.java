@@ -30,6 +30,7 @@ import org.openmrs.ui.framework.annotation.SpringBean;
 import org.openmrs.ui.framework.page.PageModel;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -38,6 +39,8 @@ import java.util.Map;
 public class RegisterPatientFromHiePageController {
 
 	private static final Log log = LogFactory.getLog(RegisterPatientFromHiePageController.class);
+
+	private static final String RWANDA_EMR_REGISTRATION_APP_ID = "rwandaemr.registerPatient";
 
 	public String get(UiSessionContext sessionContext,
 			UiUtils ui,
@@ -60,6 +63,8 @@ public class RegisterPatientFromHiePageController {
 			}
 
 			model.addAttribute("patientDetails", patientDetails);
+			model.addAttribute("upidIdentifierTypeUuid",
+					clientRegistryRegistrationService.getUpidIdentifierTypeUuid());
 			model.addAttribute("upid", normalizedUpid);
 			model.addAttribute("returnUrl", safeReturnUrl);
 			model.addAttribute("cancelUrl", "/" + ui.contextPath() + safeReturnUrl);
@@ -84,6 +89,7 @@ public class RegisterPatientFromHiePageController {
 		requireAccess(sessionContext);
 
 		String normalizedUpid = StringUtils.trimToNull(upid);
+		String safeReturnUrl = safeReturnUrl(returnUrl, ui);
 		try {
 			HiePatientRegistrationResult result = clientRegistryRegistrationService.registerPatientByUpid(
 					normalizedUpid, sessionContext.getSessionLocation());
@@ -95,6 +101,7 @@ public class RegisterPatientFromHiePageController {
 					: "transferapp.pending.registration.exists";
 			InfoErrorMessageUtil.flashInfoMessage(sessionContext.getSession(),
 					ui.message(messageCode, normalizedUpid, localIdentifier));
+			return "redirect:" + registrationSummaryUrl(ui, patient);
 		}
 		catch (Exception ex) {
 			log.error("Unable to register the HIE patient with UPID " + normalizedUpid, ex);
@@ -102,9 +109,31 @@ public class RegisterPatientFromHiePageController {
 					? ex.getMessage() : ui.message("transferapp.pending.registration.error");
 			InfoErrorMessageUtil.flashErrorMessage(sessionContext.getSession(),
 					ui.message("transferapp.pending.registration.failed", normalizedUpid, reason));
+			if (normalizedUpid != null) {
+				Map<String, Object> previewParameters = new LinkedHashMap<String, Object>();
+				previewParameters.put("upid", normalizedUpid);
+				previewParameters.put("returnUrl", safeReturnUrl);
+				return "redirect:" + ui.pageLinkWithoutContextPath(
+						"transferapp", "registerPatientFromHie", previewParameters);
+			}
 		}
 
-		return "redirect:" + safeReturnUrl(returnUrl, ui);
+		return "redirect:" + safeReturnUrl;
+	}
+
+	private String registrationSummaryUrl(UiUtils ui, Patient patient) {
+		String patientUuid = patient.getUuid();
+
+		Map<String, Object> patientPageParameters = new LinkedHashMap<String, Object>();
+		patientPageParameters.put("patientId", patientUuid);
+		String patientPageUrl = "/" + ui.contextPath()
+				+ ui.pageLinkWithoutContextPath("coreapps", "clinicianfacing/patient", patientPageParameters);
+
+		Map<String, Object> summaryParameters = new LinkedHashMap<String, Object>();
+		summaryParameters.put("patientId", patientUuid);
+		summaryParameters.put("appId", RWANDA_EMR_REGISTRATION_APP_ID);
+		summaryParameters.put("returnUrl", patientPageUrl);
+		return ui.pageLinkWithoutContextPath("registrationapp", "registrationSummary", summaryParameters);
 	}
 
 	private void requireAccess(UiSessionContext sessionContext) {

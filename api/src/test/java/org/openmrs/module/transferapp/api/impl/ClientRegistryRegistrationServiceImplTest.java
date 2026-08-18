@@ -22,6 +22,7 @@ import org.openmrs.PersonAddress;
 import org.openmrs.PersonAttribute;
 import org.openmrs.PersonAttributeType;
 import org.openmrs.PersonName;
+import org.openmrs.api.AdministrationService;
 import org.openmrs.api.LocationService;
 import org.openmrs.api.PatientService;
 import org.openmrs.module.addresshierarchy.AddressHierarchyEntry;
@@ -32,7 +33,9 @@ import org.openmrs.module.rwandaemr.integration.ClientRegistryPatientProvider;
 import org.openmrs.module.rwandaemr.integration.ClientRegistryPatientTranslator;
 import org.openmrs.module.rwandaemr.integration.IntegrationConfig;
 import org.openmrs.module.registrationcore.api.RegistrationCoreService;
+import org.openmrs.module.transferapp.TransferAppConstants;
 import org.openmrs.module.transferapp.api.HiePatientRegistrationResult;
+import org.openmrs.util.OpenmrsConstants;
 
 import java.util.Calendar;
 import java.util.Collections;
@@ -86,14 +89,14 @@ public class ClientRegistryRegistrationServiceImplTest {
 				.thenReturn(Collections.<Patient>emptyList());
 
 		org.hl7.fhir.r4.model.Patient fhirPatient = new org.hl7.fhir.r4.model.Patient();
-		fhirPatient.addName().addGiven("Alice").addGiven("Marie").setFamily("Uwase");
+		fhirPatient.addName().addGiven("Consolée").addGiven("Marie").setFamily("Uwase");
 		ClientRegistryPatient registryPatient = new ClientRegistryPatient(fhirPatient);
 		ClientRegistryPatientProvider provider = mock(ClientRegistryPatientProvider.class);
 		when(provider.fetchPatientFromClientRegistry("UPI-123", IntegrationConfig.IDENTIFIER_SYSTEM_UPI))
 				.thenReturn(registryPatient);
 
 		Patient translatedPatient = new Patient();
-		PersonName translatedName = new PersonName("Alice Marie", null, "Uwase");
+		PersonName translatedName = new PersonName("Consolée Marie", null, "Uwase");
 		translatedName.setPreferred(true);
 		translatedPatient.addName(translatedName);
 		translatedPatient.addIdentifier(identifier(nationalIdType, "1199880011223344"));
@@ -106,17 +109,27 @@ public class ClientRegistryRegistrationServiceImplTest {
 				.thenReturn(translatedPatient);
 		ClientRegistryRegistrationServiceImpl service = registrationService(
 				upidType, nationalIdType, patientService, provider, translator, registrationCoreService);
+		AdministrationService administrationService = mock(AdministrationService.class);
+		when(administrationService.getGlobalProperty(
+				OpenmrsConstants.GLOBAL_PROPERTY_PATIENT_NAME_REGEX)).thenReturn("[A-Za-z' -]+");
+		service.setAdministrationService(administrationService);
 
 		HiePatientRegistrationResult result = service.registerPatientByUpid("UPI-123", location);
 
 		assertTrue(result.isCreated());
 		assertSame(translatedPatient, result.getPatient());
-		assertEquals("Alice", translatedPatient.getGivenName());
+		assertEquals("Consolee", translatedPatient.getGivenName());
 		assertEquals("Marie", translatedPatient.getMiddleName());
 		assertEquals("Uwase", translatedPatient.getFamilyName());
 		assertEquals("UPI-123", translatedPatient.getPatientIdentifier(upidType).getIdentifier());
 		assertSame(location, translatedPatient.getPatientIdentifier(upidType).getLocation());
 		verify(registrationCoreService).registerPatient(eq(translatedPatient), anyList(), eq(location));
+	}
+
+	@Test
+	public void normalizeNameForValidationPreservesAccentsWhenConfiguredPatternAllowsThem() {
+		assertEquals("Consolée", ClientRegistryRegistrationServiceImpl.normalizeNameForValidation(
+				"Consolée", "[\\p{L}]+"));
 	}
 
 	@Test
@@ -178,6 +191,27 @@ public class ClientRegistryRegistrationServiceImplTest {
 	}
 
 	@Test
+	public void findRegistrationFieldsByUpidIncludesInlineFhirPhoto() {
+		PatientIdentifierType upidType = identifierType("upid");
+		PatientIdentifierType nationalIdType = identifierType("national-id");
+		org.hl7.fhir.r4.model.Patient fhirPatient = new org.hl7.fhir.r4.model.Patient();
+		fhirPatient.addPhoto().setContentType("image/png").setData(new byte[] { 1, 2, 3 });
+		ClientRegistryPatient registryPatient = new ClientRegistryPatient(fhirPatient);
+		ClientRegistryPatientProvider provider = mock(ClientRegistryPatientProvider.class);
+		when(provider.fetchPatientFromClientRegistry("UPI-123", IntegrationConfig.IDENTIFIER_SYSTEM_UPI))
+				.thenReturn(registryPatient);
+		ClientRegistryPatientTranslator translator = mock(ClientRegistryPatientTranslator.class);
+		when(translator.toPatient(registryPatient)).thenReturn(new Patient());
+		ClientRegistryRegistrationServiceImpl service = registrationService(
+				upidType, nationalIdType, mock(PatientService.class), provider, translator,
+				mock(RegistrationCoreService.class));
+
+		Map<String, Object> fields = service.findRegistrationFieldsByUpid("UPI-123");
+
+		assertEquals("data:image/png;base64,AQID", fields.get("photo"));
+	}
+
+	@Test
 	public void findRegistrationFieldsByUpidRejectsIncompleteAddressBeforePreview() {
 		PatientIdentifierType upidType = identifierType("upid");
 		PatientIdentifierType nationalIdType = identifierType("national-id");
@@ -196,6 +230,7 @@ public class ClientRegistryRegistrationServiceImplTest {
 				upidType, nationalIdType, mock(PatientService.class), provider, translator,
 				mock(RegistrationCoreService.class));
 		service.setAddressHierarchyService(mock(AddressHierarchyService.class));
+		setAddressValidation(service, true);
 
 		try {
 			service.findRegistrationFieldsByUpid("UPI-123");
@@ -226,6 +261,7 @@ public class ClientRegistryRegistrationServiceImplTest {
 		ClientRegistryRegistrationServiceImpl service = registrationService(
 				upidType, nationalIdType, patientService, provider, translator, registrationCoreService);
 		service.setAddressHierarchyService(addressHierarchy(false));
+		setAddressValidation(service, true);
 
 		try {
 			service.registerPatientByUpid("UPI-123", new Location());
@@ -242,6 +278,7 @@ public class ClientRegistryRegistrationServiceImplTest {
 	public void validateAddressAllowsEmptyAddressAndAcceptsCompleteConfiguredHierarchy() {
 		ClientRegistryRegistrationServiceImpl service = new ClientRegistryRegistrationServiceImpl();
 		service.setAddressHierarchyService(addressHierarchy(true));
+		setAddressValidation(service, true);
 
 		Patient patientWithoutAddress = new Patient();
 		service.validateAddress(patientWithoutAddress);
@@ -258,6 +295,27 @@ public class ClientRegistryRegistrationServiceImplTest {
 		patientWithValidAddress.addAddress(validAddress);
 		service.validateAddress(patientWithValidAddress);
 		assertSame(validAddress, patientWithValidAddress.getPersonAddress());
+	}
+
+	@Test
+	public void validateAddressIsDisabledWhenGlobalPropertyIsMissingOrFalse() {
+		ClientRegistryRegistrationServiceImpl service = new ClientRegistryRegistrationServiceImpl();
+		AdministrationService administrationService = mock(AdministrationService.class);
+		service.setAdministrationService(administrationService);
+
+		Patient patient = new Patient();
+		PersonAddress incompleteAddress = rwandaAddress();
+		incompleteAddress.setAddress1(null);
+		patient.addAddress(incompleteAddress);
+
+		service.validateAddress(patient);
+		assertFalse(service.isPatientAddressValidationEnabled());
+
+		when(administrationService.getGlobalProperty(
+				TransferAppConstants.GP_HIE_VALIDATE_PATIENT_ADDRESS)).thenReturn(" false ");
+		service.validateAddress(patient);
+		assertFalse(service.isPatientAddressValidationEnabled());
+		assertSame(incompleteAddress, patient.getPersonAddress());
 	}
 
 	@Test
@@ -420,6 +478,13 @@ public class ClientRegistryRegistrationServiceImplTest {
 		return service;
 	}
 
+	private void setAddressValidation(ClientRegistryRegistrationServiceImpl service, boolean enabled) {
+		AdministrationService administrationService = mock(AdministrationService.class);
+		when(administrationService.getGlobalProperty(
+				TransferAppConstants.GP_HIE_VALIDATE_PATIENT_ADDRESS)).thenReturn(Boolean.toString(enabled));
+		service.setAdministrationService(administrationService);
+	}
+
 	private void assertInvalidNationalIdRejected(String nationalId) {
 		PatientIdentifierType upidType = identifierType("upid");
 		PatientIdentifierType nationalIdType = identifierType("national-id");
@@ -506,6 +571,7 @@ public class ClientRegistryRegistrationServiceImplTest {
 		service.setClientRegistryPatientProvider(provider);
 		service.setClientRegistryPatientTranslator(translator);
 		service.setRegistrationCoreService(registrationCoreService);
+		service.setAdministrationService(mock(AdministrationService.class));
 		return service;
 	}
 

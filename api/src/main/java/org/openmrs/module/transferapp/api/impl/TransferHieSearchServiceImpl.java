@@ -26,6 +26,7 @@ import org.openmrs.module.transferapp.hie.HieApiException;
 import org.openmrs.module.transferapp.hie.HieBasicConnection;
 import org.openmrs.module.transferapp.hie.HieConnectionResolver;
 import org.openmrs.module.transferapp.hie.HieShrClient;
+import org.openmrs.module.transferapp.hie.HieTransferResponsePage;
 import org.openmrs.module.transferapp.hie.HieTransferResponseParser;
 
 import java.io.UnsupportedEncodingException;
@@ -34,13 +35,19 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class TransferHieSearchServiceImpl implements TransferHieSearchService {
 
 	private static final Log log = LogFactory.getLog(TransferHieSearchServiceImpl.class);
+
+	static final int HIE_PAGE_SIZE = 100;
+
+	static final int HIE_MAX_PAGES = 10000;
 
 	private HieConnectionResolver hieConnectionResolver = new HieConnectionResolver();
 
@@ -82,10 +89,8 @@ public class TransferHieSearchServiceImpl implements TransferHieSearchService {
 			String pathWithQuery = buildPatientListTransfersPath(upid.trim(), fromDate, endDate);
 			log.info("Requesting transfers from HIE: " + connection.getBaseUrl() + pathWithQuery);
 
-			String responseJson = hieShrClient.get(connection, pathWithQuery);
-			validateHieResponse(responseJson);
-
-			List<Map<String, Object>> transfers = enrichTransfers(responseParser.parse(responseJson));
+			List<Map<String, Object>> transfers = enrichTransfers(
+					fetchAllTransferPages(connection, pathWithQuery));
 			if (StringUtils.isNotBlank(transferId)) {
 				transfers = filterByTransferId(transfers, transferId.trim());
 			}
@@ -105,7 +110,13 @@ public class TransferHieSearchServiceImpl implements TransferHieSearchService {
 
 	@Override
 	public Map<String, Object> listPendingTransfersForCurrentFacility() {
+		return listPendingTransfersForCurrentFacility(DEFAULT_PENDING_WEEKS);
+	}
+
+	@Override
+	public Map<String, Object> listPendingTransfersForCurrentFacility(int weeks) {
 		Map<String, Object> result = new LinkedHashMap<String, Object>();
+		int selectedWeeks = normalizePendingWeeks(weeks);
 
 		String targetOrg = sendingLocationResolver.resolveCurrentSendingFacilityName();
 		if (StringUtils.isBlank(targetOrg)) {
@@ -127,21 +138,21 @@ public class TransferHieSearchServiceImpl implements TransferHieSearchService {
 
 		try {
 			LocalDate today = LocalDate.now();
-			String fromDate = today.minusDays(28).format(DateTimeFormatter.ISO_LOCAL_DATE);
+			String fromDate = calculatePendingFromDate(today, selectedWeeks)
+					.format(DateTimeFormatter.ISO_LOCAL_DATE);
 			String endDate = today.plusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE);
 
 			HieBasicConnection connection = hieConnectionResolver.resolveConnection();
 			String pathWithQuery = buildTargetOrgListTransfersPath(targetOrg.trim(), fromDate, endDate);
 			log.info("Requesting pending transfers from HIE: " + connection.getBaseUrl() + pathWithQuery);
 
-			String responseJson = hieShrClient.get(connection, pathWithQuery);
-			validateHieResponse(responseJson);
-
-			List<Map<String, Object>> transfers = enrichTransfers(responseParser.parse(responseJson));
+			List<Map<String, Object>> transfers = enrichTransfers(
+					fetchAllTransferPages(connection, pathWithQuery));
 			result.put("status", "success");
 			result.put("targetOrg", targetOrg.trim());
 			result.put("fromDate", fromDate);
 			result.put("endDate", endDate);
+			result.put("weeks", selectedWeeks);
 			result.put("data", transfers);
 			return result;
 		}
@@ -153,6 +164,72 @@ public class TransferHieSearchServiceImpl implements TransferHieSearchService {
 			result.put("data", Collections.emptyList());
 			return result;
 		}
+	}
+
+	static int normalizePendingWeeks(int weeks) {
+		return weeks >= DEFAULT_PENDING_WEEKS && weeks <= MAX_PENDING_WEEKS
+				? weeks : DEFAULT_PENDING_WEEKS;
+	}
+
+	static LocalDate calculatePendingFromDate(LocalDate today, int weeks) {
+		return today.minusDays(normalizePendingWeeks(weeks) * 7L);
+	}
+
+	List<Map<String, Object>> fetchAllTransferPages(HieBasicConnection connection, String pathWithQuery)
+			throws Exception {
+		List<Map<String, Object>> allTransfers = new ArrayList<Map<String, Object>>();
+		Set<String> seenTransferIds = new HashSet<String>();
+		int rawLoadedCount = 0;
+
+		for (int page = 1; page <= HIE_MAX_PAGES; page++) {
+			String pagedPath = appendPagination(pathWithQuery, page, HIE_PAGE_SIZE);
+			String responseJson = hieShrClient.get(connection, pagedPath);
+			validateHieResponse(responseJson);
+
+			HieTransferResponsePage responsePage = responseParser.parsePage(responseJson);
+			List<Map<String, Object>> batch = responsePage.getTransfers();
+			if (batch == null || batch.isEmpty()) {
+				log.info("HIE transfer list loaded " + allTransfers.size() + " unique entries across "
+						+ page + " page(s)");
+				return allTransfers;
+			}
+
+			rawLoadedCount += batch.size();
+			for (Map<String, Object> transfer : batch) {
+				String transferId = transfer != null ? asString(transfer.get("id")) : "";
+				if (StringUtils.isBlank(transferId) || seenTransferIds.add(transferId)) {
+					allTransfers.add(transfer);
+				}
+			}
+
+			if (!shouldFetchNextPage(responsePage, batch.size(), rawLoadedCount)) {
+				log.info("HIE transfer list loaded " + allTransfers.size() + " unique entries across "
+						+ page + " page(s)");
+				return allTransfers;
+			}
+		}
+
+		throw new HieApiException("HIE transfer pagination exceeded the safety limit of "
+				+ HIE_MAX_PAGES + " pages");
+	}
+
+	static boolean shouldFetchNextPage(HieTransferResponsePage responsePage, int batchSize, int loadedCount) {
+		if (batchSize <= 0) {
+			return false;
+		}
+		if (responsePage.hasMore()) {
+			return true;
+		}
+		Integer total = responsePage.getTotal();
+		if (total != null) {
+			return loadedCount < total;
+		}
+		return batchSize >= HIE_PAGE_SIZE;
+	}
+
+	private static String appendPagination(String pathWithQuery, int page, int size) {
+		String separator = pathWithQuery.contains("?") ? "&" : "?";
+		return pathWithQuery + separator + "page=" + page + "&size=" + size;
 	}
 
 	private static String buildPatientListTransfersPath(String upid, String fromDate, String endDate)
@@ -234,6 +311,10 @@ public class TransferHieSearchServiceImpl implements TransferHieSearchService {
 			}
 		}
 		return filtered;
+	}
+
+	void setHieShrClient(HieShrClient hieShrClient) {
+		this.hieShrClient = hieShrClient;
 	}
 
 }

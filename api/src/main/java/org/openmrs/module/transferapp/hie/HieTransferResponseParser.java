@@ -54,8 +54,12 @@ public class HieTransferResponseParser {
             "http://example.org/fhir/StructureDefinition/extended-vitals";
 
     public List<Map<String, Object>> parse(String jsonData) throws Exception {
+        return parsePage(jsonData).getTransfers();
+    }
+
+    public HieTransferResponsePage parsePage(String jsonData) throws Exception {
         if (jsonData == null || jsonData.trim().isEmpty()) {
-            return new ArrayList<Map<String, Object>>();
+            return emptyPage();
         }
 
         ObjectMapper mapper = new ObjectMapper();
@@ -63,37 +67,56 @@ public class HieTransferResponseParser {
 
         JsonNode resourceType = rootNode.get("resourceType");
         if (resourceType == null || resourceType.isNull() || !"Parameters".equals(resourceType.getTextValue())) {
-            return new ArrayList<Map<String, Object>>();
+            return emptyPage();
         }
 
         JsonNode parameters = rootNode.get("parameter");
         if (parameters == null || !parameters.isArray()) {
-            return new ArrayList<Map<String, Object>>();
+            return emptyPage();
         }
 
         JsonNode bundleNode = null;
+        boolean hasMore = false;
+        Integer page = null;
+        Integer size = null;
+        Integer total = null;
         Iterator<JsonNode> parameterIterator = parameters.getElements();
         while (parameterIterator.hasNext()) {
             JsonNode param = parameterIterator.next();
             JsonNode nameNode = param.get("name");
-            if (nameNode != null && !nameNode.isNull() && "bundle".equals(nameNode.getTextValue())) {
+            if (nameNode == null || nameNode.isNull()) {
+                continue;
+            }
+            String parameterName = nameNode.getTextValue();
+            if ("bundle".equals(parameterName)) {
                 bundleNode = param.get("resource");
-                break;
+            } else if ("hasMore".equals(parameterName)) {
+                JsonNode value = param.get("valueBoolean");
+                hasMore = value != null && !value.isNull() && value.getBooleanValue();
+            } else if ("page".equals(parameterName)) {
+                page = integerValue(param.get("valueInteger"));
+            } else if ("size".equals(parameterName)) {
+                size = integerValue(param.get("valueInteger"));
+            } else if ("total".equals(parameterName)) {
+                total = integerValue(param.get("valueInteger"));
             }
         }
 
         if (bundleNode == null || bundleNode.isNull()) {
-            return new ArrayList<Map<String, Object>>();
+            return new HieTransferResponsePage(new ArrayList<Map<String, Object>>(), hasMore, page, size, total);
+        }
+        if (total == null) {
+            total = integerValue(bundleNode.get("total"));
         }
 
         JsonNode entries = bundleNode.get("entry");
         if (entries == null || !entries.isArray()) {
-            return new ArrayList<Map<String, Object>>();
+            return new HieTransferResponsePage(new ArrayList<Map<String, Object>>(), hasMore, page, size, total);
         }
 
         Iterator<JsonNode> entriesIterator = entries.getElements();
         if (!entriesIterator.hasNext()) {
-            return new ArrayList<Map<String, Object>>();
+            return new HieTransferResponsePage(new ArrayList<Map<String, Object>>(), hasMore, page, size, total);
         }
 
         List<Map<String, Object>> transferList = new ArrayList<Map<String, Object>>();
@@ -157,7 +180,15 @@ public class HieTransferResponseParser {
             transferList.add(transfer);
         }
 
-        return transferList;
+        return new HieTransferResponsePage(transferList, hasMore, page, size, total);
+    }
+
+    private HieTransferResponsePage emptyPage() {
+        return new HieTransferResponsePage(new ArrayList<Map<String, Object>>(), false, null, null, null);
+    }
+
+    private Integer integerValue(JsonNode node) {
+        return node == null || node.isNull() ? null : node.getIntValue();
     }
 
     /**

@@ -24,6 +24,8 @@ public interface ClientRegistryRegistrationService {
 
 	boolean isHieEnabled();
 
+	String getUpidIdentifierTypeUuid();
+
 	/**
 	 * @return registration field values, or {@code null} when the UPID has no unique client-registry match
 	 */

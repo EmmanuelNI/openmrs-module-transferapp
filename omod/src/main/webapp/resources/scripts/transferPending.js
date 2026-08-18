@@ -32,9 +32,63 @@
             .split("\"").join("&quot;");
     }
 
+    function escapeRegex(value) {
+        return String(value || "").replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1");
+    }
+
+    function ensureSelect2() {
+        if (typeof jq.fn.select2 === "function") {
+            return true;
+        }
+        if (typeof jQuery !== "undefined" && typeof jQuery.fn.select2 === "function") {
+            jq.fn.select2 = jQuery.fn.select2;
+            return true;
+        }
+        return false;
+    }
+
     jq(document).ready(function() {
-        if (jq.fn.dataTable && jq("#transfer-pending-table").length) {
-            jq("#transfer-pending-table").dataTable({
+        jq("#pending-week-filter").on("change.transferPending", function() {
+            var form = jq("#transfer-pending-filter-form");
+            if (!form.length || form.attr("aria-busy") === "true") {
+                return;
+            }
+            form.attr("aria-busy", "true");
+            jq("#pending-week-loading").show();
+            if (form[0] && typeof form[0].submit === "function") {
+                form[0].submit();
+            }
+        });
+
+        var pendingTable = null;
+        var pendingRefreshInProgress = false;
+
+        function getPendingFilterState() {
+            var selectedServices = jq("#pending-service-filter").val() || [];
+            if (typeof selectedServices === "string") {
+                selectedServices = [selectedServices];
+            }
+            return {
+                date: jq.trim(jq("#pending-date-filter").val() || ""),
+                services: selectedServices
+            };
+        }
+
+        function initializePendingTable(filterState) {
+            var tableElement = jq("#transfer-pending-table");
+            if (!jq.fn.dataTable || !tableElement.length) {
+                pendingTable = null;
+                return;
+            }
+
+            var dateFilter = jq("#pending-date-filter");
+            var serviceFilter = jq("#pending-service-filter");
+            if (filterState) {
+                dateFilter.val(filterState.date || "");
+                serviceFilter.val(filterState.services || []);
+            }
+
+            pendingTable = tableElement.dataTable({
                 "sDom": "lfrtip",
                 "bLengthChange": true,
                 "iDisplayLength": 25,
@@ -45,7 +99,102 @@
                     { "bSortable": false, "aTargets": [6] }
                 ]
             });
+
+            if (serviceFilter.length && ensureSelect2()) {
+                serviceFilter.select2({
+                    width: "100%",
+                    placeholder: serviceFilter.attr("data-placeholder") || "All services",
+                    allowClear: true,
+                    closeOnSelect: false
+                });
+            }
+
+            serviceFilter.off("change.transferPending").on("change.transferPending", function() {
+                var selectedServices = jq(this).val() || [];
+                if (typeof selectedServices === "string") {
+                    selectedServices = [selectedServices];
+                }
+                var escapedServices = jq.map(selectedServices, function(service) {
+                    return escapeRegex(jq.trim(service));
+                });
+                var filterExpression = escapedServices.length > 0
+                    ? "^(?:" + escapedServices.join("|") + ")$"
+                    : "";
+                pendingTable.fnFilter(filterExpression, 4, escapedServices.length > 0, false);
+            });
+
+            dateFilter.off("change.transferPending").on("change.transferPending", function() {
+                var selectedDate = jq.trim(jq(this).val() || "");
+                var filterExpression = selectedDate
+                    ? "^" + escapeRegex(selectedDate) + "$"
+                    : "";
+                pendingTable.fnFilter(filterExpression, 0, selectedDate.length > 0, false);
+            });
+
+            serviceFilter.trigger("change.transferPending");
+            dateFilter.trigger("change.transferPending");
         }
+
+        function destroyPendingTable() {
+            var serviceFilter = jq("#pending-service-filter");
+            if (serviceFilter.hasClass("select2-hidden-accessible") && ensureSelect2()) {
+                serviceFilter.select2("destroy");
+            }
+            if (pendingTable && typeof pendingTable.fnDestroy === "function") {
+                pendingTable.fnDestroy();
+            }
+            pendingTable = null;
+        }
+
+        function parsePendingResponse(html) {
+            var parsedNodes = typeof jq.parseHTML === "function"
+                ? jq.parseHTML(html, document, false)
+                : jq(html);
+            return jq("<div></div>").append(parsedNodes);
+        }
+
+        function refreshPendingTransfers() {
+            var form = jq("#transfer-pending-filter-form");
+            if (!form.length || pendingRefreshInProgress) {
+                return;
+            }
+
+            pendingRefreshInProgress = true;
+            var filterState = getPendingFilterState();
+            jq.ajax({
+                url: form.attr("action") || window.location.pathname,
+                type: "GET",
+                data: form.serialize(),
+                dataType: "html",
+                cache: false
+            }).done(function(html) {
+                var response = parsePendingResponse(html);
+                var refreshedFilters = response.find("#pending-client-filters").first();
+                var refreshedResults = response.find("#transfer-pending-results").first();
+                if (!refreshedFilters.length || !refreshedResults.length
+                        || refreshedResults.attr("data-refresh-status") === "error") {
+                    return;
+                }
+
+                destroyPendingTable();
+                jq("#pending-client-filters")
+                    .toggleClass("is-empty", refreshedFilters.hasClass("is-empty"))
+                    .html(refreshedFilters.html());
+                jq("#transfer-pending-results")
+                    .attr("data-refresh-status", refreshedResults.attr("data-refresh-status"))
+                    .html(refreshedResults.html());
+                initializePendingTable(filterState);
+            }).always(function() {
+                pendingRefreshInProgress = false;
+            });
+        }
+
+        initializePendingTable();
+        window.refreshPendingTransfers = refreshPendingTransfers;
+        window.__transferPendingRefreshTimer = window.setInterval(
+            refreshPendingTransfers,
+            5 * 60 * 1000
+        );
 
         var transferOpenmrsPath = (typeof openmrsContextPath !== "undefined" ? openmrsContextPath : "");
         window.transferOpenmrsPath = transferOpenmrsPath;

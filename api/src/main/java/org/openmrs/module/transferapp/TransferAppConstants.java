@@ -121,6 +121,8 @@ public final class TransferAppConstants {
 
 	public static final String GP_HIE_PASSWORD = "transferapp.hie.password";
 
+	public static final String GP_HIE_VALIDATE_PATIENT_ADDRESS = "transferapp.hie.validatePatientAddress";
+
 	public static final String GP_FR_TOKEN = "transferapp.fr_token";
 
 	public static final String GP_VERIFY_BASE_URL = "transferapp.verify_base_url";
