@@ -172,6 +172,12 @@
 	</globalProperty>
 
 	<globalProperty>
+		<property>transferapp.hie.validatePatientAddress</property>
+		<defaultValue>false</defaultValue>
+		<description>When true, require HIE patient addresses to match the configured Rwanda address hierarchy before registration</description>
+	</globalProperty>
+
+	<globalProperty>
 		<property>transferapp.verify_base_url</property>
 		<defaultValue>http://197.243.24.138:8081</defaultValue>
 		<description>Base URL for transfer verification QR codes (eTransfer verify endpoint)</description>

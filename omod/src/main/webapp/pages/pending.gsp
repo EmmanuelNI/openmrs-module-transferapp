@@ -4,8 +4,10 @@
     ui.includeCss("transferapp", "transferSection.css")
     ui.includeCss("transferapp", "transferRecords.css")
     ui.includeCss("transferapp", "transferFormPreview.css")
+    ui.includeCss("transferapp", "select2.min.css")
     ui.includeCss("uicommons", "datatables/dataTables_jui.css")
     ui.includeJavascript("uicommons", "datatables/jquery.dataTables.min.js")
+    ui.includeJavascript("transferapp", "select2/select2.min.js")
     ui.includeJavascript("transferapp", "transferMohLogo.js")
     ui.includeJavascript("transferapp", "transferFormPreview.js")
     ui.includeJavascript("transferapp", "transferPending.js")
@@ -30,14 +32,54 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "pendi
 </p>
 <% } %>
 
-<% if (!canListPending) { %>
-<div class="transfer-records-empty">${ ui.encodeHtmlContent(pendingAccessDeniedMessage ?: ui.message("transferapp.pending.notAllowed")) }</div>
-<% } else if (pendingErrorMessage) { %>
-<div class="transfer-records-empty" style="color:#a94442;">${ ui.encodeHtmlContent(pendingErrorMessage) }</div>
-<% } else if (!hasPendingTransfers) { %>
-<div class="transfer-records-empty">${ ui.message("transferapp.pending.empty") }</div>
-<% } else { %>
+<% if (canListPending) { %>
+<form id="transfer-pending-filter-form"
+      class="transfer-records-filters transfer-pending-filters"
+      method="get"
+      action="${ ui.encodeHtmlAttribute(ui.pageLink('transferapp', 'pending')) }">
+    <input type="hidden" name="app" value="${ ui.encodeHtmlAttribute(appId) }" />
+    <div class="transfer-records-filter-field transfer-pending-period-filter-field">
+        <label for="pending-week-filter">${ ui.message("transferapp.pending.filter.period") }</label>
+        <select id="pending-week-filter" name="weeks" class="transfer-pending-period-select">
+            <option value="1" <% if (selectedWeeks == 1) { %>selected="selected"<% } %>>${ ui.message("transferapp.pending.filter.period.week1") }</option>
+            <option value="2" <% if (selectedWeeks == 2) { %>selected="selected"<% } %>>${ ui.message("transferapp.pending.filter.period.week2") }</option>
+            <option value="3" <% if (selectedWeeks == 3) { %>selected="selected"<% } %>>${ ui.message("transferapp.pending.filter.period.week3") }</option>
+            <option value="4" <% if (selectedWeeks == 4) { %>selected="selected"<% } %>>${ ui.message("transferapp.pending.filter.period.week4") }</option>
+        </select>
+    </div>
+    <div id="pending-client-filters"
+         class="transfer-pending-client-filters${ pendingErrorMessage || !hasPendingTransfers ? ' is-empty' : '' }">
+    <% if (!pendingErrorMessage && hasPendingTransfers) { %>
+    <div class="transfer-records-filter-field transfer-pending-date-filter-field">
+        <label for="pending-date-filter">${ ui.message("transferapp.pending.filter.date") }</label>
+        <select id="pending-date-filter" class="transfer-pending-date-select">
+            <option value="">${ ui.message("transferapp.pending.filter.date.all") }</option>
+            <% pendingDates.each { date -> %>
+            <option value="${ ui.encodeHtmlAttribute(date) }">${ ui.encodeHtmlContent(date) }</option>
+            <% } %>
+        </select>
+    </div>
+    <div class="transfer-records-filter-field transfer-pending-service-filter-field">
+        <label for="pending-service-filter">${ ui.message("transferapp.pending.filter.service") }</label>
+        <select id="pending-service-filter"
+                class="transfer-pending-service-select"
+                multiple="multiple"
+                data-placeholder="${ ui.encodeHtmlAttribute(ui.message('transferapp.pending.filter.service.all')) }">
+            <% pendingServices.each { service -> %>
+            <option value="${ ui.encodeHtmlAttribute(service) }">${ ui.encodeHtmlContent(service) }</option>
+            <% } %>
+        </select>
+    </div>
+    <% } %>
+    </div>
+    <span id="pending-week-loading" class="transfer-pending-period-loading" style="display: none;">
+        <i class="icon-spinner icon-spin"></i>
+        ${ ui.message("transferapp.pending.filter.period.loading") }
+    </span>
+</form>
+<% } %>
 
+<% if (canListPending) { %>
 <div id="transfer-preview-dialog" class="dialog transfer-preview-dialog" style="display: none">
     <div class="dialog-header">
         <i class="icon-retweet"></i>
@@ -52,6 +94,16 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "pendi
         </div>
     </div>
 </div>
+<% } %>
+
+<div id="transfer-pending-results" data-refresh-status="${ pendingErrorMessage ? 'error' : 'success' }">
+<% if (!canListPending) { %>
+<div class="transfer-records-empty">${ ui.encodeHtmlContent(pendingAccessDeniedMessage ?: ui.message("transferapp.pending.notAllowed")) }</div>
+<% } else if (pendingErrorMessage) { %>
+<div class="transfer-records-empty" style="color:#a94442;">${ ui.encodeHtmlContent(pendingErrorMessage) }</div>
+<% } else if (!hasPendingTransfers) { %>
+<div class="transfer-records-empty">${ ui.message("transferapp.pending.empty") }</div>
+<% } else { %>
 
 <div class="transfer-table-wrapper">
     <table id="transfer-pending-table" class="transfer-datatable display">
@@ -72,6 +124,7 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "pendi
                 def upid = (transfer.upid ?: transfer.subject ?: "") as String
                 def existingPatient = transfer.existingPatient == true
                 def existingPatientReference = (transfer.existingPatientReference ?: "") as String
+<<<<<<< HEAD
                 def pendingReturnUrl = ui.pageLinkWithoutContextPath("transferapp", "pending", [app: appId])
                 def agentRejected = transfer.agentRejected == true || transfer.agentRejected == "true"
                 def agentApproved = transfer.agentDecisionApproved == true || transfer.agentDecisionApproved == "true"
@@ -80,6 +133,9 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "pendi
                         : (agentApproved ? "transfer-status-approved"
                         : (needsApproval ? "transfer-status-awaiting" : "transfer-status-pending"))
                 def statusLabel = (transfer.status ?: "pending") as String
+=======
+                def pendingReturnUrl = ui.pageLinkWithoutContextPath("transferapp", "pending", [app: appId, weeks: selectedWeeks])
+>>>>>>> f7744b452c83dd8dd454fcae1923b96133f2dc8e
             %>
             <tr class="transfer-row"
                 data-uuid="${ ui.encodeHtmlAttribute(uuid) }"
@@ -113,8 +169,10 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "pendi
                                 <i class="icon-calendar"></i> ${ ui.message("transferapp.pending.action.schedule") }
                             </a>
                         <% } else if (!existingPatient) { %>
-                            <a class="button confirm transfer-pending-workflow-button"
-                               href="${ ui.pageLink('transferapp', 'registerPatientFromHie', [upid: upid, returnUrl: pendingReturnUrl]) }">
+                            <a class="button confirm transfer-pending-workflow-button transfer-pending-register-link"
+                               href="${ ui.pageLink('transferapp', 'registerPatientFromHie', [upid: upid, returnUrl: pendingReturnUrl]) }"
+                               target="_blank"
+                               rel="noopener">
                                 <i class="icon-user"></i> ${ ui.message("transferapp.pending.action.register") }
                             </a>
                         <% } %>
@@ -126,4 +184,5 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "pendi
     </table>
 </div>
 <% } %>
+</div>
 </div>

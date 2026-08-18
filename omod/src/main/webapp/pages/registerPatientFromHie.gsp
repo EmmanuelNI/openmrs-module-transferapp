@@ -3,6 +3,7 @@
     ui.includeCss("transferapp", "hiePatientPreview.css")
     def missingValue = ui.message("transferapp.pending.registration.preview.notProvided")
     def showValue = { value -> value == null || value.toString().trim().isEmpty() ? missingValue : value.toString() }
+    def patientPhoto = patientDetails.photo == null ? "" : patientDetails.photo.toString().trim()
 %>
 
 <script type="text/javascript">
@@ -35,13 +36,27 @@
 
     <section class="transfer-hie-preview-section" aria-labelledby="preview-demographics-title">
         <h2 id="preview-demographics-title">${ ui.message("transferapp.pending.registration.preview.demographics") }</h2>
-        <dl class="transfer-hie-preview-grid">
-            <div><dt>${ ui.message("transferapp.pending.registration.preview.givenName") }</dt><dd>${ ui.encodeHtmlContent(showValue(patientDetails.givenName)) }</dd></div>
-            <div><dt>${ ui.message("transferapp.pending.registration.preview.middleName") }</dt><dd>${ ui.encodeHtmlContent(showValue(patientDetails.middleName)) }</dd></div>
-            <div><dt>${ ui.message("transferapp.pending.registration.preview.familyName") }</dt><dd>${ ui.encodeHtmlContent(showValue(patientDetails.familyName)) }</dd></div>
-            <div><dt>${ ui.message("transferapp.pending.registration.preview.gender") }</dt><dd>${ ui.encodeHtmlContent(showValue(patientDetails.gender)) }</dd></div>
-            <div><dt>${ ui.message("transferapp.pending.registration.preview.birthdate") }</dt><dd>${ ui.encodeHtmlContent(showValue(patientDetails.birthdate)) }</dd></div>
-        </dl>
+        <div class="transfer-hie-preview-demographics">
+            <figure class="transfer-hie-preview-photo">
+                <div class="transfer-hie-preview-photo-frame">
+                    <img id="transfer-hie-preview-photo-image"
+                         alt="${ ui.encodeHtmlAttribute(ui.message('transferapp.pending.registration.preview.photo')) }" />
+                    <span id="transfer-hie-preview-photo-placeholder"
+                          class="transfer-hie-preview-photo-placeholder">
+                        <i class="icon-user"></i>
+                        <span>${ ui.message("transferapp.pending.registration.preview.photo.loading") }</span>
+                    </span>
+                </div>
+                <figcaption>${ ui.message("transferapp.pending.registration.preview.photo") }</figcaption>
+            </figure>
+            <dl class="transfer-hie-preview-grid">
+                <div><dt>${ ui.message("transferapp.pending.registration.preview.givenName") }</dt><dd>${ ui.encodeHtmlContent(showValue(patientDetails.givenName)) }</dd></div>
+                <div><dt>${ ui.message("transferapp.pending.registration.preview.middleName") }</dt><dd>${ ui.encodeHtmlContent(showValue(patientDetails.middleName)) }</dd></div>
+                <div><dt>${ ui.message("transferapp.pending.registration.preview.familyName") }</dt><dd>${ ui.encodeHtmlContent(showValue(patientDetails.familyName)) }</dd></div>
+                <div><dt>${ ui.message("transferapp.pending.registration.preview.gender") }</dt><dd>${ ui.encodeHtmlContent(showValue(patientDetails.gender)) }</dd></div>
+                <div><dt>${ ui.message("transferapp.pending.registration.preview.birthdate") }</dt><dd>${ ui.encodeHtmlContent(showValue(patientDetails.birthdate)) }</dd></div>
+            </dl>
+        </div>
     </section>
 
     <section class="transfer-hie-preview-section" aria-labelledby="preview-contact-title">
@@ -81,3 +96,115 @@
         </form>
     </div>
 </div>
+
+<script type="text/javascript">
+    jq(function() {
+        var registryPhoto = jq("#transfer-hie-preview-photo-image");
+        var registryPhotoPlaceholder = jq("#transfer-hie-preview-photo-placeholder");
+        var initialPhoto = "${ ui.encodeJavaScript(patientPhoto) }";
+        var patientUpid = "${ ui.encodeJavaScript(upid) }";
+        var upidIdentifierTypeUuid = "${ ui.encodeJavaScript(upidIdentifierTypeUuid) }";
+        var registrySearchUrl = "${ ui.encodeJavaScript(ui.actionLink('rwandaemr', 'field/searchClientRegistry', 'findByIdentifier')) }";
+        var noPhotoMessage = "${ ui.encodeJavaScript(ui.message('transferapp.pending.registration.preview.photo.none')) }";
+        var loadingPhotoMessage = "${ ui.encodeJavaScript(ui.message('transferapp.pending.registration.preview.photo.loading')) }";
+        var unavailablePhotoMessage = "${ ui.encodeJavaScript(ui.message('transferapp.pending.registration.preview.photo.unavailable')) }";
+
+        function clearRegistryPhoto(message) {
+            registryPhoto.hide().removeAttr("src");
+            registryPhotoPlaceholder.removeClass("is-hidden").find("span").text(message || noPhotoMessage);
+        }
+
+        function showRegistryPhoto(photo) {
+            var photoSrc = getRegistryPhotoSrc(photo);
+            if (!photoSrc) {
+                clearRegistryPhoto(noPhotoMessage);
+                return;
+            }
+            registryPhoto
+                .off("load error")
+                .on("load", function() {
+                    registryPhotoPlaceholder.addClass("is-hidden");
+                    registryPhoto.show();
+                })
+                .on("error", function() {
+                    clearRegistryPhoto(unavailablePhotoMessage);
+                })
+                .attr("src", photoSrc);
+        }
+
+        function getRegistryPhotoSrc(photo) {
+            if (!photo) {
+                return null;
+            }
+            var trimmed = jq.trim(photo);
+            if (!trimmed) {
+                return null;
+            }
+            var lower = trimmed.toLowerCase();
+            if (lower.indexOf("data:image/") === 0
+                    || lower.indexOf("http://") === 0
+                    || lower.indexOf("https://") === 0) {
+                return trimmed;
+            }
+            var compact = trimmed
+                .split(" ").join("")
+                .split(String.fromCharCode(9)).join("")
+                .split(String.fromCharCode(10)).join("")
+                .split(String.fromCharCode(13)).join("");
+            if (isBase64PhotoValue(compact)) {
+                return "data:image/jpeg;base64," + compact;
+            }
+            if (trimmed.charAt(0) === "/") {
+                return trimmed;
+            }
+            return null;
+        }
+
+        function isBase64PhotoValue(value) {
+            if (!value || value.length < 100) {
+                return false;
+            }
+            if (value.indexOf("/9j/") !== 0 && value.indexOf("iVBOR") !== 0) {
+                return false;
+            }
+            var validChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=";
+            for (var i = 0; i < value.length; i++) {
+                if (validChars.indexOf(value.charAt(i)) === -1) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        if (initialPhoto) {
+            showRegistryPhoto(initialPhoto);
+        } else {
+            clearRegistryPhoto(loadingPhotoMessage);
+        }
+
+        if (!patientUpid || !upidIdentifierTypeUuid) {
+            if (!initialPhoto) {
+                clearRegistryPhoto(noPhotoMessage);
+            }
+            return;
+        }
+
+        var searchParams = {};
+        searchParams["identifier_" + upidIdentifierTypeUuid] = patientUpid;
+        jq.ajax({
+            url: registrySearchUrl,
+            dataType: "json",
+            data: searchParams
+        }).done(function(data) {
+            if (data && data.patient && data.patient.photo) {
+                showRegistryPhoto(data.patient.photo);
+            } else if (!initialPhoto) {
+                clearRegistryPhoto(noPhotoMessage);
+            }
+        }).fail(function() {
+            if (!initialPhoto) {
+                clearRegistryPhoto(unavailablePhotoMessage);
+            }
+        });
+    });
+</script>

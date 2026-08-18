@@ -35,7 +35,10 @@
 }
 
 .transfer-records-date-input,
-.transfer-records-destination-select {
+.transfer-records-destination-select,
+.transfer-pending-period-select,
+.transfer-pending-date-select,
+.transfer-pending-service-select {
   width: 100%;
   box-sizing: border-box;
   padding: 7px 10px;
@@ -43,6 +46,66 @@
   border-radius: 4px;
   font-size: 13px;
   background: #fff;
+}
+
+.transfer-pending-filters {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 14px 16px;
+}
+
+.transfer-pending-client-filters {
+  display: flex;
+  align-items: flex-end;
+  flex: 1 1 520px;
+  flex-wrap: wrap;
+  gap: 14px 16px;
+}
+
+.transfer-pending-client-filters.is-empty {
+  display: none;
+}
+
+.transfer-pending-period-filter-field {
+  flex: 0 1 220px;
+  min-width: 180px;
+}
+
+.transfer-pending-date-filter-field {
+  flex: 0 1 220px;
+  min-width: 180px;
+}
+
+.transfer-pending-service-filter-field {
+  flex: 1 1 280px;
+  max-width: 360px;
+}
+
+.transfer-pending-service-filter-field .select2-container {
+  width: 100% !important;
+}
+
+.transfer-pending-service-filter-field .select2-container--default .select2-selection--multiple {
+  min-height: 36px;
+  border-color: #c7e7e2;
+  border-radius: 4px;
+}
+
+.transfer-pending-service-filter-field .select2-container--default .select2-selection__choice {
+  max-width: calc(100% - 10px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transfer-pending-period-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  color: #0f766e;
+  font-size: 13px;
 }
 
 .transfer-records-filter-actions {
@@ -77,6 +140,16 @@
   .transfer-records-filter-field-destination,
   .transfer-records-filter-actions {
     grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .transfer-pending-client-filters,
+  .transfer-pending-period-filter-field,
+  .transfer-pending-date-filter-field,
+  .transfer-pending-service-filter-field {
+    flex-basis: 100%;
+    max-width: none;
   }
 }
 
