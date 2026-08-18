@@ -11,13 +11,25 @@ ui.includeCss("transferapp", "styles/select2.min.css")
 <g:if test="${formData}">
 <div class="transfer-wizard-shell">
     <header class="transfer-wizard-page-header">
-        <h1 class="transfer-wizard-page-title">External Transfer Form</h1>
+        <h1 class="transfer-wizard-page-title">
+            <% if (formData.editing) { %>
+                ${ ui.message("transferapp.patient.transfers.editTransferOut") }
+            <% } else { %>
+                External Transfer Form
+            <% } %>
+        </h1>
     </header>
 
     <div class="transfer-wizard-panel" style="padding: 0 5px;">
-        <form id="moh-transfer-wizard-form" class="transfer-out-form" novalidate="novalidate">
+        <form id="moh-transfer-wizard-form" class="transfer-out-form" novalidate="novalidate"
+              data-editing="${ formData.editing ? 'true' : 'false' }"
+              data-preferred-receiving-service="${ ui.encodeHtmlAttribute(formData.receivingService ?: '') }">
             <input type="hidden" name="patientId" value="${ formData.patientId }" />
-            <input type="hidden" id="receivingFacilityId" name="receivingFacilityId" value="" />
+            <% if (formData.transferUuid) { %>
+            <input type="hidden" name="transferUuid" value="${ ui.encodeHtmlAttribute(formData.transferUuid) }" />
+            <% } %>
+            <input type="hidden" id="receivingFacilityId" name="receivingFacilityId"
+                   value="${ formData.receivingFacilityId != null ? formData.receivingFacilityId : '' }" />
 
             <div class="transfer-wizard-section">
                 <h2 class="transfer-wizard-section-title">Referral information</h2>
@@ -26,12 +38,14 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                     <div class="transfer-wizard-field">
                         <label for="decisionToTransferAt">Decision date &amp; time</label>
                         <input type="text" class="js-datetime-picker" id="decisionToTransferAt" name="decisionToTransferAt"
-                               value="" required placeholder="Select date and time" autocomplete="off" />
+                               value="${ ui.encodeHtmlAttribute(formData.decisionToTransferAt ?: '') }" required
+                               placeholder="Select date and time" autocomplete="off" />
                     </div>
                     <div class="transfer-wizard-field">
                         <label for="callingTime">Calling time</label>
                         <input type="text" class="js-time-picker" id="callingTime" name="callingTime"
-                               value="" placeholder="Select time" autocomplete="off" />
+                               value="${ ui.encodeHtmlAttribute(formData.callingTime ?: '') }"
+                               placeholder="Select time" autocomplete="off" />
                     </div>
                     <div class="transfer-wizard-field">
                         <label for="receivingFacilityCode">Receiving facility</label>
@@ -39,7 +53,8 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                             <option value="">Select receiving facility</option>
                             <% formData.receivingFacilities.each { facility -> %>
                                 <option value="${ ui.encodeHtmlAttribute(facility.value) }"
-                                        data-receiving-facility-id="${ facility.receivingFacilityId ?: '' }">
+                                        data-receiving-facility-id="${ facility.receivingFacilityId ?: '' }"
+                                        ${ formData.receivingFacilityCode == facility.value ? 'selected="selected"' : '' }>
                                     ${ ui.format(facility.label) }
                                 </option>
                             <% } %>
@@ -50,15 +65,22 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                         <select id="receivingService" name="receivingService" class="js-transfer-receiving-service-select" required
                                 data-placeholder="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.receivingService.placeholder')) }">
                             <option value=""></option>
+                            <% if (formData.receivingService) { %>
+                                <option value="${ ui.encodeHtmlAttribute(formData.receivingService) }" selected="selected">
+                                    ${ ui.encodeHtmlContent(formData.receivingService) }
+                                </option>
+                            <% } %>
                         </select>
                     </div>
                     <div class="transfer-wizard-field">
                         <label for="staffContactedName">Staff contacted</label>
-                        <input type="text" id="staffContactedName" name="staffContactedName" value="" />
+                        <input type="text" id="staffContactedName" name="staffContactedName"
+                               value="${ ui.encodeHtmlAttribute(formData.staffContactedName ?: '') }" />
                     </div>
                     <div class="transfer-wizard-field">
                         <label for="staffContactedPhone">Contact phone</label>
-                        <input type="tel" id="staffContactedPhone" name="staffContactedPhone" value="" />
+                        <input type="tel" id="staffContactedPhone" name="staffContactedPhone"
+                               value="${ ui.encodeHtmlAttribute(formData.staffContactedPhone ?: '') }" />
                     </div>
                 </div>
             </div>
@@ -69,7 +91,8 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                     <% formData.transferTypes.each { type -> %>
                     <span class="transfer-type-option">
                         <input type="radio" name="transferType" id="transferType_${ ui.encodeHtmlAttribute(type.value) }"
-                               value="${ ui.encodeHtmlAttribute(type.value) }" required />
+                               value="${ ui.encodeHtmlAttribute(type.value) }" required
+                               ${ formData.transferType == type.value ? 'checked="checked"' : '' } />
                         <label for="transferType_${ ui.encodeHtmlAttribute(type.value) }">${ ui.format(type.label) }</label>
                     </span>
                     <% } %>
@@ -82,19 +105,56 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                     <div class="transfer-wizard-field">
                         <label for="ambulanceCalledTime">${ ui.message("transferapp.patient.transfers.ambulanceCalledTime") }</label>
                         <input type="text" class="js-time-picker" id="ambulanceCalledTime" name="ambulanceCalledTime"
-                               value="" placeholder="Select time" autocomplete="off" data-emergency-required="true" />
+                               value="${ ui.encodeHtmlAttribute(formData.ambulanceCalledTime ?: '') }"
+                               placeholder="Select time" autocomplete="off" data-emergency-required="true" />
                     </div>
                     <div class="transfer-wizard-field">
                         <label for="departureFromReferringTime">${ ui.message("transferapp.patient.transfers.departureFromReferringTime") }</label>
                         <input type="text" class="js-time-picker" id="departureFromReferringTime" name="departureFromReferringTime"
-                               value="" placeholder="Select time" autocomplete="off" data-emergency-required="true" />
+                               value="${ ui.encodeHtmlAttribute(formData.departureFromReferringTime ?: '') }"
+                               placeholder="Select time" autocomplete="off" data-emergency-required="true" />
                     </div>
                 </div>
             </div>
 
-            <div class="transfer-wizard-section transfer-wizard-field">
-                <label for="reasonForTransfer" class="transfer-wizard-section-title">Reason for transfer</label>
-                <textarea id="reasonForTransfer" name="reasonForTransfer" rows="4" required placeholder="Enter the reason for transfer"></textarea>
+            <div class="transfer-wizard-section">
+                <h2 class="transfer-wizard-section-title">${ ui.message("transferapp.patient.transfers.clinicalInformation") }</h2>
+                <div class="transfer-wizard-row transfer-wizard-row-three-col"
+                     style="display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:12px !important;">
+                    <div class="transfer-wizard-field">
+                        <label for="reasonForTransfer">${ ui.message("transferapp.patient.transfers.reason") }</label>
+                        <textarea id="reasonForTransfer" name="reasonForTransfer" rows="4" required
+                                  placeholder="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.reason.placeholder')) }">${ ui.encodeHtmlContent(formData.reasonForTransfer ?: "") }</textarea>
+                    </div>
+                    <div class="transfer-wizard-field">
+                        <label for="clinicalPresentation">${ ui.message("transferapp.patient.transfers.clinicalPresentation") }</label>
+                        <textarea id="clinicalPresentation" name="clinicalPresentation" rows="4" required
+                                  placeholder="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.clinicalPresentation.placeholder')) }">${ ui.encodeHtmlContent(formData.clinicalPresentation ?: "") }</textarea>
+                    </div>
+                    <div class="transfer-wizard-field">
+                        <label for="laboratory">${ ui.message("transferapp.patient.transfers.laboratory") }</label>
+                        <textarea id="laboratory" name="laboratory" rows="4"
+                                  placeholder="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.laboratory.placeholder')) }">${ ui.encodeHtmlContent(formData.laboratory ?: "") }</textarea>
+                    </div>
+                </div>
+                <div class="transfer-wizard-row transfer-wizard-row-three-col"
+                     style="display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:12px !important;margin-top:12px;">
+                    <div class="transfer-wizard-field">
+                        <label for="otherNotes">${ ui.message("transferapp.patient.transfers.others") }</label>
+                        <textarea id="otherNotes" name="otherNotes" rows="4"
+                                  placeholder="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.others.placeholder')) }">${ ui.encodeHtmlContent(formData.othersNotes ?: "") }</textarea>
+                    </div>
+                    <div class="transfer-wizard-field">
+                        <label for="proceduresTreatments">${ ui.message("transferapp.patient.transfers.proceduresAndTreatments") }</label>
+                        <textarea id="proceduresTreatments" name="proceduresTreatments" rows="4"
+                                  placeholder="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.proceduresAndTreatments.placeholder')) }">${ ui.encodeHtmlContent(formData.proceduresAndTreatments ?: "") }</textarea>
+                    </div>
+                    <div class="transfer-wizard-field">
+                        <label for="diagnosis">${ ui.message("transferapp.patient.transfers.diagnosis") }</label>
+                        <textarea id="diagnosis" name="diagnosis" rows="4" required
+                                  placeholder="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.diagnosis.placeholder')) }">${ ui.encodeHtmlContent(formData.diagnosis ?: "") }</textarea>
+                    </div>
+                </div>
             </div>
 
             <div class="transfer-wizard-section">
@@ -105,7 +165,8 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                         <input type="radio" name="transportationType"
                                id="transportationType_${ ui.encodeHtmlAttribute(transport.value) }"
                                value="${ ui.encodeHtmlAttribute(transport.value) }"
-                               data-transport-value="${ ui.encodeHtmlAttribute(transport.value) }" />
+                               data-transport-value="${ ui.encodeHtmlAttribute(transport.value) }"
+                               ${ formData.transportationType == transport.value ? 'checked="checked"' : '' } />
                         <label for="transportationType_${ ui.encodeHtmlAttribute(transport.value) }">${ ui.format(transport.label) }</label>
                     </span>
                     <% } %>
@@ -113,6 +174,7 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                 <div id="transportOtherField" class="transfer-transport-other transfer-wizard-field">
                     <label for="transportationOtherSpec">${ ui.message("transferapp.patient.transfers.transportationOtherSpec") }</label>
                     <input type="text" id="transportationOtherSpec" name="transportationOtherSpec" maxlength="255"
+                           value="${ ui.encodeHtmlAttribute(formData.transportationOtherSpec ?: '') }"
                            placeholder="${ ui.message('transferapp.patient.transfers.transportationOtherSpec.placeholder') }" />
                 </div>
             </div>

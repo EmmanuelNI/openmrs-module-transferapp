@@ -138,6 +138,11 @@ public class NewTransferOutFormData {
 
 	private String referringProviderPhone;
 
+	/** When set, the form is editing an existing transfer instead of creating a new one. */
+	private String transferUuid;
+
+	private Integer receivingFacilityId;
+
 	public Integer getPatientId() {
 		return patientId;
 	}
@@ -584,6 +589,26 @@ public class NewTransferOutFormData {
 
 	public void setReferringProviderPhone(String referringProviderPhone) {
 		this.referringProviderPhone = referringProviderPhone;
+	}
+
+	public String getTransferUuid() {
+		return transferUuid;
+	}
+
+	public void setTransferUuid(String transferUuid) {
+		this.transferUuid = transferUuid;
+	}
+
+	public Integer getReceivingFacilityId() {
+		return receivingFacilityId;
+	}
+
+	public void setReceivingFacilityId(Integer receivingFacilityId) {
+		this.receivingFacilityId = receivingFacilityId;
+	}
+
+	public boolean isEditing() {
+		return transferUuid != null && transferUuid.trim().length() > 0;
 	}
 
 }

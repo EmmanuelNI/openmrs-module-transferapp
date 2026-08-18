@@ -58,6 +58,24 @@ public interface TransferService {
 			String reasonForTransfer,
 			TransferFormExtras formExtras);
 
+	@Authorized(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)
+	Transfer saveReferralTransfer(Integer patientId,
+			String transferUuid,
+			String decisionToTransferAt,
+			String callingTime,
+			String receivingFacilityCode,
+			Integer receivingFacilityId,
+			String receivingService,
+			String staffContactedName,
+			String staffContactedPhone,
+			String transferType,
+			String ambulanceCalledTime,
+			String departureFromReferringTime,
+			String transportationType,
+			String transportationOtherSpec,
+			String reasonForTransfer,
+			TransferFormExtras formExtras);
+
 	@Authorized(TransferAppActivator.PRIVILEGE_LIST_TRANSFERS)
 	@Transactional(readOnly = true)
 	List<Transfer> getTransfersByPatient(Patient patient);

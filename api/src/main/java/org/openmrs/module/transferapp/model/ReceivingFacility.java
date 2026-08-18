@@ -51,6 +51,9 @@ public class ReceivingFacility extends BaseOpenmrsData {
 	@Column(name = "district", length = 120)
 	private String district;
 
+	@Column(name = "external")
+	private Boolean external;
+
 	@Override
 	public Integer getId() {
 		return getReceivingFacilityId();
@@ -115,6 +118,18 @@ public class ReceivingFacility extends BaseOpenmrsData {
 
 	public void setDistrict(String district) {
 		this.district = district;
+	}
+
+	public Boolean getExternal() {
+		return external;
+	}
+
+	public void setExternal(Boolean external) {
+		this.external = external;
+	}
+
+	public boolean isExternal() {
+		return Boolean.TRUE.equals(external);
 	}
 
 }

@@ -29,4 +29,8 @@ public interface NewTransferOutService {
 	@Transactional(readOnly = true)
 	NewTransferOutFormData getNewTransferOutFormData(Patient patient);
 
+	@Authorized(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)
+	@Transactional(readOnly = true)
+	NewTransferOutFormData getNewTransferOutFormData(Patient patient, String transferUuid);
+
 }

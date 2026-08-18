@@ -20,6 +20,8 @@ import org.codehaus.jackson.node.ObjectNode;
 import org.openmrs.User;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.transferapp.TransferAppConstants;
+import org.openmrs.module.transferapp.api.TransferAdminService;
+import org.openmrs.module.transferapp.model.ReceivingFacility;
 import org.openmrs.module.transferapp.model.Transfer;
 
 import java.text.SimpleDateFormat;
@@ -45,7 +47,19 @@ public class TransferEncounterPayloadBuilder {
 
 	private final ObjectMapper objectMapper = new ObjectMapper();
 
+	private TransferAdminService transferAdminService;
+
+	public void setTransferAdminService(TransferAdminService transferAdminService) {
+		this.transferAdminService = transferAdminService;
+	}
+
 	public String buildEncounterJson(Transfer transfer, User user, String receivingFacilityLabel) {
+		boolean externalReceivingFacility = resolveExternalReceivingFacility(transfer);
+		return buildEncounterJson(transfer, user, receivingFacilityLabel, externalReceivingFacility);
+	}
+
+	public String buildEncounterJson(Transfer transfer, User user, String receivingFacilityLabel,
+			boolean externalReceivingFacility) {
 		try {
 			String upi = requireUpi(transfer);
 			String encounterId = transfer.getUuid() != null ? transfer.getUuid() : UUID.randomUUID().toString();
@@ -55,7 +69,7 @@ public class TransferEncounterPayloadBuilder {
 			encounter.put("status", "finished");
 
 			addMeta(encounter);
-			addExtensions(encounter, transfer, user, receivingFacilityLabel);
+			addExtensions(encounter, transfer, user, receivingFacilityLabel, externalReceivingFacility);
 			addClass(encounter, transfer.getTransferType());
 			addType(encounter);
 			addServiceType(encounter, transfer.getReceivingService());
@@ -82,6 +96,39 @@ public class TransferEncounterPayloadBuilder {
 		}
 	}
 
+	/**
+	 * Reads Destinations configuration for the transfer's selected receiving facility code.
+	 */
+	private boolean resolveExternalReceivingFacility(Transfer transfer) {
+		if (transfer == null || StringUtils.isBlank(transfer.getReceivingFacilityCode())) {
+			return false;
+		}
+		TransferAdminService adminService = getTransferAdminService();
+		if (adminService == null) {
+			return false;
+		}
+		String facilityCode = transfer.getReceivingFacilityCode().trim();
+		Integer sendingLocationId = adminService.resolveCurrentSendingLocationId();
+		ReceivingFacility facility = null;
+		if (sendingLocationId != null) {
+			facility = adminService.getReceivingFacilityByCode(sendingLocationId, facilityCode);
+		}
+		return facility != null && facility.isExternal();
+	}
+
+	private TransferAdminService getTransferAdminService() {
+		if (transferAdminService != null) {
+			return transferAdminService;
+		}
+		try {
+			transferAdminService = Context.getRegisteredComponent("transferAdminService", TransferAdminService.class);
+			return transferAdminService;
+		}
+		catch (Exception ignored) {
+			return null;
+		}
+	}
+
 	private void addMeta(ObjectNode encounter) {
 		ObjectNode meta = encounter.putObject("meta");
 		ObjectNode tag = addObjectNode(meta.putArray("tag"));
@@ -90,26 +137,46 @@ public class TransferEncounterPayloadBuilder {
 		tag.put("display", "Encounter");
 	}
 
-	private void addExtensions(ObjectNode encounter, Transfer transfer, User user, String receivingFacilityLabel) {
+	private void addExtensions(ObjectNode encounter, Transfer transfer, User user, String receivingFacilityLabel,
+			boolean externalReceivingFacility) {
 		addTransferTypeExtension(encounter, transfer.getTransferType());
+		// Dedicated timestamps (not derived from Encounter.period / length calculations).
+		addDateTimeExtension(encounter, "http://example.org/fhir/StructureDefinition/admission-datetime",
+				transfer.getAdmissionAt());
+		addDateTimeExtension(encounter, "http://example.org/fhir/StructureDefinition/decision-to-transfer-datetime",
+				transfer.getDecisionToTransferAt());
+		// Calling time is when the receiving facility staff was contacted (with staff name/phone).
+		addDateTimeExtension(encounter, "http://example.org/fhir/StructureDefinition/calling-time",
+				combineDateAndTime(transfer.getDecisionToTransferAt(), transfer.getCallingTime()));
+		// Ambulance call time applies to emergency / ambulance transfers only.
 		addDateTimeExtension(encounter, "http://example.org/fhir/StructureDefinition/ambulance-call-time",
 				combineDateAndTime(transfer.getDecisionToTransferAt(), transfer.getAmbulanceCallTime()));
 		addDateTimeExtension(encounter, "http://example.org/fhir/StructureDefinition/departure-time",
 				combineDateAndTime(transfer.getDecisionToTransferAt(), transfer.getDepartRefTime()));
-		addStringExtension(encounter, "http://example.org/fhir/StructureDefinition/receiving-clinician-contact",
-				formatReceivingContact(transfer));
+		// Dedicated referring unit (not only hospitalization.admitSource) so other systems can read it.
+		addStringExtension(encounter, "http://example.org/fhir/StructureDefinition/referring-department",
+				transfer.getReferringUnit());
+		addReceivingClinicianContactExtension(encounter, transfer);
 		addStringExtension(encounter, "http://example.org/fhir/StructureDefinition/receiving-province",
 				transfer.getReceivingProvince());
 		addStringExtension(encounter, "http://example.org/fhir/StructureDefinition/receiving-district",
 				transfer.getReceivingDistrict());
 		addInsuranceExtension(encounter, transfer.getHealthInsuranceType());
+		addExternalFacilityExtension(encounter, externalReceivingFacility);
 		addCaregiverExtension(encounter, transfer);
 		addStringExtension(encounter, "http://example.org/fhir/StructureDefinition/vital-signs", formatVitals(transfer));
 		addStringExtension(encounter, "http://example.org/fhir/StructureDefinition/clinical-presentation",
 				transfer.getClinicalPresentation());
+		addStringExtension(encounter, "http://example.org/fhir/StructureDefinition/lab-results",
+				transfer.getLaboratory());
+		addStringExtension(encounter, "http://example.org/fhir/StructureDefinition/others-notes",
+				transfer.getOtherNotes());
+		addStringExtension(encounter, "http://example.org/fhir/StructureDefinition/procedures-treatments",
+				transfer.getProceduresTreatments());
 		addTransportExtension(encounter, transfer.getTransportType());
 		addPatientDemographicsExtension(encounter, transfer);
 		addPatientAddressExtension(encounter, transfer);
+		addPractitionerInfoExtension(encounter, transfer, user);
 	}
 
 	private void addClass(ObjectNode encounter, String transferType) {
@@ -392,6 +459,15 @@ public class TransferEncounterPayloadBuilder {
 				display);
 	}
 
+	private void addExternalFacilityExtension(ObjectNode encounter, boolean externalReceivingFacility) {
+		if (!externalReceivingFacility) {
+			return;
+		}
+		ObjectNode extension = addObjectNode(extensionsArray(encounter));
+		extension.put("url", "http://example.org/fhir/StructureDefinition/requires-insurance-agent-verification");
+		extension.put("valueBoolean", true);
+	}
+
 	private void addCaregiverExtension(ObjectNode encounter, Transfer transfer) {
 		if (StringUtils.isBlank(transfer.getCaregiverName()) && StringUtils.isBlank(transfer.getCaregiverTelephone())) {
 			return;
@@ -409,6 +485,46 @@ public class TransferEncounterPayloadBuilder {
 			phoneExtension.put("url", "phone");
 			phoneExtension.put("valueString", transfer.getCaregiverTelephone().trim());
 		}
+	}
+
+	/**
+	 * Staff contacted at receiving facility, with optional nested calling-time.
+	 * FHIR forbids combining value[x] with nested extensions on the same element.
+	 */
+	private void addReceivingClinicianContactExtension(ObjectNode encounter, Transfer transfer) {
+		String name = StringUtils.trimToNull(transfer.getStaffContactedName());
+		String phone = StringUtils.trimToNull(transfer.getStaffContactedPhone());
+		Date callingAt = combineDateAndTime(transfer.getDecisionToTransferAt(), transfer.getCallingTime());
+		if (name == null && phone == null && callingAt == null) {
+			return;
+		}
+
+		ObjectNode extension = addObjectNode(extensionsArray(encounter));
+		extension.put("url", "http://example.org/fhir/StructureDefinition/receiving-clinician-contact");
+		ArrayNode nested = extension.putArray("extension");
+		addNestedExtensionField(nested, "name", name);
+		addNestedExtensionField(nested, "phone", phone);
+		if (callingAt != null) {
+			ObjectNode callingTimeExtension = addObjectNode(nested);
+			callingTimeExtension.put("url", "calling-time");
+			callingTimeExtension.put("valueDateTime", formatDateTime(callingAt));
+		}
+	}
+
+	private void addPractitionerInfoExtension(ObjectNode encounter, Transfer transfer, User user) {
+		String name = blankToDefault(transfer.getReferringProviderName(), resolveUserDisplayName(user));
+		String qualification = StringUtils.trimToNull(transfer.getProviderQualification());
+		String phone = StringUtils.trimToNull(transfer.getProviderPhone());
+		if (StringUtils.isBlank(name) && qualification == null && phone == null) {
+			return;
+		}
+
+		ObjectNode extension = addObjectNode(extensionsArray(encounter));
+		extension.put("url", "http://example.org/fhir/StructureDefinition/practitioner-info");
+		ArrayNode nested = extension.putArray("extension");
+		addNestedExtensionField(nested, "name", name);
+		addNestedExtensionField(nested, "qualification", qualification);
+		addNestedExtensionField(nested, "phone", phone);
 	}
 
 	private void addPatientDemographicsExtension(ObjectNode encounter, Transfer transfer) {
@@ -504,18 +620,6 @@ public class TransferEncounterPayloadBuilder {
 			return user.getPerson().getPersonName().getFullName();
 		}
 		return "Referring provider";
-	}
-
-	private static String formatReceivingContact(Transfer transfer) {
-		String name = transfer.getStaffContactedName();
-		String phone = transfer.getStaffContactedPhone();
-		if (StringUtils.isNotBlank(name) && StringUtils.isNotBlank(phone)) {
-			return name.trim() + " - " + phone.trim();
-		}
-		if (StringUtils.isNotBlank(name)) {
-			return name.trim();
-		}
-		return StringUtils.isNotBlank(phone) ? phone.trim() : null;
 	}
 
 	private static String formatVitals(Transfer transfer) {

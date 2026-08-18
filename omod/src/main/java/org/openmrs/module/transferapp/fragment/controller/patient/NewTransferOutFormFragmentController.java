@@ -14,12 +14,15 @@
 package org.openmrs.module.transferapp.fragment.controller.patient;
 
 import org.openmrs.Patient;
+import org.openmrs.User;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.transferapp.TransferAppActivator;
 import org.openmrs.module.transferapp.TransferPrivilegeHelper;
 import org.openmrs.module.transferapp.api.NewTransferOutService;
+import org.openmrs.module.transferapp.api.TransferProfileService;
 import org.openmrs.module.transferapp.model.NewTransferOutFormData;
+import org.openmrs.module.transferapp.model.TransferProfile;
 import org.openmrs.ui.framework.UiUtils;
 import org.openmrs.ui.framework.annotation.SpringBean;
 import org.openmrs.ui.framework.fragment.FragmentModel;
@@ -33,7 +36,9 @@ public class NewTransferOutFormFragmentController {
 	public void controller(FragmentModel model,
 			UiUtils ui,
 			@RequestParam(value = "patientId", required = false) Integer patientId,
-			@SpringBean("newTransferOutService") NewTransferOutService newTransferOutService) {
+			@RequestParam(value = "transferUuid", required = false) String transferUuid,
+			@SpringBean("newTransferOutService") NewTransferOutService newTransferOutService,
+			@SpringBean("transferProfileService") TransferProfileService transferProfileService) {
 
 		model.addAttribute("error", "");
 		model.addAttribute("formData", null);
@@ -41,6 +46,13 @@ public class NewTransferOutFormFragmentController {
 		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)) {
 			model.addAttribute("error",
 					TransferPrivilegeHelper.requiredPrivilegeMessage(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER));
+			return;
+		}
+
+		User user = Context.getAuthenticatedUser();
+		TransferProfile profile = user != null ? transferProfileService.getProfileForUser(user) : null;
+		if (profile == null || !profile.isCompleteForTransfer()) {
+			model.addAttribute("error", ui.message("transferapp.patient.transfers.profileIncomplete"));
 			return;
 		}
 
@@ -57,7 +69,7 @@ public class NewTransferOutFormFragmentController {
 		}
 
 		try {
-			NewTransferOutFormData formData = newTransferOutService.getNewTransferOutFormData(patient);
+			NewTransferOutFormData formData = newTransferOutService.getNewTransferOutFormData(patient, transferUuid);
 			model.addAttribute("formData", formData);
 		}
 		catch (Exception ex) {

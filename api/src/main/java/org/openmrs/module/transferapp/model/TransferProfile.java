@@ -13,6 +13,7 @@
  */
 package org.openmrs.module.transferapp.model;
 
+import org.apache.commons.lang.StringUtils;
 import org.openmrs.BaseOpenmrsData;
 
 import javax.persistence.Column;
@@ -47,6 +48,9 @@ public class TransferProfile extends BaseOpenmrsData {
 
 	@Column(name = "qualification", length = 255)
 	private String qualification;
+
+	@Column(name = "speciality", length = 255)
+	private String speciality;
 
 	@Override
 	public Integer getId() {
@@ -96,6 +100,38 @@ public class TransferProfile extends BaseOpenmrsData {
 
 	public void setQualification(String qualification) {
 		this.qualification = qualification;
+	}
+
+	public String getSpeciality() {
+		return speciality;
+	}
+
+	public void setSpeciality(String speciality) {
+		this.speciality = speciality;
+	}
+
+	/**
+	 * Returns qualification formatted with optional speciality, e.g. {@code Nurse A2(Midwife)}.
+	 */
+	public String getQualificationWithSpeciality() {
+		String qualificationValue = StringUtils.trimToNull(qualification);
+		if (qualificationValue == null) {
+			return null;
+		}
+		String specialityValue = StringUtils.trimToNull(speciality);
+		if (specialityValue == null) {
+			return qualificationValue;
+		}
+		return qualificationValue + "(" + specialityValue + ")";
+	}
+
+	/**
+	 * True when phone, qualification, and speciality are all set for transfer creation.
+	 */
+	public boolean isCompleteForTransfer() {
+		return StringUtils.isNotBlank(phoneNumber)
+				&& StringUtils.isNotBlank(qualification)
+				&& StringUtils.isNotBlank(speciality);
 	}
 
 }

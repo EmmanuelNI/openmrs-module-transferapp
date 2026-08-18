@@ -1,9 +1,12 @@
 jQuery(function($) {
     var config = window.transferAdminConfig || {};
-    var adminBaseUrl = config.adminBaseUrl;
-    var adminPageUrl = config.adminPageUrl;
+    var openmrsPath = (typeof openmrsContextPath !== "undefined" && openmrsContextPath)
+        ? openmrsContextPath
+        : "";
+    var adminBaseUrl = config.adminBaseUrl || (openmrsPath + "/module/transferapp/admin");
+    var adminPageUrl = config.adminPageUrl || (openmrsPath + "/transferapp/transferAdmin.page?app=transferapp.dashboard");
     var resourcesBase = config.resourcesBase
-        || ((typeof openmrsContextPath !== "undefined" ? openmrsContextPath : "") + "/moduleResources/transferapp/");
+        || (openmrsPath + "/moduleResources/transferapp/");
     var selectedLocationId = config.selectedLocationId;
     var selectedReceivingFacilityId = config.selectedReceivingFacilityId;
     var messages = config.messages || {};
@@ -196,15 +199,123 @@ jQuery(function($) {
 
     initFacilityRegistrySelect();
 
+    var facilityFormEditing = false;
+
+    function setFacilityRegistryEnabled(enabled) {
+        var $select = $("#facilityRegistrySelect");
+        if (!$select.length) {
+            return;
+        }
+        $select.prop("disabled", !enabled);
+        if ($select.hasClass("select2-hidden-accessible") && typeof $.fn.select2 === "function") {
+            // Keep Select2 UI in sync with the native disabled state.
+            $select.trigger("change.select2");
+        }
+    }
+
+    function selectFacilityInRegistry(code, name) {
+        var $select = $("#facilityRegistrySelect");
+        if (!$select.length || !code) {
+            return;
+        }
+        if ($select.find("option[value='" + code.replace(/'/g, "\\'") + "']").length === 0 && name) {
+            $select.append(
+                $("<option></option>")
+                    .val(code)
+                    .text(name + " (" + code + ")")
+                    .attr("data-name", name)
+            );
+        }
+        $select.val(code);
+        if ($select.hasClass("select2-hidden-accessible") && typeof $.fn.select2 === "function") {
+            $select.trigger("change.select2");
+        } else {
+            $select.trigger("change");
+        }
+        syncFacilityHiddenFields($select);
+    }
+
+    function enterFacilityEditMode($row) {
+        facilityFormEditing = true;
+        var code = $row.attr("data-facility-code") || "";
+        var name = $row.attr("data-facility-name") || "";
+        var province = $row.attr("data-province") || "";
+        var district = $row.attr("data-district") || "";
+        var distance = $row.attr("data-distance") || "";
+        var external = $row.attr("data-external") === "true";
+
+        $("#facilityCode").val(code);
+        $("#facilityName").val(name);
+        $("#province").val(province);
+        $("#district").val(district);
+        $("#distance").val(distance);
+        $("#external").prop("checked", external);
+        selectFacilityInRegistry(code, name);
+        setFacilityRegistryEnabled(false);
+
+        $("#facility-form-submit-btn").text(messages.update || "Update");
+        $("#facility-form-cancel-btn").show();
+        $("#transfer-admin-add-facility-form").addClass("is-editing");
+
+        var formTop = $("#transfer-admin-add-facility-form").offset();
+        if (formTop) {
+            $("html, body").animate({ scrollTop: Math.max(0, formTop.top - 20) }, 200);
+        }
+    }
+
+    function resetFacilityForm() {
+        facilityFormEditing = false;
+        var $form = $("#transfer-admin-add-facility-form");
+        if ($form.length && $form[0]) {
+            $form[0].reset();
+        }
+        $("#facilityCode").val("");
+        $("#facilityName").val("");
+        $("#external").prop("checked", false);
+        setFacilityRegistryEnabled(true);
+        var $select = $("#facilityRegistrySelect");
+        if ($select.length) {
+            $select.val("");
+            if ($select.hasClass("select2-hidden-accessible") && typeof $.fn.select2 === "function") {
+                $select.trigger("change.select2");
+            }
+            syncFacilityHiddenFields($select);
+        }
+        $("#facility-form-submit-btn").text(messages.add || "Add");
+        $("#facility-form-cancel-btn").hide();
+        $form.removeClass("is-editing");
+    }
+
+    $(document).on("click", ".transfer-admin-edit-facility", function(e) {
+        e.preventDefault();
+        var $row = $(this).closest("tr");
+        if (!$row.length) {
+            return;
+        }
+        enterFacilityEditMode($row);
+    });
+
+    $("#facility-form-cancel-btn").on("click", function(e) {
+        e.preventDefault();
+        resetFacilityForm();
+    });
+
     $("#transfer-admin-add-facility-form").on("submit", function(event) {
         event.preventDefault();
-        syncFacilityHiddenFields($("#facilityRegistrySelect"));
+        if (!facilityFormEditing) {
+            syncFacilityHiddenFields($("#facilityRegistrySelect"));
+        }
         if (!$("#facilityCode").val() || !$("#facilityName").val()) {
             showAdminMessage(messages.registryRequired || messages.registryPlaceholder, true);
             return;
         }
         var $form = $(this);
-        $.post(adminBaseUrl + "/saveFacility.form", $form.serialize(), function(response) {
+        var payload = $form.serialize();
+        // Unchecked checkbox is omitted; force false when editing/clearing external.
+        if (!$("#external").is(":checked")) {
+            payload += (payload ? "&" : "") + "external=false";
+        }
+        $.post(adminBaseUrl + "/saveFacility.form", payload, function(response) {
             if (response.status === "success") {
                 window.location = adminPageUrl
                     + "&locationId=" + encodeURIComponent(selectedLocationId)
@@ -220,19 +331,26 @@ jQuery(function($) {
     $("#transfer-admin-add-service-form").on("submit", function(event) {
         event.preventDefault();
         var $form = $(this);
+        var editingServiceId = $("#receivingServiceId").val();
         $.post(adminBaseUrl + "/saveService.form", $form.serialize(), function(response) {
             if (response.status === "success") {
                 removeEmptyRow($("#transfer-admin-services-table"));
-                $("#transfer-admin-services-table tbody").append(
-                    "<tr data-service-id=\"" + response.receivingServiceId + "\">" +
+                var $existingRow = $("#transfer-admin-services-table tr[data-service-id='" + response.receivingServiceId + "']");
+                var rowHtml =
+                    "<tr data-service-id=\"" + response.receivingServiceId + "\" data-service-name=\"" + escapeHtml(response.serviceName) + "\">" +
                     "<td>" + escapeHtml(response.serviceName) + "</td>" +
                     "<td class=\"transfer-admin-col-action\">" +
+                    "<button type=\"button\" class=\"btn btn-link transfer-admin-edit-service\" data-service-id=\"" +
+                    response.receivingServiceId + "\"><i class=\"icon-pencil\"></i> " + escapeHtml(messages.edit || "Edit") + "</button> " +
                     "<button type=\"button\" class=\"btn btn-link transfer-admin-remove-service\" data-service-id=\"" +
                     response.receivingServiceId + "\">" + escapeHtml(messages.remove) + "</button>" +
-                    "</td></tr>"
-                );
-                $form[0].reset();
-                $form.find("input[name='receivingFacilityId']").val(selectedReceivingFacilityId || "");
+                    "</td></tr>";
+                if ($existingRow.length) {
+                    $existingRow.replaceWith(rowHtml);
+                } else if (!editingServiceId) {
+                    $("#transfer-admin-services-table tbody").append(rowHtml);
+                }
+                resetServiceForm();
                 showAdminMessage(messages.saveSuccess, false);
             } else {
                 showAdminMessage(response.message || messages.saveError, true);
@@ -240,6 +358,44 @@ jQuery(function($) {
         }, "json").fail(function() {
             showAdminMessage(messages.saveError, true);
         });
+    });
+
+    function resetServiceForm() {
+        var $form = $("#transfer-admin-add-service-form");
+        $("#receivingServiceId").val("").prop("disabled", true);
+        $("#serviceName").val("");
+        $form.find("input[name='receivingFacilityId']").val(selectedReceivingFacilityId || "");
+        $("#service-form-submit-btn").text(messages.add || "Add");
+        $("#service-form-cancel-btn").hide();
+        $form.removeClass("is-editing");
+    }
+
+    function enterServiceEditMode($row) {
+        var serviceId = $row.attr("data-service-id") || "";
+        var serviceName = $row.attr("data-service-name") || "";
+        $("#receivingServiceId").prop("disabled", false).val(serviceId);
+        $("#serviceName").val(serviceName).focus();
+        $("#service-form-submit-btn").text(messages.update || "Update");
+        $("#service-form-cancel-btn").show();
+        $("#transfer-admin-add-service-form").addClass("is-editing");
+        var formTop = $("#transfer-admin-add-service-form").offset();
+        if (formTop) {
+            $("html, body").animate({ scrollTop: Math.max(0, formTop.top - 20) }, 200);
+        }
+    }
+
+    $(document).on("click", ".transfer-admin-edit-service", function(e) {
+        e.preventDefault();
+        var $row = $(this).closest("tr");
+        if (!$row.length) {
+            return;
+        }
+        enterServiceEditMode($row);
+    });
+
+    $("#service-form-cancel-btn").on("click", function(e) {
+        e.preventDefault();
+        resetServiceForm();
     });
 
     $(document).on("click", ".transfer-admin-remove-facility", function() {

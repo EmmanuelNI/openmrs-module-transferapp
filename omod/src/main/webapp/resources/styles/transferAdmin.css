@@ -81,6 +81,30 @@
     box-sizing: border-box;
 }
 
+.transfer-admin-field-external {
+    flex: 0 1 220px;
+    max-width: 260px;
+}
+
+.transfer-admin-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: normal;
+    margin: 6px 0 0;
+    cursor: pointer;
+}
+
+.transfer-admin-form-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.transfer-admin-col-action .btn-link {
+    margin-right: 6px;
+}
+
 .transfer-admin-col-distance {
     width: 100px;
     white-space: nowrap;

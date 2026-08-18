@@ -203,6 +203,9 @@ public class Transfer extends BaseOpenmrsData {
 	@Column(name = "provider_qualification", length = 255)
 	private String providerQualification;
 
+	@Column(name = "provider_phone", length = 64)
+	private String providerPhone;
+
 	@Column(name = "signed_date")
 	private Date signedDate;
 
@@ -665,6 +668,14 @@ public class Transfer extends BaseOpenmrsData {
 
 	public void setProviderQualification(String providerQualification) {
 		this.providerQualification = providerQualification;
+	}
+
+	public String getProviderPhone() {
+		return providerPhone;
+	}
+
+	public void setProviderPhone(String providerPhone) {
+		this.providerPhone = providerPhone;
 	}
 
 	public Date getSignedDate() {

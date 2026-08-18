@@ -179,6 +179,27 @@
             }
         }
 
+        function markTransferRowHieStatus(transferUuid, sentToHie) {
+            if (!transferUuid) {
+                return;
+            }
+            var row = jq("tr.transfer-row").filter(function() {
+                return jq(this).attr("data-transfer-id") === transferUuid
+                    || jq(this).attr("data-uuid") === transferUuid;
+            });
+            if (!row.length) {
+                return;
+            }
+            row.attr("data-hie-sent", sentToHie ? "true" : "false");
+            if (sentToHie) {
+                row.addClass("transfer-row-sent");
+                row.find("td").eq(5).html("<span class='transfer-status-sent'>Sent</span>");
+            } else {
+                row.removeClass("transfer-row-sent");
+                row.find("td").eq(5).html("<span class='transfer-status-pending'>Not sent</span>");
+            }
+        }
+
         function ensureTransferPreviewRenderer(callback) {
             if (typeof buildTransferFormPreviewHtml === "function") {
                 callback();
@@ -316,6 +337,9 @@
                 dataType: "json"
             }).done(function(response) {
                 if (response && response.status === "success") {
+                    currentPreviewTransferSent = true;
+                    syncTransferPreviewSubmitButton();
+                    markTransferRowHieStatus(currentPreviewTransferUuid, true);
                     if (typeof emr !== "undefined" && typeof emr.successMessage === "function") {
                         emr.successMessage("Transfer sent to HIE successfully.");
                     }
