@@ -340,7 +340,6 @@
 			+ "<div class='tf-row'><strong>Reason for Transfer:</strong> " + line(p.reasonForTransfer, 830) + "</div>"
 
 			+ "<div class='tf-section-title'>Significant Findings:</div>"
-			+ (p.significantFindings ? "<div class='tf-row'>" + line(p.significantFindings, 900) + "</div>" : "")
 			+ "<div class='tf-row'><strong>Clinical Presentation:</strong> " + line(p.clinicalPresentation, 780) + "</div>"
 			+ "<div class='tf-lines-block'></div><div class='tf-lines-block'></div><div class='tf-lines-block'></div>"
 			+ "<div class='tf-row'><strong>If person with disability, record the type of disability:</strong> " + line(p.disabilityType, 470) + "</div>"

@@ -83,6 +83,7 @@ public class TransferHieSubmissionServiceImpl implements TransferHieSubmissionSe
 			refreshDiagnosisFromObsIfNeeded(transfer);
 			applyProviderQualificationWithSpeciality(transfer);
 			applyCaregiverFromCurrentUser(transfer);
+			applyConfiguredSendingFacility(transfer);
 			HieBasicConnection connection = hieConnectionResolver.resolveConnection();
 			String receivingFacilityLabel = resolveReceivingFacilityLabel(transfer);
 			ensurePayloadBuilderConfigured();
@@ -158,6 +159,19 @@ public class TransferHieSubmissionServiceImpl implements TransferHieSubmissionSe
 			if (profile != null && StringUtils.isNotBlank(profile.getPhoneNumber())) {
 				transfer.setCaregiverTelephone(StringUtils.trimToNull(profile.getPhoneNumber()));
 			}
+		}
+	}
+
+	/**
+	 * Aligns outbound sending facility with {@code transferapp.sendingFacilityName} before HIE submit.
+	 */
+	private void applyConfiguredSendingFacility(Transfer transfer) {
+		if (transfer == null || transferAdminService == null) {
+			return;
+		}
+		String configuredName = StringUtils.trimToNull(transferAdminService.resolveCurrentSendingFacilityName());
+		if (configuredName != null) {
+			transfer.setSendingFacility(configuredName);
 		}
 	}
 

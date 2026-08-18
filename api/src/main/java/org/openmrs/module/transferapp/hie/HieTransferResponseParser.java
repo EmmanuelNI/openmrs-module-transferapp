@@ -431,7 +431,6 @@ public class HieTransferResponseParser {
         transfer.put("others", extractExtensionValue(resource, EXT_OTHERS));
         transfer.put("proceduresAndTreatments", extractExtensionValue(resource, EXT_PROCEDURES_AND_TREATMENTS));
         String vitals = extractExtensionValue(resource, EXT_VITAL_SIGNS);
-        transfer.put("significantFindings", vitals);
         parseVitalSignsIntoTransfer(vitals, transfer);
 
         String extWeight = extractNestedExtensionValue(resource, EXT_EXTENDED_VITALS, "weight");

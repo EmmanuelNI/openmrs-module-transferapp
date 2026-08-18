@@ -269,14 +269,13 @@ public class NewTransferOutServiceImpl implements NewTransferOutService {
 	}
 
 	protected String getCurrentFacilityName() {
-		Location sessionLocation = Context.getUserContext().getLocation();
-		if (sessionLocation == null) {
-			return "";
+		if (transferAdminService != null) {
+			String configuredName = transferAdminService.resolveCurrentSendingFacilityName();
+			if (StringUtils.isNotBlank(configuredName)) {
+				return configuredName.trim();
+			}
 		}
-		if (sessionLocation.getParentLocation() != null) {
-			return sessionLocation.getParentLocation().getName();
-		}
-		return sessionLocation.getName();
+		return "";
 	}
 
 	protected List<TransferFormOption> getIdentifierTypes() {

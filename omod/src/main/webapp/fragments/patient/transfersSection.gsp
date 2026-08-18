@@ -34,6 +34,26 @@
     </div>
 </div>
 
+<div id="transfer-profile-incomplete-overlay" class="transfer-notice-overlay" style="display: none;"></div>
+<div id="transfer-profile-incomplete-dialog" class="dialog transfer-notice-dialog" style="display: none;"
+     data-profile-url="${ ui.encodeHtmlAttribute(ui.pageLink('transferapp', 'transferProfile') + '?app=transferapp.dashboard') }">
+    <div class="dialog-header">
+        <i class="icon-user"></i>
+        <h3>${ ui.message("transferapp.patient.transfers.profileIncompleteTitle") }</h3>
+    </div>
+    <div class="dialog-content">
+        <p id="transfer-profile-incomplete-message" class="transfer-notice-message"></p>
+        <div class="transfer-notice-actions">
+            <a id="transfer-profile-incomplete-goto" class="button confirm" href="javascript:void(0);">
+                ${ ui.message("transferapp.patient.transfers.goToProfile") }
+            </a>
+            <button type="button" id="transfer-profile-incomplete-close" class="cancel">
+                ${ ui.message("coreapps.close") }
+            </button>
+        </div>
+    </div>
+</div>
+
 <style>
 #new-transfer-out-dialog.transfer-wizard-dialog.dialog {
   position: fixed !important;
@@ -106,6 +126,84 @@
   padding: 0.5rem 0.75rem;
   border-top: 1px solid #e2e8f0;
   background: #fff;
+}
+
+.transfer-notice-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 10010;
+}
+
+#transfer-profile-incomplete-dialog.transfer-notice-dialog.dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10011;
+  background: #fff;
+  border: 1px solid #00473f;
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  width: 480px;
+  max-width: 92%;
+  margin: 0;
+  display: none;
+  flex-direction: column;
+}
+
+#transfer-profile-incomplete-dialog.transfer-notice-dialog.is-open {
+  display: flex !important;
+}
+
+#transfer-profile-incomplete-dialog .dialog-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid #00473f;
+  background: #00473f;
+  border-radius: 4px 4px 0 0;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#transfer-profile-incomplete-dialog .dialog-header i,
+#transfer-profile-incomplete-dialog .dialog-header h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 17px;
+  font-weight: bold;
+}
+
+#transfer-profile-incomplete-dialog .dialog-content {
+  padding: 20px 18px 16px;
+}
+
+#transfer-profile-incomplete-dialog .transfer-notice-message {
+  margin: 0 0 18px;
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+#transfer-profile-incomplete-dialog .transfer-notice-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#transfer-profile-incomplete-dialog .transfer-notice-actions .confirm {
+  background: #00473f;
+  color: #fff;
+  border: 1px solid #00352f;
+  text-decoration: none;
+}
+
+#transfer-profile-incomplete-dialog .transfer-notice-actions .confirm:hover {
+  background: #0a5c52;
+  color: #fff;
 }
 </style>
 <% } %>
@@ -411,13 +509,44 @@
         + "/module/transferapp/transfer/save.form";
 
     jq(document).ready(function() {
+        function closeProfileIncompleteDialog() {
+            jq("#transfer-profile-incomplete-dialog").removeClass("is-open").hide();
+            jq("#transfer-profile-incomplete-overlay").hide();
+        }
+
+        function showProfileIncompleteDialog(message) {
+            var dialog = jq("#transfer-profile-incomplete-dialog");
+            if (!dialog.length) {
+                window.alert(message);
+                return;
+            }
+            jq("#transfer-profile-incomplete-message").text(message || "");
+            jq("#transfer-profile-incomplete-overlay").show();
+            dialog.addClass("is-open").show().css("display", "flex");
+        }
+
+        jq(document).on("click", "#transfer-profile-incomplete-close, #transfer-profile-incomplete-overlay", function(e) {
+            e.preventDefault();
+            closeProfileIncompleteDialog();
+        });
+
+        jq(document).on("click", "#transfer-profile-incomplete-goto", function(e) {
+            e.preventDefault();
+            var profileUrl = jq("#transfer-profile-incomplete-dialog").attr("data-profile-url");
+            if (profileUrl) {
+                window.location.href = profileUrl;
+                return;
+            }
+            closeProfileIncompleteDialog();
+        });
+
         jq(document).on("click", "#open-new-transfer-out", function(e) {
             e.preventDefault();
             var profileComplete = jq(this).attr("data-provider-profile-complete") === "true";
             if (!profileComplete) {
                 var incompleteMessage = jq(this).attr("data-profile-incomplete-message")
                     || "Please complete My Profile with phone number, qualification, and speciality before creating a transfer.";
-                alert(incompleteMessage);
+                showProfileIncompleteDialog(incompleteMessage);
                 return;
             }
             var loadUrl = jq(this).attr("data-load-url");
@@ -430,7 +559,7 @@
             if (gateEl.attr("data-provider-profile-complete") === "false") {
                 var incompleteMessage = gateEl.attr("data-profile-incomplete-message")
                     || "${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.profileIncomplete')) }";
-                alert(incompleteMessage);
+                showProfileIncompleteDialog(incompleteMessage);
                 return;
             }
             var loadUrl = jq(this).attr("data-load-url");
