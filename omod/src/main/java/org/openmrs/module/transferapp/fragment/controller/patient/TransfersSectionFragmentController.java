@@ -24,7 +24,9 @@ import org.openmrs.module.transferapp.TransferAppActivator;
 import org.openmrs.module.transferapp.TransferPrivilegeHelper;
 import org.openmrs.module.transferapp.api.PatientInsuranceService;
 import org.openmrs.module.transferapp.api.PatientTransferListService;
+import org.openmrs.module.transferapp.api.TransferPatientSnapshotResolver;
 import org.openmrs.module.transferapp.api.TransferProfileService;
+import org.openmrs.module.transferapp.api.TransferRegistrationObsService;
 import org.openmrs.module.transferapp.model.PatientInsuranceInfo;
 import org.openmrs.module.transferapp.model.PatientTransferListItem;
 import org.openmrs.module.transferapp.model.TransferProfile;
@@ -53,7 +55,8 @@ public class TransfersSectionFragmentController {
 			@InjectBeans PatientDomainWrapper patientWrapper,
 			@SpringBean("patientTransferListService") PatientTransferListService patientTransferListService,
 			@SpringBean("patientInsuranceService") PatientInsuranceService patientInsuranceService,
-			@SpringBean("transferProfileService") TransferProfileService transferProfileService) {
+			@SpringBean("transferProfileService") TransferProfileService transferProfileService,
+			@SpringBean("transferAppRegistrationObsService") TransferRegistrationObsService registrationObsService) {
 
 		config.require("patient");
 		Object patient = config.get("patient");
@@ -79,6 +82,7 @@ public class TransfersSectionFragmentController {
 				ui.includeCss("transferapp", "transferSection.css");
 				ui.includeJavascript("transferapp", "transferMohLogo.js");
 				ui.includeJavascript("transferapp", "transferFormPreview.js");
+				ui.includeJavascript("transferapp", "hieTransferSection.js");
 				totalPatientTransfers = patientTransferListService.countPatientTransfers(patientWrapper.getPatient());
 				transfers = patientTransferListService.getPatientTransfers(
 						patientWrapper.getPatient(),
@@ -132,14 +136,41 @@ public class TransfersSectionFragmentController {
 				+ "?patientId=" + patientWrapper.getPatient().getPatientId()
 				+ "&app=transferapp.dashboard";
 
+		String recordedHieTransferId = null;
+		String recordedHieTransferUpid = null;
+		if (canListTransfers && patientWrapper.getPatient() != null) {
+			try {
+				recordedHieTransferId = registrationObsService.findRecordedHieTransferIdOnActiveVisit(
+						patientWrapper.getPatient());
+				if (recordedHieTransferId != null) {
+					recordedHieTransferUpid = new TransferPatientSnapshotResolver()
+							.resolveUpid(patientWrapper.getPatient());
+				}
+			}
+			catch (Exception ignored) {
+				recordedHieTransferId = null;
+				recordedHieTransferUpid = null;
+			}
+		}
+		boolean hasRecordedHieTransfer = recordedHieTransferId != null
+				&& recordedHieTransferUpid != null
+				&& recordedHieTransferUpid.trim().length() > 0;
+		boolean canProvideFeedback = canCreateTransfer && hasRecordedHieTransfer;
+		Integer patientId = patientWrapper.getPatient() != null ? patientWrapper.getPatient().getPatientId() : null;
+
 		model.addAttribute("patient", patientWrapper);
 		model.addAttribute("transfers", transfers);
 		model.addAttribute("hasTransfers", hasTransfers);
 		model.addAttribute("hasMorePatientTransfers", hasMorePatientTransfers);
 		model.addAttribute("totalPatientTransfers", totalPatientTransfers);
 		model.addAttribute("recordsPageUrl", recordsPageUrl);
+		model.addAttribute("hasRecordedHieTransfer", hasRecordedHieTransfer);
+		model.addAttribute("recordedHieTransferId", recordedHieTransferId != null ? recordedHieTransferId : "");
+		model.addAttribute("recordedHieTransferUpid", recordedHieTransferUpid != null ? recordedHieTransferUpid : "");
 		model.addAttribute("canListTransfers", canListTransfers);
 		model.addAttribute("canCreateTransfer", canCreateTransfer);
+		model.addAttribute("canProvideFeedback", canProvideFeedback);
+		model.addAttribute("patientId", patientId);
 		model.addAttribute("providerProfileComplete", providerProfileComplete);
 		model.addAttribute("requiredListPrivilege", TransferAppActivator.PRIVILEGE_LIST_TRANSFERS);
 		model.addAttribute("requiredCreatePrivilege", TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);

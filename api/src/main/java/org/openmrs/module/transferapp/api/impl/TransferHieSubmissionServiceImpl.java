@@ -134,6 +134,15 @@ public class TransferHieSubmissionServiceImpl implements TransferHieSubmissionSe
 		if (phone != null) {
 			transfer.setProviderPhone(phone);
 		}
+		String referringName = StringUtils.trimToNull(transfer.getReferringProviderName());
+		if (referringName == null && user.getPerson() != null && user.getPerson().getPersonName() != null) {
+			referringName = StringUtils.trimToNull(user.getPerson().getPersonName().getFullName());
+		}
+		if (referringName == null) {
+			referringName = StringUtils.trimToNull(user.getUsername());
+		}
+		transfer.setReferringProviderName(TransferProfile.formatCareProviderName(
+				referringName, profile.getLicenseNumber()));
 	}
 
 	private void applyCaregiverFromCurrentUser(Transfer transfer) {
@@ -224,6 +233,9 @@ public class TransferHieSubmissionServiceImpl implements TransferHieSubmissionSe
 		}
 		if (transferAdminService != null) {
 			payloadBuilder.setTransferAdminService(transferAdminService);
+		}
+		if (transferProfileService != null) {
+			payloadBuilder.setTransferProfileService(transferProfileService);
 		}
 	}
 

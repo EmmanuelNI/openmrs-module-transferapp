@@ -302,9 +302,6 @@
     <div class="info-header">
         <i class="icon-retweet"></i>
         <h3>${ ui.message(config.label ? config.label : "transferapp.patient.transfers.title").toUpperCase() }</h3>
-        <div class="transfer-section-subtitle">
-            ${ ui.message("transferapp.patient.transfers.subtitle") }
-        </div>
     </div>
     <div class="info-body">
         <% if (canCreateTransfer && patientInsuranceAvailable) { %>
@@ -384,6 +381,41 @@
                 </div>
                 <% } %>
             </div>
+        <% } %>
+        <% if (canListTransfers && hasRecordedHieTransfer) {
+            def recordedCtxPath = (ui.contextPath() ?: "").toString()
+            while (recordedCtxPath.startsWith("/")) {
+                recordedCtxPath = recordedCtxPath.substring(1)
+            }
+            def recordedHieRestUrl = "/" + recordedCtxPath + "/ws/rest/v1/transferapp/transfer"
+            def recordedFeedbackRestUrl = "/" + recordedCtxPath + "/ws/rest/v1/transferapp/transfer/feedback"
+        %>
+            <div id="transfer-recorded-hie-config" style="display:none;"
+                 data-patient-id="${ ui.encodeHtmlAttribute((patientId ?: '') as String) }"
+                 data-upid="${ ui.encodeHtmlAttribute(recordedHieTransferUpid) }"
+                 data-transfer-id="${ ui.encodeHtmlAttribute(recordedHieTransferId) }"
+                 data-rest-url="${ ui.encodeHtmlAttribute(recordedHieRestUrl) }"
+                 data-feedback-url="${ ui.encodeHtmlAttribute(recordedFeedbackRestUrl) }"
+                 data-facilities-url="${ ui.encodeHtmlAttribute(recordedFeedbackRestUrl + '/facilities') }"
+                 data-has-transfer-id="true"
+                 data-can-provide-feedback="${ canProvideFeedback ? 'true' : 'false' }"></div>
+            <div class="transfer-open-recorded-wrap">
+                <a id="patient-open-recorded-transfer"
+                   class="transfer-open-recorded-link hie-transfer-view-link"
+                   href="javascript:void(0);"
+                   role="button"
+                   data-transfer-id="${ ui.encodeHtmlAttribute(recordedHieTransferId) }"
+                   data-upid="${ ui.encodeHtmlAttribute(recordedHieTransferUpid) }"
+                   data-patient-id="${ ui.encodeHtmlAttribute((patientId ?: '') as String) }"
+                   data-rest-url="${ ui.encodeHtmlAttribute(recordedHieRestUrl) }"
+                   data-feedback-url="${ ui.encodeHtmlAttribute(recordedFeedbackRestUrl) }"
+                   data-facilities-url="${ ui.encodeHtmlAttribute(recordedFeedbackRestUrl + '/facilities') }"
+                   data-can-provide-feedback="${ canProvideFeedback ? 'true' : 'false' }"
+                   title="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.hieTransfer.openTransfer')) }">
+                    <i class="icon-eye-open"></i> ${ ui.message("transferapp.patient.hieTransfer.openTransfer") }
+                </a>
+            </div>
+            ${ ui.includeFragment("transferapp", "patient/hieTransferPreviewDialog") }
         <% } %>
     </div>
 </div>
@@ -726,6 +758,7 @@
     }
 
     function showTransferPreview(transferUuid) {
+        jq("#transfer-preview-submit").show();
         if (!transferUuid) {
             return;
         }

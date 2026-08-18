@@ -20,11 +20,13 @@ import org.openmrs.module.transferapp.TransferAppActivator;
 import org.openmrs.module.transferapp.TransferPrivilegeHelper;
 import org.openmrs.module.transferapp.api.TransferAdminService;
 import org.openmrs.module.transferapp.api.TransferHieSubmissionService;
+import org.openmrs.module.transferapp.api.TransferProfileService;
 import org.openmrs.module.transferapp.api.TransferQrCodeService;
 import org.openmrs.module.transferapp.api.TransferService;
 import org.openmrs.module.transferapp.api.TransferVerificationUrlService;
 import org.openmrs.module.transferapp.model.Transfer;
 import org.openmrs.module.transferapp.model.TransferFormExtras;
+import org.openmrs.module.transferapp.model.TransferProfile;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -306,7 +308,7 @@ public class TransferSaveController {
 		preview.put("healthInsuranceOtherSpec", nullToEmpty(transfer.getHealthInsuranceOther()));
 		preview.put("isNoInsurance", "NONE".equals(healthInsuranceType));
 
-		preview.put("referringProviderName", nullToEmpty(transfer.getReferringProviderName()));
+		preview.put("referringProviderName", formatReferringProviderNameForPreview(transfer));
 		preview.put("referringProviderQualification", nullToEmpty(transfer.getProviderQualification()));
 		preview.put("referringSignedDate", formatDateOnly(transfer.getSignedDate()));
 		preview.put("referringSignedTime", nullToEmpty(transfer.getSignedTime()));
@@ -329,6 +331,26 @@ public class TransferSaveController {
 			preview.put("verifyQrUrl", verificationUrlService.buildVerifyQrFormUrl(verificationTransferId));
 		}
 		return preview;
+	}
+
+	private String formatReferringProviderNameForPreview(Transfer transfer) {
+		String name = nullToEmpty(transfer.getReferringProviderName());
+		try {
+			TransferProfileService profileService = Context.getService(TransferProfileService.class);
+			org.openmrs.User owner = transfer.getCreator() != null
+					? transfer.getCreator()
+					: Context.getAuthenticatedUser();
+			if (profileService != null && owner != null) {
+				TransferProfile profile = profileService.getProfileForUser(owner);
+				if (profile != null) {
+					return TransferProfile.formatCareProviderName(name, profile.getLicenseNumber());
+				}
+			}
+		}
+		catch (Exception ignored) {
+			// Fall back to the stored name when profile lookup is unavailable.
+		}
+		return name;
 	}
 
 	private String nullToEmpty(String value) {

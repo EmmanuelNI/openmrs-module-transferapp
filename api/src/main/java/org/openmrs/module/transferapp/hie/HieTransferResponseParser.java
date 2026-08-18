@@ -2,6 +2,7 @@ package org.openmrs.module.transferapp.hie;
 
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.openmrs.module.transferapp.model.TransferProfile;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -439,7 +440,11 @@ public class HieTransferResponseParser {
                 referringProviderName = textOrDefault(individual.get("display"), "");
             }
         }
-        transfer.put("referringProviderName", referringProviderName);
+        transfer.put("referringProviderName", TransferProfile.formatCareProviderName(
+                firstNonBlank(
+                        extractNestedExtensionValue(resource, EXT_PRACTITIONER_INFO, "name"),
+                        referringProviderName),
+                extractNestedExtensionValue(resource, EXT_PRACTITIONER_INFO, "license-number")));
         transfer.put("referringProviderQualification", extractNestedExtensionValue(resource, EXT_PRACTITIONER_INFO, "qualification"));
 
         String transportType = extractExtensionDisplay(resource, EXT_TRANSPORT_TYPE);
@@ -475,6 +480,9 @@ public class HieTransferResponseParser {
 
         applyInsuranceAgentVerificationFlags(resource, transfer);
         applyEtransferFormFallback(transfer, extractEtransferFormNode(resource));
+        transfer.put("referringProviderName", TransferProfile.formatCareProviderName(
+                asString(transfer.get("referringProviderName")),
+                extractNestedExtensionValue(resource, EXT_PRACTITIONER_INFO, "license-number")));
     }
 
     /**

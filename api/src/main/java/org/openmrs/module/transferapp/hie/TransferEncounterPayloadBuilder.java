@@ -21,8 +21,10 @@ import org.openmrs.User;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.transferapp.TransferAppConstants;
 import org.openmrs.module.transferapp.api.TransferAdminService;
+import org.openmrs.module.transferapp.api.TransferProfileService;
 import org.openmrs.module.transferapp.model.ReceivingFacility;
 import org.openmrs.module.transferapp.model.Transfer;
+import org.openmrs.module.transferapp.model.TransferProfile;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -49,8 +51,14 @@ public class TransferEncounterPayloadBuilder {
 
 	private TransferAdminService transferAdminService;
 
+	private TransferProfileService transferProfileService;
+
 	public void setTransferAdminService(TransferAdminService transferAdminService) {
 		this.transferAdminService = transferAdminService;
+	}
+
+	public void setTransferProfileService(TransferProfileService transferProfileService) {
+		this.transferProfileService = transferProfileService;
 	}
 
 	public String buildEncounterJson(Transfer transfer, User user, String receivingFacilityLabel) {
@@ -218,7 +226,7 @@ public class TransferEncounterPayloadBuilder {
 
 	private void addParticipant(ObjectNode encounter, Transfer transfer, User user) {
 		String practitionerId = resolvePractitionerId(user);
-		String displayName = blankToDefault(transfer.getReferringProviderName(), resolveUserDisplayName(user));
+		String displayName = formatReferringProviderName(transfer, user);
 
 		ObjectNode participant = addObjectNode(encounter.putArray("participant"));
 		ObjectNode participantType = addObjectNode(participant.putArray("type"));
@@ -512,10 +520,11 @@ public class TransferEncounterPayloadBuilder {
 	}
 
 	private void addPractitionerInfoExtension(ObjectNode encounter, Transfer transfer, User user) {
-		String name = blankToDefault(transfer.getReferringProviderName(), resolveUserDisplayName(user));
+		String license = resolveReferringProviderLicense(user);
+		String name = formatReferringProviderName(transfer, user);
 		String qualification = StringUtils.trimToNull(transfer.getProviderQualification());
 		String phone = StringUtils.trimToNull(transfer.getProviderPhone());
-		if (StringUtils.isBlank(name) && qualification == null && phone == null) {
+		if (StringUtils.isBlank(name) && qualification == null && phone == null && StringUtils.isBlank(license)) {
 			return;
 		}
 
@@ -525,6 +534,39 @@ public class TransferEncounterPayloadBuilder {
 		addNestedExtensionField(nested, "name", name);
 		addNestedExtensionField(nested, "qualification", qualification);
 		addNestedExtensionField(nested, "phone", phone);
+		addNestedExtensionField(nested, "license-number", license);
+	}
+
+	private String formatReferringProviderName(Transfer transfer, User user) {
+		String rawName = blankToDefault(transfer.getReferringProviderName(), resolveUserDisplayName(user));
+		return TransferProfile.formatCareProviderName(rawName, resolveReferringProviderLicense(user));
+	}
+
+	private String resolveReferringProviderLicense(User user) {
+		TransferProfileService profileService = getTransferProfileService();
+		if (profileService == null || user == null) {
+			return null;
+		}
+		try {
+			TransferProfile profile = profileService.getProfileForUser(user);
+			return profile != null ? StringUtils.trimToNull(profile.getLicenseNumber()) : null;
+		}
+		catch (Exception ignored) {
+			return null;
+		}
+	}
+
+	private TransferProfileService getTransferProfileService() {
+		if (transferProfileService != null) {
+			return transferProfileService;
+		}
+		try {
+			transferProfileService = Context.getRegisteredComponent("transferProfileService", TransferProfileService.class);
+			return transferProfileService;
+		}
+		catch (Exception ignored) {
+			return null;
+		}
 	}
 
 	private void addPatientDemographicsExtension(ObjectNode encounter, Transfer transfer) {

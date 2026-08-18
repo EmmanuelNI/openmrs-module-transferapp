@@ -15,18 +15,20 @@ package org.openmrs.module.transferapp.api;
 
 import org.openmrs.annotation.Authorized;
 import org.openmrs.module.transferapp.TransferAppActivator;
-import org.openmrs.module.transferapp.model.RegistryFacility;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.Map;
 
-@Transactional(readOnly = true)
-public interface TransferFacilityRegistryService {
-
-	@Authorized(TransferAppActivator.PRIVILEGE_DASHBOARD)
-	List<RegistryFacility> listReceivingFacilitiesFromHie();
+@Transactional
+public interface TransferReferralFeedbackService {
 
 	@Authorized(TransferAppActivator.PRIVILEGE_LIST_TRANSFERS)
-	List<RegistryFacility> listCounterReferralFacilitiesFromHie();
+	@Transactional(readOnly = true)
+	Map<String, Object> getFeedbackForm(Integer patientId, String hieTransferId);
 
+	@Authorized(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)
+	Map<String, Object> saveFeedback(Integer patientId, String hieTransferId,
+			String dateOfDischarge, String finalDiagnosis, String treatmentGiven, String outcome,
+			String recommendations, String referBackToFacility, String contactPerson,
+			String providerName, String qualification, String signedDate, String signedTime, String phone);
 }

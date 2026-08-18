@@ -333,6 +333,15 @@ public class TransferServiceImpl implements TransferService {
 		}
 		transfer.setProviderQualification(StringUtils.trimToNull(profile.getQualificationWithSpeciality()));
 		transfer.setProviderPhone(StringUtils.trimToNull(profile.getPhoneNumber()));
+		String referringName = StringUtils.trimToNull(transfer.getReferringProviderName());
+		if (referringName == null && user.getPerson() != null && user.getPerson().getPersonName() != null) {
+			referringName = StringUtils.trimToNull(user.getPerson().getPersonName().getFullName());
+		}
+		if (referringName == null) {
+			referringName = StringUtils.trimToNull(user.getUsername());
+		}
+		transfer.setReferringProviderName(TransferProfile.formatCareProviderName(
+				referringName, profile.getLicenseNumber()));
 	}
 
 	protected Date parseDateValue(String value) {

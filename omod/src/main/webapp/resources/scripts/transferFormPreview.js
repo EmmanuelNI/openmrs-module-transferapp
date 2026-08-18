@@ -21,6 +21,29 @@
 		return "<span class='tf-line' style='min-width:" + width + "px;'>" + safe + "</span>";
 	}
 
+	function splitClinicalPresentationLines(value) {
+		if (value === null || value === undefined) {
+			return [];
+		}
+		return String(value).split(/\r?\n/);
+	}
+
+	function hasClinicalLineData(value) {
+		return value !== null && value !== undefined && String(value).trim() !== "";
+	}
+
+	function buildClinicalPresentationSection(clinicalPresentation) {
+		var lines = splitClinicalPresentationLines(clinicalPresentation);
+		var firstLine = lines.length > 0 ? lines[0] : "";
+		var html = "<div class='tf-row'><strong>Clinical Presentation:</strong> " + line(firstLine, 780) + "</div>";
+		for (var i = 1; i <= 3; i++) {
+			if (hasClinicalLineData(lines[i])) {
+				html += "<div class='tf-lines-block'>" + escTransferPreview(String(lines[i]).trim()) + "</div>";
+			}
+		}
+		return html;
+	}
+
 	function truthy(value) {
 		return value === true || value === "true";
 	}
@@ -294,21 +317,23 @@
 			+ ">"
 			+ buildInsuranceAgentDecisionBannerHtml(p)
 			+ "<div class='tf-sheet'>"
-			+ "<div class='tf-head'>"
-			+ "<div class='tf-left'>"
+			+ "<table class='tf-head' cellpadding='0' cellspacing='0'>"
+			+ "<tr>"
+			+ "<td class='tf-head-brand'>"
 			+ "<div class='tf-row'><strong>REPUBLIC OF RWANDA</strong></div>"
-			+ "<div class='tf-row'>" + logoHtml + "</div>"
-			+ "<div class='tf-row' style='margin-top: 22px;'><strong>MINISTRY OF HEALTH</strong></div>"
-			+ "</div>"
-			+ "<div class='tf-right'>"
-			+ "<div class='tf-row'><strong>Province:</strong>" + line(p.province, 320) + "</div>"
-			+ "<div class='tf-row'><strong>District:</strong>" + line(p.district, 332) + "</div>"
-			+ "<div class='tf-row'><strong>Name of Hospital:</strong>" + line(p.receivingFacility, 230) + "</div>"
-			+ "<div class='tf-row'><strong>Name of Referring Facility:</strong>" + line(p.referringFacilityName, 172) + "</div>"
-			+ "<div class='tf-row'><strong>Referring Unit:</strong>" + line(p.referringUnit, 280) + "</div>"
-			+ "<div class='tf-row'><strong>Receiving Clinician/Phone:</strong>" + line(p.receivingClinicianPhone, 190) + "</div>"
-			+ "</div>"
-			+ "</div>"
+			+ "<div class='tf-row tf-head-logo-row'>" + logoHtml + "</div>"
+			+ "<div class='tf-row tf-head-moh-row'><strong>MINISTRY OF HEALTH</strong></div>"
+			+ "</td>"
+			+ "<td class='tf-head-fields'>"
+			+ "<div class='tf-row'><strong>Province:</strong>" + line(p.province, 180) + "</div>"
+			+ "<div class='tf-row'><strong>District:</strong>" + line(p.district, 180) + "</div>"
+			+ "<div class='tf-row'><strong>Name of Hospital:</strong>" + line(p.receivingFacility, 160) + "</div>"
+			+ "<div class='tf-row'><strong>Name of Referring Facility:</strong>" + line(p.referringFacilityName, 120) + "</div>"
+			+ "<div class='tf-row'><strong>Referring Unit:</strong>" + line(p.referringUnit, 160) + "</div>"
+			+ "<div class='tf-row'><strong>Receiving Clinician/Phone:</strong>" + line(p.receivingClinicianPhone, 140) + "</div>"
+			+ "</td>"
+			+ "</tr>"
+			+ "</table>"
 
 			+ "<div class='tf-title'>EXTERNAL TRANSFER FORM</div>"
 
@@ -340,8 +365,7 @@
 			+ "<div class='tf-row'><strong>Reason for Transfer:</strong> " + line(p.reasonForTransfer, 830) + "</div>"
 
 			+ "<div class='tf-section-title'>Significant Findings:</div>"
-			+ "<div class='tf-row'><strong>Clinical Presentation:</strong> " + line(p.clinicalPresentation, 780) + "</div>"
-			+ "<div class='tf-lines-block'></div><div class='tf-lines-block'></div><div class='tf-lines-block'></div>"
+			+ buildClinicalPresentationSection(p.clinicalPresentation)
 			+ "<div class='tf-row'><strong>If person with disability, record the type of disability:</strong> " + line(p.disabilityType, 470) + "</div>"
 
 			+ "<div class='tf-row'><strong>Vital Signs:</strong>"
@@ -414,11 +438,22 @@
 		popup.document.open();
 		popup.document.write(
 			"<!DOCTYPE html><html><head><meta charset='utf-8'/>"
+			+ "<meta name='viewport' content='width=1200'/>"
 			+ "<title>" + escTransferPreview(title) + "</title>"
 			+ "<link rel='stylesheet' type='text/css' href='" + escTransferPreview(cssHref) + "'/>"
 			+ "<style>"
-			+ "body{margin:12px;background:#fff;}"
-			+ ".transfer-form-preview{max-width:100%;}"
+			+ "@page{size:A4 portrait;margin:10mm 12mm;}"
+			+ "body{margin:0;background:#fff;}"
+			+ ".transfer-form-preview{max-width:210mm;margin:0 auto;}"
+			+ ".tf-sheet{border:1px solid #111;padding:6px 8px;font-family:'Times New Roman',Times,serif;}"
+			+ ".tf-head{width:100%;border-collapse:collapse;table-layout:fixed;}"
+			+ ".tf-head-brand{width:52%;vertical-align:top;text-align:left;padding:0 12px 0 0;}"
+			+ ".tf-head-brand .tf-row{text-align:left;}"
+			+ ".tf-head-brand .tf-moh-logo{display:block;margin-left:0;height:90px;}"
+			+ ".tf-head-fields{width:48%;vertical-align:top;border:2px solid #111;padding:6px 10px;}"
+			+ ".tf-line{display:inline-block;border-bottom:1px dashed #111;min-height:18px;vertical-align:bottom;word-break:break-word;}"
+			+ ".tf-row{font-size:11pt;line-height:1.2;margin:1px 0;}"
+			+ ".tf-title{text-align:center;font-weight:700;text-decoration:underline;font-size:14pt;margin:6px 0 8px;}"
 			+ "@media print{body{margin:0;} .tf-no-print{display:none !important;}}"
 			+ "</style></head><body>"
 			+ "<p class='tf-no-print' style='font-family:sans-serif;font-size:13px;color:#334155;margin:0 0 12px;'>"

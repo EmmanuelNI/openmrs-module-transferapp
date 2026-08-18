@@ -143,7 +143,18 @@ public class NewTransferOutServiceImpl implements NewTransferOutService {
 		}
 		formData.setReferringSignedTime(StringUtils.defaultString(transfer.getSignedTime()));
 		if (StringUtils.isNotBlank(transfer.getReferringProviderName())) {
-			formData.setReferringProviderName(transfer.getReferringProviderName());
+			String license = null;
+			if (transferProfileService != null) {
+				User user = Context.getAuthenticatedUser();
+				if (user != null) {
+					TransferProfile profile = transferProfileService.getProfileForUser(user);
+					if (profile != null) {
+						license = profile.getLicenseNumber();
+					}
+				}
+			}
+			formData.setReferringProviderName(TransferProfile.formatCareProviderName(
+					transfer.getReferringProviderName(), license));
 		}
 		if (StringUtils.isNotBlank(transfer.getProviderQualification())) {
 			formData.setReferringProviderQualification(transfer.getProviderQualification());
@@ -247,15 +258,21 @@ public class NewTransferOutServiceImpl implements NewTransferOutService {
 			userName = StringUtils.trimToNull(user.getUsername());
 		}
 		if (userName != null) {
-			formData.setReferringProviderName(userName);
 			formData.setCaregiverName(userName);
 		}
 		if (transferProfileService != null) {
 			TransferProfile profile = transferProfileService.getProfileForUser(user);
-			if (profile != null && StringUtils.isNotBlank(profile.getPhoneNumber())) {
-				formData.setCaregiverTelephone(StringUtils.trimToNull(profile.getPhoneNumber()));
-				formData.setReferringProviderPhone(StringUtils.trimToNull(profile.getPhoneNumber()));
+			if (profile != null) {
+				formData.setReferringProviderName(TransferProfile.formatCareProviderName(
+						userName, profile.getLicenseNumber()));
+				if (StringUtils.isNotBlank(profile.getPhoneNumber())) {
+					formData.setCaregiverTelephone(StringUtils.trimToNull(profile.getPhoneNumber()));
+					formData.setReferringProviderPhone(StringUtils.trimToNull(profile.getPhoneNumber()));
+				}
 			}
+		}
+		if (StringUtils.isBlank(formData.getReferringProviderName()) && userName != null) {
+			formData.setReferringProviderName(userName);
 		}
 	}
 
