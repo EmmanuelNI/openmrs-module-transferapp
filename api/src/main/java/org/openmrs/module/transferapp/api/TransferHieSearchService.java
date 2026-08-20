@@ -22,6 +22,10 @@ import java.util.Map;
 @Transactional
 public interface TransferHieSearchService {
 
+	int DEFAULT_PENDING_WEEKS = 1;
+
+	int MAX_PENDING_WEEKS = 4;
+
 	@Authorized(value = {
 			TransferAppActivator.PRIVILEGE_LIST_TRANSFERS,
 			TransferAppActivator.PRIVILEGE_LIST_PENDING }, requireAll = false)
@@ -29,11 +33,20 @@ public interface TransferHieSearchService {
 	Map<String, Object> searchTransfers(String upid, String transferId, boolean activeOnly);
 
 	/**
-	 * Lists pending inbound transfers for the current parent location from HIE.
-	 * Uses targetOrg=parent location name, fromDate=today-28, endDate=today+1.
+	 * Lists pending inbound transfers for the current facility from HIE.
+	 * Uses targetOrg from transferapp.sendingFacilityName when set, otherwise the session
+	 * location parent name; defaults to the most recent week.
 	 */
 	@Authorized(TransferAppActivator.PRIVILEGE_LIST_PENDING)
 	@Transactional(readOnly = true)
 	Map<String, Object> listPendingTransfersForCurrentFacility();
+
+	/**
+	 * Lists pending inbound transfers for the requested number of weeks. Values outside 1..4
+	 * are normalized to the one-week default.
+	 */
+	@Authorized(TransferAppActivator.PRIVILEGE_LIST_PENDING)
+	@Transactional(readOnly = true)
+	Map<String, Object> listPendingTransfersForCurrentFacility(int weeks);
 
 }

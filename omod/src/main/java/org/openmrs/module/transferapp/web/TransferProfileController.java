@@ -41,16 +41,19 @@ public class TransferProfileController {
 	public void saveProfile(HttpServletResponse response,
 			@RequestParam("licenseNumber") String licenseNumber,
 			@RequestParam("phoneNumber") String phoneNumber,
-			@RequestParam("qualification") String qualification) throws Exception {
+			@RequestParam("qualification") String qualification,
+			@RequestParam(value = "speciality", required = false) String speciality) throws Exception {
 
 		Map<String, Object> data = new HashMap<String, Object>();
 		try {
 			TransferProfile profile = getTransferProfileService().saveProfileForCurrentUser(
-					licenseNumber, phoneNumber, qualification);
+					licenseNumber, phoneNumber, qualification, speciality);
 			data.put("status", "success");
 			data.put("licenseNumber", profile.getLicenseNumber());
 			data.put("phoneNumber", profile.getPhoneNumber());
 			data.put("qualification", profile.getQualification());
+			data.put("speciality", profile.getSpeciality());
+			data.put("qualificationDisplay", profile.getQualificationWithSpeciality());
 		}
 		catch (Exception e) {
 			log.error("Unable to save transfer profile", e);

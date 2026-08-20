@@ -13,17 +13,24 @@
  */
 package org.openmrs.module.transferapp.api;
 
-import org.openmrs.User;
-import org.openmrs.module.transferapp.model.TransferProfile;
-import org.springframework.transaction.annotation.Transactional;
+import org.openmrs.Patient;
 
-@Transactional
-public interface TransferProfileService {
+public class HiePatientRegistrationResult {
 
-	@Transactional(readOnly = true)
-	TransferProfile getProfileForUser(User user);
+	private final Patient patient;
 
-	TransferProfile saveProfileForCurrentUser(String licenseNumber, String phoneNumber, String qualification,
-			String speciality);
+	private final boolean created;
 
+	public HiePatientRegistrationResult(Patient patient, boolean created) {
+		this.patient = patient;
+		this.created = created;
+	}
+
+	public Patient getPatient() {
+		return patient;
+	}
+
+	public boolean isCreated() {
+		return created;
+	}
 }

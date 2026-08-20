@@ -121,6 +121,8 @@ public final class TransferAppConstants {
 
 	public static final String GP_HIE_PASSWORD = "transferapp.hie.password";
 
+	public static final String GP_HIE_VALIDATE_PATIENT_ADDRESS = "transferapp.hie.validatePatientAddress";
+
 	public static final String GP_FR_TOKEN = "transferapp.fr_token";
 
 	public static final String GP_VERIFY_BASE_URL = "transferapp.verify_base_url";
@@ -130,6 +132,19 @@ public final class TransferAppConstants {
 	public static final String GP_SENDING_FOSA_ID = "transferapp.sendingFosaId";
 
 	public static final String DEFAULT_SENDING_FOSA_ID = "0074";
+
+	/** Display name of this facility used for HIE targetOrg / outbound sendingFacility matching. */
+	public static final String GP_SENDING_FACILITY_NAME = "transferapp.sendingFacilityName";
+
+	public static final String UPID_IDENTIFIER_TYPE_NAME = "UPID";
+
+	public static final String PENDING_TRANSFER_EXISTING_PATIENT_KEY = "existingPatient";
+
+	public static final String PENDING_TRANSFER_PATIENT_REFERENCE_KEY = "existingPatientReference";
+
+	public static final String RWANDAEMR_MODULE_ID = "rwandaemr";
+
+	public static final String REQUEST_APPOINTMENT_PAGE = "appointment/requestAppointment";
 
 	public static final String HIE_TRANSFER_ENCOUNTER_PATH = "/shr/Encounter/transfer";
 

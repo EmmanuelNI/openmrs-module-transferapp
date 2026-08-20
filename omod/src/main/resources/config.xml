@@ -22,6 +22,9 @@
 		<require_module version="${coreappsVersion}">org.openmrs.module.coreapps</require_module>
 		<require_module version="${webservicesRestVersion}">org.openmrs.module.webservices.rest</require_module>
 		<require_module version="${rwandaemrVersion}">org.openmrs.module.rwandaemr</require_module>
+		<require_module version="${fhir2Version}">org.openmrs.module.fhir2</require_module>
+		<require_module version="${registrationcoreVersion}">org.openmrs.module.registrationcore</require_module>
+		<require_module version="${addresshierarchyVersion}">org.openmrs.module.addresshierarchy</require_module>
 	</require_modules>
 
 	<!-- Module Activator -->
@@ -169,6 +172,12 @@
 	</globalProperty>
 
 	<globalProperty>
+		<property>transferapp.hie.validatePatientAddress</property>
+		<defaultValue>false</defaultValue>
+		<description>When true, require HIE patient addresses to match the configured Rwanda address hierarchy before registration</description>
+	</globalProperty>
+
+	<globalProperty>
 		<property>transferapp.verify_base_url</property>
 		<defaultValue>http://197.243.24.138:8081</defaultValue>
 		<description>Base URL for transfer verification QR codes (eTransfer verify endpoint)</description>
@@ -178,6 +187,12 @@
 		<property>transferapp.sendingFosaId</property>
 		<defaultValue>0074</defaultValue>
 		<description>4-digit FOSAID of the sending facility used as Encounter.hospitalization.origin.identifier.value when submitting transfers to HIE</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.sendingFacilityName</property>
+		<defaultValue></defaultValue>
+		<description>Facility display name used for HIE pending-transfer targetOrg and outbound sendingFacility matching. When blank, falls back to the session location parent name (or the location name)</description>
 	</globalProperty>
 
 	<privilege>

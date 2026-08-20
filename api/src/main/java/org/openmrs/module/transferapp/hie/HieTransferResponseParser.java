@@ -19,6 +19,12 @@ public class HieTransferResponseParser {
             "http://example.org/fhir/StructureDefinition/receiving-department";
     private static final String EXT_AMBULANCE_CALL_TIME =
             "http://example.org/fhir/StructureDefinition/ambulance-call-time";
+    private static final String EXT_CALLING_TIME =
+            "http://example.org/fhir/StructureDefinition/calling-time";
+    private static final String EXT_ADMISSION_DATETIME =
+            "http://example.org/fhir/StructureDefinition/admission-datetime";
+    private static final String EXT_DECISION_TO_TRANSFER_DATETIME =
+            "http://example.org/fhir/StructureDefinition/decision-to-transfer-datetime";
     private static final String EXT_PRACTITIONER_INFO =
             "http://example.org/fhir/StructureDefinition/practitioner-info";
     private static final String EXT_ETRANSFER_FORM =
@@ -48,14 +54,28 @@ public class HieTransferResponseParser {
             "http://example.org/fhir/StructureDefinition/insurance-type";
     private static final String EXT_LAB_RESULTS =
             "http://example.org/fhir/StructureDefinition/lab-results";
+    private static final String EXT_OTHERS =
+            "http://example.org/fhir/StructureDefinition/others-notes";
+    private static final String EXT_PROCEDURES_AND_TREATMENTS =
+            "http://example.org/fhir/StructureDefinition/procedures-treatments";
     private static final String EXT_VITAL_SIGNS =
             "http://example.org/fhir/StructureDefinition/vital-signs";
     private static final String EXT_EXTENDED_VITALS =
             "http://example.org/fhir/StructureDefinition/extended-vitals";
+    private static final String EXT_REQUIRES_INSURANCE_AGENT_VERIFICATION =
+            "http://example.org/fhir/StructureDefinition/requires-insurance-agent-verification";
+    private static final String EXT_AGENT_APPROVED =
+            "http://example.org/fhir/StructureDefinition/agent-approved";
+    private static final String EXT_AGENT_COMMENT =
+            "http://example.org/fhir/StructureDefinition/agent-comment";
 
     public List<Map<String, Object>> parse(String jsonData) throws Exception {
+        return parsePage(jsonData).getTransfers();
+    }
+
+    public HieTransferResponsePage parsePage(String jsonData) throws Exception {
         if (jsonData == null || jsonData.trim().isEmpty()) {
-            return new ArrayList<Map<String, Object>>();
+            return emptyPage();
         }
 
         ObjectMapper mapper = new ObjectMapper();
@@ -63,37 +83,56 @@ public class HieTransferResponseParser {
 
         JsonNode resourceType = rootNode.get("resourceType");
         if (resourceType == null || resourceType.isNull() || !"Parameters".equals(resourceType.getTextValue())) {
-            return new ArrayList<Map<String, Object>>();
+            return emptyPage();
         }
 
         JsonNode parameters = rootNode.get("parameter");
         if (parameters == null || !parameters.isArray()) {
-            return new ArrayList<Map<String, Object>>();
+            return emptyPage();
         }
 
         JsonNode bundleNode = null;
+        boolean hasMore = false;
+        Integer page = null;
+        Integer size = null;
+        Integer total = null;
         Iterator<JsonNode> parameterIterator = parameters.getElements();
         while (parameterIterator.hasNext()) {
             JsonNode param = parameterIterator.next();
             JsonNode nameNode = param.get("name");
-            if (nameNode != null && !nameNode.isNull() && "bundle".equals(nameNode.getTextValue())) {
+            if (nameNode == null || nameNode.isNull()) {
+                continue;
+            }
+            String parameterName = nameNode.getTextValue();
+            if ("bundle".equals(parameterName)) {
                 bundleNode = param.get("resource");
-                break;
+            } else if ("hasMore".equals(parameterName)) {
+                JsonNode value = param.get("valueBoolean");
+                hasMore = value != null && !value.isNull() && value.getBooleanValue();
+            } else if ("page".equals(parameterName)) {
+                page = integerValue(param.get("valueInteger"));
+            } else if ("size".equals(parameterName)) {
+                size = integerValue(param.get("valueInteger"));
+            } else if ("total".equals(parameterName)) {
+                total = integerValue(param.get("valueInteger"));
             }
         }
 
         if (bundleNode == null || bundleNode.isNull()) {
-            return new ArrayList<Map<String, Object>>();
+            return new HieTransferResponsePage(new ArrayList<Map<String, Object>>(), hasMore, page, size, total);
+        }
+        if (total == null) {
+            total = integerValue(bundleNode.get("total"));
         }
 
         JsonNode entries = bundleNode.get("entry");
         if (entries == null || !entries.isArray()) {
-            return new ArrayList<Map<String, Object>>();
+            return new HieTransferResponsePage(new ArrayList<Map<String, Object>>(), hasMore, page, size, total);
         }
 
         Iterator<JsonNode> entriesIterator = entries.getElements();
         if (!entriesIterator.hasNext()) {
-            return new ArrayList<Map<String, Object>>();
+            return new HieTransferResponsePage(new ArrayList<Map<String, Object>>(), hasMore, page, size, total);
         }
 
         List<Map<String, Object>> transferList = new ArrayList<Map<String, Object>>();
@@ -157,7 +196,15 @@ public class HieTransferResponseParser {
             transferList.add(transfer);
         }
 
-        return transferList;
+        return new HieTransferResponsePage(transferList, hasMore, page, size, total);
+    }
+
+    private HieTransferResponsePage emptyPage() {
+        return new HieTransferResponsePage(new ArrayList<Map<String, Object>>(), false, null, null, null);
+    }
+
+    private Integer integerValue(JsonNode node) {
+        return node == null || node.isNull() ? null : node.getIntValue();
     }
 
     /**
@@ -235,6 +282,14 @@ public class HieTransferResponseParser {
         transfer.put("formTime", "");
         transfer.put("providerPhone", "");
         transfer.put("signatureAndStamp", "");
+
+        transfer.put("requiresInsuranceAgentVerification", "false");
+        transfer.put("hasAgentApprovedExtension", "false");
+        transfer.put("agentApproved", "false");
+        transfer.put("agentComment", "");
+        transfer.put("agentRejected", "false");
+        transfer.put("agentDecisionApproved", "false");
+        transfer.put("needsInsuranceApproval", "false");
     }
 
     private void mapTransferFormFields(JsonNode resource, Map<String, Object> transfer) {
@@ -278,15 +333,18 @@ public class HieTransferResponseParser {
             periodEnd = textOrDefault(period.get("end"), "");
         }
 		transfer.put("admissionDatetime", firstNonBlank(
+				extractExtensionDateTime(resource, EXT_ADMISSION_DATETIME),
 				extractNestedExtensionValue(resource, EXT_TRANSFER_FLAGS, "admission-date"),
 				periodStart));
-		// Decision-to-transfer is not Encounter.period.end; leave blank unless
-		// provided by etransfer form (decisionToTransferAt) or a dedicated extension.
-		transfer.put("transferDecisionDatetime", "");
+		transfer.put("transferDecisionDatetime",
+				extractExtensionDateTime(resource, EXT_DECISION_TO_TRANSFER_DATETIME));
 		transfer.put("departureTime", firstNonBlank(
 				extractExtensionDateTime(resource, EXT_DEPARTURE_TIME),
 				periodEnd));
         transfer.put("ambulanceCalledTime", extractExtensionDateTime(resource, EXT_AMBULANCE_CALL_TIME));
+        transfer.put("callingTime", firstNonBlank(
+                extractExtensionDateTime(resource, EXT_CALLING_TIME),
+                extractNestedExtensionValue(resource, EXT_RECEIVING_CLINICIAN_CONTACT, "calling-time")));
 
         String transferType = extractExtensionDisplay(resource, EXT_TRANSFER_TYPE);
         transfer.put("transferType", transferType);
@@ -330,8 +388,8 @@ public class HieTransferResponseParser {
         transfer.put("hospitalName", destinationDisplay);
         transfer.put("receivingFacility", destinationDisplay);
         transfer.put("referringUnit", firstNonBlank(
-                admitSourceDisplay,
-                extractExtensionValue(resource, EXT_REFERRING_DEPARTMENT)));
+                extractExtensionValue(resource, EXT_REFERRING_DEPARTMENT),
+                admitSourceDisplay));
         transfer.put("receivingService", firstNonBlank(
                 serviceTypeDisplay,
                 dischargeDispositionDisplay,
@@ -339,9 +397,11 @@ public class HieTransferResponseParser {
 
         String receivingClinicianContact = extractExtensionValue(resource, EXT_RECEIVING_CLINICIAN_CONTACT);
         String[] clinicianContactParts = parseReceivingClinicianContact(receivingClinicianContact);
-        transfer.put("receivingClinicianPhone", receivingClinicianContact);
-        transfer.put("staffContactedAtReceivingFacility", clinicianContactParts[0]);
-        transfer.put("staffContactPhone", clinicianContactParts[1]);
+        String nestedStaffName = extractNestedExtensionValue(resource, EXT_RECEIVING_CLINICIAN_CONTACT, "name");
+        String nestedStaffPhone = extractNestedExtensionValue(resource, EXT_RECEIVING_CLINICIAN_CONTACT, "phone");
+        transfer.put("receivingClinicianPhone", firstNonBlank(nestedStaffPhone, receivingClinicianContact));
+        transfer.put("staffContactedAtReceivingFacility", firstNonBlank(nestedStaffName, clinicianContactParts[0]));
+        transfer.put("staffContactPhone", firstNonBlank(nestedStaffPhone, clinicianContactParts[1]));
 
         String reasonCodeText = "";
         JsonNode reasonCode = resource.get("reasonCode");
@@ -399,8 +459,9 @@ public class HieTransferResponseParser {
         transfer.put("isNoInsurance", String.valueOf(insurance.trim().isEmpty()));
 
         transfer.put("laboratory", extractExtensionValue(resource, EXT_LAB_RESULTS));
+        transfer.put("others", extractExtensionValue(resource, EXT_OTHERS));
+        transfer.put("proceduresAndTreatments", extractExtensionValue(resource, EXT_PROCEDURES_AND_TREATMENTS));
         String vitals = extractExtensionValue(resource, EXT_VITAL_SIGNS);
-        transfer.put("significantFindings", vitals);
         parseVitalSignsIntoTransfer(vitals, transfer);
 
         String extWeight = extractNestedExtensionValue(resource, EXT_EXTENDED_VITALS, "weight");
@@ -412,7 +473,95 @@ public class HieTransferResponseParser {
             transfer.put("height", extHeight.trim());
         }
 
+        applyInsuranceAgentVerificationFlags(resource, transfer);
         applyEtransferFormFallback(transfer, extractEtransferFormNode(resource));
+    }
+
+    /**
+     * Reads agent-approved / agent-comment / requires-insurance-agent-verification
+     * the same way etransfer does for pending and receiving previews.
+     */
+    private void applyInsuranceAgentVerificationFlags(JsonNode resource, Map<String, Object> transfer) {
+        boolean requiresVerification = extractExtensionBooleanTrue(resource, EXT_REQUIRES_INSURANCE_AGENT_VERIFICATION);
+        boolean hasAgentApprovedExtension = hasExtension(resource, EXT_AGENT_APPROVED);
+        boolean agentApproved = hasAgentApprovedExtension
+                && extractExtensionPresentAndNotFalse(resource, EXT_AGENT_APPROVED);
+        String agentComment = extractExtensionValue(resource, EXT_AGENT_COMMENT);
+        boolean agentRejected = hasAgentApprovedExtension && !agentApproved;
+        boolean agentDecisionApproved = hasAgentApprovedExtension && agentApproved;
+        boolean needsInsuranceApproval = requiresVerification && !hasAgentApprovedExtension;
+
+        transfer.put("requiresInsuranceAgentVerification", String.valueOf(requiresVerification));
+        transfer.put("hasAgentApprovedExtension", String.valueOf(hasAgentApprovedExtension));
+        transfer.put("agentApproved", String.valueOf(agentApproved));
+        transfer.put("agentComment", agentComment);
+        transfer.put("agentRejected", String.valueOf(agentRejected));
+        transfer.put("agentDecisionApproved", String.valueOf(agentDecisionApproved));
+        transfer.put("needsInsuranceApproval", String.valueOf(needsInsuranceApproval));
+
+        if (agentRejected) {
+            transfer.put("status", "Rejected by insurance");
+        } else if (agentDecisionApproved) {
+            transfer.put("status", "Approved by insurance");
+        } else if (needsInsuranceApproval) {
+            transfer.put("status", "Awaiting insurance approval");
+        }
+    }
+
+    private JsonNode findExtensionNode(JsonNode resource, String extensionUrl) {
+        JsonNode extensions = resource.get("extension");
+        if (extensions == null || !extensions.isArray() || extensionUrl == null) {
+            return null;
+        }
+        String expected = extensionUrl.trim();
+        Iterator<JsonNode> extensionIterator = extensions.getElements();
+        while (extensionIterator.hasNext()) {
+            JsonNode ext = extensionIterator.next();
+            String url = textOrDefault(ext.get("url"), "").trim();
+            if (url.equals(expected) || url.endsWith("/" + lastUrlSegment(expected))) {
+                return ext;
+            }
+            if (lastUrlSegment(url).equals(lastUrlSegment(expected))) {
+                return ext;
+            }
+        }
+        return null;
+    }
+
+    private static String lastUrlSegment(String url) {
+        if (url == null || url.isEmpty()) {
+            return "";
+        }
+        int slash = url.lastIndexOf('/');
+        return slash >= 0 ? url.substring(slash + 1) : url;
+    }
+
+    private boolean hasExtension(JsonNode resource, String extensionUrl) {
+        return findExtensionNode(resource, extensionUrl) != null;
+    }
+
+    private boolean extractExtensionBooleanTrue(JsonNode resource, String extensionUrl) {
+        JsonNode ext = findExtensionNode(resource, extensionUrl);
+        if (ext == null) {
+            return false;
+        }
+        JsonNode valueBoolean = ext.get("valueBoolean");
+        return valueBoolean != null && !valueBoolean.isNull() && valueBoolean.getBooleanValue();
+    }
+
+    /**
+     * Matches etransfer: extension present and not explicitly false counts as approved.
+     */
+    private boolean extractExtensionPresentAndNotFalse(JsonNode resource, String extensionUrl) {
+        JsonNode ext = findExtensionNode(resource, extensionUrl);
+        if (ext == null) {
+            return false;
+        }
+        JsonNode valueBoolean = ext.get("valueBoolean");
+        if (valueBoolean == null || valueBoolean.isNull()) {
+            return true;
+        }
+        return valueBoolean.getBooleanValue();
     }
 
     /**
@@ -563,6 +712,11 @@ public class HieTransferResponseParser {
                 JsonNode valueString = nested.get("valueString");
                 if (valueString != null && !valueString.isNull()) {
                     return textOrDefault(valueString, "");
+                }
+
+                JsonNode valueDateTime = nested.get("valueDateTime");
+                if (valueDateTime != null && !valueDateTime.isNull()) {
+                    return textOrDefault(valueDateTime, "");
                 }
             }
         }

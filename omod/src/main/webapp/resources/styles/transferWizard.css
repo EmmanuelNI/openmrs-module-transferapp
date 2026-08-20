@@ -59,12 +59,43 @@
   border: 0;
   padding: 0.25rem 0 1rem;
   box-shadow: none;
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   display: block;
+}
+
+#new-transfer-out-dialog .transfer-wizard-shell {
+  flex: none;
+  min-height: 0;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  display: block !important;
+}
+
+#new-transfer-out-dialog .transfer-wizard-page-header {
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+#new-transfer-out-dialog .dialog-content {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+#new-transfer-out-dialog .transfer-wizard-panel {
+  flex: none;
+  min-height: 0;
+  overflow: visible !important;
+  max-height: none !important;
 }
 
 #moh-transfer-wizard-form {

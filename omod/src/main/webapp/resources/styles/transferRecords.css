@@ -35,7 +35,10 @@
 }
 
 .transfer-records-date-input,
-.transfer-records-destination-select {
+.transfer-records-destination-select,
+.transfer-pending-period-select,
+.transfer-pending-date-select,
+.transfer-pending-service-select {
   width: 100%;
   box-sizing: border-box;
   padding: 7px 10px;
@@ -43,6 +46,66 @@
   border-radius: 4px;
   font-size: 13px;
   background: #fff;
+}
+
+.transfer-pending-filters {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 14px 16px;
+}
+
+.transfer-pending-client-filters {
+  display: flex;
+  align-items: flex-end;
+  flex: 1 1 520px;
+  flex-wrap: wrap;
+  gap: 14px 16px;
+}
+
+.transfer-pending-client-filters.is-empty {
+  display: none;
+}
+
+.transfer-pending-period-filter-field {
+  flex: 0 1 220px;
+  min-width: 180px;
+}
+
+.transfer-pending-date-filter-field {
+  flex: 0 1 220px;
+  min-width: 180px;
+}
+
+.transfer-pending-service-filter-field {
+  flex: 1 1 280px;
+  max-width: 360px;
+}
+
+.transfer-pending-service-filter-field .select2-container {
+  width: 100% !important;
+}
+
+.transfer-pending-service-filter-field .select2-container--default .select2-selection--multiple {
+  min-height: 36px;
+  border-color: #c7e7e2;
+  border-radius: 4px;
+}
+
+.transfer-pending-service-filter-field .select2-container--default .select2-selection__choice {
+  max-width: calc(100% - 10px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transfer-pending-period-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  color: #0f766e;
+  font-size: 13px;
 }
 
 .transfer-records-filter-actions {
@@ -80,6 +143,16 @@
   }
 }
 
+@media (max-width: 520px) {
+  .transfer-pending-client-filters,
+  .transfer-pending-period-filter-field,
+  .transfer-pending-date-filter-field,
+  .transfer-pending-service-filter-field {
+    flex-basis: 100%;
+    max-width: none;
+  }
+}
+
 .transfer-records-intro {
   margin: 0 0 16px;
   color: #555;
@@ -105,26 +178,91 @@
   font-style: italic;
 }
 
+.transfer-patient-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.transfer-patient-badge-existing {
+  color: #166534;
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.transfer-patient-badge-new {
+  color: #1e40af;
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.transfer-status-awaiting {
+  color: #a16207;
+  font-weight: 600;
+}
+
+.transfer-status-approved {
+  color: #166534;
+  font-weight: 600;
+}
+
+.transfer-status-rejected {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.transfer-pending-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 165px;
+}
+
+.transfer-pending-workflow-button.button {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 5px 9px;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
 #transfer-records-table_wrapper .dataTables_length,
 #transfer-records-table_wrapper .dataTables_filter,
 #transfer-records-table_wrapper .dataTables_info,
-#transfer-records-table_wrapper .dataTables_paginate {
+#transfer-records-table_wrapper .dataTables_paginate,
+#transfer-pending-table_wrapper .dataTables_length,
+#transfer-pending-table_wrapper .dataTables_filter,
+#transfer-pending-table_wrapper .dataTables_info,
+#transfer-pending-table_wrapper .dataTables_paginate {
   margin: 10px 0;
 }
 
 #transfer-records-table_wrapper .dataTables_length,
-#transfer-records-table_wrapper .dataTables_filter {
+#transfer-records-table_wrapper .dataTables_filter,
+#transfer-pending-table_wrapper .dataTables_length,
+#transfer-pending-table_wrapper .dataTables_filter {
   float: none;
   width: auto;
 }
 
-#transfer-records-table_wrapper .dataTables_info {
+#transfer-records-table_wrapper .dataTables_info,
+#transfer-pending-table_wrapper .dataTables_info {
   float: left;
   width: auto;
   padding-top: 2px;
 }
 
-#transfer-records-table_wrapper .dataTables_paginate {
+#transfer-records-table_wrapper .dataTables_paginate,
+#transfer-pending-table_wrapper .dataTables_paginate {
   float: right;
   width: auto !important;
   clear: none;
@@ -132,7 +270,9 @@
 }
 
 #transfer-records-table_wrapper .paging_two_button,
-#transfer-records-table_wrapper .paging_full_numbers {
+#transfer-records-table_wrapper .paging_full_numbers,
+#transfer-pending-table_wrapper .paging_two_button,
+#transfer-pending-table_wrapper .paging_full_numbers {
   width: auto !important;
 }
 
@@ -140,7 +280,12 @@
 #transfer-records-table_wrapper .dataTables_paginate .paginate_active,
 #transfer-records-table_wrapper .dataTables_paginate .paginate_enabled,
 #transfer-records-table_wrapper .dataTables_paginate .paginate_disabled,
-#transfer-records-table_wrapper .dataTables_paginate .fg-button {
+#transfer-records-table_wrapper .dataTables_paginate .fg-button,
+#transfer-pending-table_wrapper .dataTables_paginate .paginate_button,
+#transfer-pending-table_wrapper .dataTables_paginate .paginate_active,
+#transfer-pending-table_wrapper .dataTables_paginate .paginate_enabled,
+#transfer-pending-table_wrapper .dataTables_paginate .paginate_disabled,
+#transfer-pending-table_wrapper .dataTables_paginate .fg-button {
   display: inline-block !important;
   float: none !important;
   position: static !important;
@@ -158,10 +303,14 @@
   background: #fff;
   color: #0f766e;
   text-decoration: none !important;
+  overflow: visible;
+  text-indent: 0 !important;
 }
 
 #transfer-records-table_wrapper .dataTables_paginate .paginate_button.current,
-#transfer-records-table_wrapper .dataTables_paginate .paginate_active {
+#transfer-records-table_wrapper .dataTables_paginate .paginate_active,
+#transfer-pending-table_wrapper .dataTables_paginate .paginate_button.current,
+#transfer-pending-table_wrapper .dataTables_paginate .paginate_active {
   background: #0f766e;
   color: #fff !important;
   border-color: #0a5c52;
@@ -170,17 +319,23 @@
 
 #transfer-records-table_wrapper .dataTables_paginate .paginate_button.disabled,
 #transfer-records-table_wrapper .dataTables_paginate .paginate_disabled,
-#transfer-records-table_wrapper .dataTables_paginate .paginate_button.paginate_button_disabled {
+#transfer-records-table_wrapper .dataTables_paginate .paginate_button.paginate_button_disabled,
+#transfer-pending-table_wrapper .dataTables_paginate .paginate_button.disabled,
+#transfer-pending-table_wrapper .dataTables_paginate .paginate_disabled,
+#transfer-pending-table_wrapper .dataTables_paginate .paginate_button.paginate_button_disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  pointer-events: none;
 }
 
-#transfer-records-table_wrapper .fg-buttonset {
+#transfer-records-table_wrapper .fg-buttonset,
+#transfer-pending-table_wrapper .fg-buttonset {
   display: inline-block;
   white-space: nowrap;
 }
 
-#transfer-records-table_wrapper::after {
+#transfer-records-table_wrapper::after,
+#transfer-pending-table_wrapper::after {
   content: "";
   display: table;
   clear: both;

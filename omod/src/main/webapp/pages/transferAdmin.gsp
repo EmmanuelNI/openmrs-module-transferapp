@@ -67,9 +67,20 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "admin
                 <label for="distance">${ ui.message("transferapp.admin.receivingFacilities.distance") }</label>
                 <input type="number" id="distance" name="distance" min="0" step="1" placeholder="${ ui.message('transferapp.admin.receivingFacilities.distance.placeholder') }" />
             </div>
+            <div class="transfer-admin-field transfer-admin-field-external">
+                <label for="external">${ ui.message("transferapp.admin.receivingFacilities.external") }</label>
+                <label class="transfer-admin-checkbox">
+                    <input type="checkbox" id="external" name="external" value="true" />
+                </label>
+            </div>
             <div class="transfer-admin-field transfer-admin-field-action">
                 <label>&nbsp;</label>
-                <button type="submit" class="btn btn-primary">${ ui.message("transferapp.admin.add") }</button>
+                <div class="transfer-admin-form-actions">
+                    <button type="submit" id="facility-form-submit-btn" class="btn btn-primary">${ ui.message("transferapp.admin.add") }</button>
+                    <button type="button" id="facility-form-cancel-btn" class="btn btn-default" style="display:none;">
+                        ${ ui.message("transferapp.admin.cancelEdit") }
+                    </button>
+                </div>
             </div>
         </div>
     </form>
@@ -82,23 +93,36 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "admin
                 <th>${ ui.message("transferapp.admin.receivingFacilities.province") }</th>
                 <th>${ ui.message("transferapp.admin.receivingFacilities.district") }</th>
                 <th>${ ui.message("transferapp.admin.receivingFacilities.distance") }</th>
+                <th>${ ui.message("transferapp.admin.receivingFacilities.external") }</th>
                 <th class="transfer-admin-col-action">${ ui.message("transferapp.admin.action") }</th>
             </tr>
         </thead>
         <tbody>
             <% if (receivingFacilities == null || receivingFacilities.isEmpty()) { %>
             <tr class="transfer-admin-empty-row">
-                <td colspan="6">${ ui.message("transferapp.admin.receivingFacilities.empty") }</td>
+                <td colspan="7">${ ui.message("transferapp.admin.receivingFacilities.empty") }</td>
             </tr>
             <% } else { receivingFacilities.each { facility -> %>
             <tr data-facility-id="${ facility.receivingFacilityId }"
+                data-facility-code="${ ui.encodeHtmlAttribute(facility.facilityCode) }"
+                data-facility-name="${ ui.encodeHtmlAttribute(facility.facilityName) }"
+                data-province="${ ui.encodeHtmlAttribute(facility.province ?: '') }"
+                data-district="${ ui.encodeHtmlAttribute(facility.district ?: '') }"
+                data-distance="${ facility.distance != null ? facility.distance : '' }"
+                data-external="${ facility.external ? 'true' : 'false' }"
                 class="${ selectedReceivingFacilityId != null && selectedReceivingFacilityId == facility.receivingFacilityId ? 'is-selected' : '' }">
                 <td>${ ui.encodeHtmlContent(facility.facilityCode) }</td>
                 <td>${ ui.encodeHtmlContent(facility.facilityName) }</td>
                 <td>${ ui.encodeHtmlContent(facility.province ?: '') }</td>
                 <td>${ ui.encodeHtmlContent(facility.district ?: '') }</td>
                 <td><% if (facility.distance != null) { %>${ facility.distance } ${ ui.message("transferapp.admin.receivingFacilities.distance.unit") }<% } else { %>—<% } %></td>
+                <td>${ facility.external ? ui.message("transferapp.admin.receivingFacilities.external.yes") : ui.message("transferapp.admin.receivingFacilities.external.no") }</td>
                 <td class="transfer-admin-col-action">
+                    <button type="button"
+                            class="btn btn-link transfer-admin-edit-facility"
+                            data-facility-id="${ facility.receivingFacilityId }">
+                        <i class="icon-pencil"></i> ${ ui.message("transferapp.admin.edit") }
+                    </button>
                     <a href="${ ui.pageLink('transferapp', 'transferAdmin') }?app=transferapp.dashboard&amp;locationId=${ selectedLocationId }&amp;receivingFacilityId=${ facility.receivingFacilityId }"
                        class="btn btn-link transfer-admin-manage-services">
                         ${ ui.message("transferapp.admin.manageServices") }
@@ -137,6 +161,7 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "admin
 
     <form id="transfer-admin-add-service-form" class="transfer-admin-add-form">
         <input type="hidden" name="receivingFacilityId" value="${ selectedReceivingFacilityId ?: '' }" />
+        <input type="hidden" id="receivingServiceId" name="receivingServiceId" value="" disabled="disabled" />
         <div class="transfer-admin-form-row">
             <div class="transfer-admin-field transfer-admin-field-grow">
                 <label for="serviceName">${ ui.message("transferapp.admin.receivingServices.name") }</label>
@@ -144,7 +169,12 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "admin
             </div>
             <div class="transfer-admin-field transfer-admin-field-action">
                 <label>&nbsp;</label>
-                <button type="submit" class="btn btn-primary">${ ui.message("transferapp.admin.add") }</button>
+                <div class="transfer-admin-form-actions">
+                    <button type="submit" id="service-form-submit-btn" class="btn btn-primary">${ ui.message("transferapp.admin.add") }</button>
+                    <button type="button" id="service-form-cancel-btn" class="btn btn-default" style="display:none;">
+                        ${ ui.message("transferapp.admin.cancelEdit") }
+                    </button>
+                </div>
             </div>
         </div>
     </form>
@@ -166,9 +196,15 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "admin
                 <td colspan="2">${ ui.message("transferapp.admin.receivingServices.empty") }</td>
             </tr>
             <% } else { receivingServices.each { service -> %>
-            <tr data-service-id="${ service.receivingServiceId }">
+            <tr data-service-id="${ service.receivingServiceId }"
+                data-service-name="${ ui.encodeHtmlAttribute(service.serviceName) }">
                 <td>${ ui.encodeHtmlContent(service.serviceName) }</td>
                 <td class="transfer-admin-col-action">
+                    <button type="button"
+                            class="btn btn-link transfer-admin-edit-service"
+                            data-service-id="${ service.receivingServiceId }">
+                        <i class="icon-pencil"></i> ${ ui.message("transferapp.admin.edit") }
+                    </button>
                     <button type="button"
                             class="btn btn-link transfer-admin-remove-service"
                             data-service-id="${ service.receivingServiceId }">
@@ -195,6 +231,10 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "admin
         selectedReceivingFacilityId: ${ selectedReceivingFacilityId != null ? selectedReceivingFacilityId : 'null' },
         messages: {
             remove: "${ ui.encodeJavaScript(ui.message('transferapp.admin.remove')) }",
+            edit: "${ ui.encodeJavaScript(ui.message('transferapp.admin.edit')) }",
+            add: "${ ui.encodeJavaScript(ui.message('transferapp.admin.add')) }",
+            update: "${ ui.encodeJavaScript(ui.message('transferapp.admin.update')) }",
+            cancelEdit: "${ ui.encodeJavaScript(ui.message('transferapp.admin.cancelEdit')) }",
             saveSuccess: "${ ui.encodeJavaScript(ui.message('transferapp.admin.saveSuccess')) }",
             saveError: "${ ui.encodeJavaScript(ui.message('transferapp.admin.saveError')) }",
             removeSuccess: "${ ui.encodeJavaScript(ui.message('transferapp.admin.removeSuccess')) }",

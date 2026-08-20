@@ -36,6 +36,15 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "profi
             <input type="text" id="qualification" name="qualification" maxlength="255" required
                    value="${ ui.encodeHtmlAttribute(qualification ?: '') }" />
         </div>
+        <div class="transfer-profile-field">
+            <label for="speciality">${ ui.message("transferapp.profile.speciality") }</label>
+            <input type="text" id="speciality" name="speciality" maxlength="255"
+                   value="${ ui.encodeHtmlAttribute(speciality ?: '') }" />
+            <% if (qualificationDisplay) { %>
+            <p class="transfer-profile-hint">${ ui.message("transferapp.profile.qualificationPreview") }:
+                <strong>${ ui.encodeHtmlContent(qualificationDisplay) }</strong></p>
+            <% } %>
+        </div>
 
         <div class="transfer-profile-actions">
             <button type="submit" class="btn btn-primary">${ ui.message("transferapp.profile.save") }</button>

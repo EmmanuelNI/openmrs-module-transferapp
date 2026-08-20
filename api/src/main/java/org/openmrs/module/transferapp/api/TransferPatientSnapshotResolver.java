@@ -299,13 +299,7 @@ public class TransferPatientSnapshotResolver {
 	}
 
 	protected String resolveCurrentFacilityName() {
-		Location sessionLocation = Context.getUserContext().getLocation();
-		if (sessionLocation != null && sessionLocation.getParentLocation() != null) {
-			return sessionLocation.getParentLocation().getName();
-		} else if (sessionLocation != null) {
-			return sessionLocation.getName();
-		}
-		return null;
+		return new TransferSendingLocationResolver().resolveCurrentSendingFacilityName();
 	}
 
 	protected String resolveReferringUnit() {

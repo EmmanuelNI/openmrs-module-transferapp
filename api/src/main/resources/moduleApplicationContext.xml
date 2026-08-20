@@ -316,6 +316,7 @@
 			<bean class="org.openmrs.module.transferapp.api.impl.NewTransferOutServiceImpl">
 				<property name="transferDao" ref="transferDao" />
 				<property name="transferAdminService" ref="transferAdminService" />
+				<property name="transferProfileService" ref="transferProfileService" />
 			</bean>
 		</property>
 		<property name="preInterceptors">
@@ -392,6 +393,7 @@
 	<bean id="transferHieSubmissionServiceTarget" class="org.openmrs.module.transferapp.api.impl.TransferHieSubmissionServiceImpl">
 		<property name="transferDao" ref="transferDao" />
 		<property name="transferAdminService" ref="transferAdminService" />
+		<property name="transferProfileService" ref="transferProfileService" />
 	</bean>
 
 	<bean id="transferHieSubmissionService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
@@ -519,6 +521,18 @@
 
 	<bean id="transferQrCodeServiceTarget"
 	      class="org.openmrs.module.transferapp.api.impl.TransferQrCodeServiceImpl" />
+
+	<bean id="transferAppClientRegistryRegistrationService"
+	      class="org.openmrs.module.transferapp.api.impl.ClientRegistryRegistrationServiceImpl">
+		<property name="integrationConfig" ref="integrationConfig" />
+		<property name="clientRegistryPatientProvider" ref="clientRegistryPatientProvider" />
+		<property name="clientRegistryPatientTranslator" ref="clientRegistryPatientTranslator" />
+		<property name="rwandaEmrConfig" ref="rwandaEmrConfig" />
+		<property name="patientService" ref="patientService" />
+		<property name="locationService" ref="locationService" />
+		<property name="registrationCoreService" ref="registrationCoreService" />
+		<property name="administrationService" ref="adminService" />
+	</bean>
 
 	<bean parent="serviceContext">
 		<property name="moduleService">

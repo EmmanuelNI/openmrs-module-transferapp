@@ -13,8 +13,10 @@
  */
 package org.openmrs.module.transferapp.api;
 
+import org.apache.commons.lang.StringUtils;
 import org.openmrs.Location;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.transferapp.TransferAppConstants;
 
 public class TransferSendingLocationResolver {
 
@@ -29,7 +31,18 @@ public class TransferSendingLocationResolver {
 		return sessionLocation.getLocationId();
 	}
 
+	/**
+	 * Prefer {@link TransferAppConstants#GP_SENDING_FACILITY_NAME} when set, so the HIE facility
+	 * name can be configured without relying on the OpenMRS location hierarchy. Falls back to the
+	 * session location's parent name (or the location itself when it has no parent).
+	 */
 	public String resolveCurrentSendingFacilityName() {
+		String configuredName = StringUtils.trimToNull(
+				Context.getAdministrationService().getGlobalProperty(TransferAppConstants.GP_SENDING_FACILITY_NAME));
+		if (configuredName != null) {
+			return configuredName;
+		}
+
 		Location sessionLocation = Context.getUserContext().getLocation();
 		if (sessionLocation == null) {
 			return null;

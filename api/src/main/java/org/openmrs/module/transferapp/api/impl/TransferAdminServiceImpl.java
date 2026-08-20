@@ -121,11 +121,18 @@ public class TransferAdminServiceImpl implements TransferAdminService {
 	@Override
 	public ReceivingFacility saveReceivingFacility(Integer sendingLocationId, String facilityCode, String facilityName,
 			Integer distance, String province, String district) {
+		return saveReceivingFacility(sendingLocationId, facilityCode, facilityName, distance, province, district, false);
+	}
+
+	@Override
+	public ReceivingFacility saveReceivingFacility(Integer sendingLocationId, String facilityCode, String facilityName,
+			Integer distance, String province, String district, Boolean external) {
 		requireSendingLocationId(sendingLocationId);
 		String code = StringUtils.trimToNull(facilityCode);
 		String name = StringUtils.trimToNull(facilityName);
 		String provinceValue = StringUtils.trimToNull(province);
 		String districtValue = StringUtils.trimToNull(district);
+		boolean externalValue = Boolean.TRUE.equals(external);
 		if (code == null) {
 			throw new APIException("Facility code is required");
 		}
@@ -148,6 +155,7 @@ public class TransferAdminServiceImpl implements TransferAdminService {
 			existing.setDistance(distance);
 			existing.setProvince(provinceValue);
 			existing.setDistrict(districtValue);
+			existing.setExternal(externalValue);
 			existing.setChangedBy(Context.getAuthenticatedUser());
 			existing.setDateChanged(new Date());
 			return transferAdminDao.saveReceivingFacility(existing);
@@ -161,6 +169,7 @@ public class TransferAdminServiceImpl implements TransferAdminService {
 		facility.setDistance(distance);
 		facility.setProvince(provinceValue);
 		facility.setDistrict(districtValue);
+		facility.setExternal(externalValue);
 		facility.setCreator(requireAuthenticatedUser());
 		facility.setDateCreated(new Date());
 		facility.setVoided(false);
@@ -185,6 +194,12 @@ public class TransferAdminServiceImpl implements TransferAdminService {
 
 	@Override
 	public ReceivingService saveReceivingService(Integer receivingFacilityId, String serviceName) {
+		return saveReceivingService(receivingFacilityId, serviceName, null);
+	}
+
+	@Override
+	public ReceivingService saveReceivingService(Integer receivingFacilityId, String serviceName,
+			Integer receivingServiceId) {
 		requireReceivingFacilityId(receivingFacilityId);
 		ReceivingFacility facility = getReceivingFacility(receivingFacilityId);
 		if (facility == null) {
@@ -194,6 +209,29 @@ public class TransferAdminServiceImpl implements TransferAdminService {
 		String name = StringUtils.trimToNull(serviceName);
 		if (name == null) {
 			throw new APIException("Service name is required");
+		}
+
+		if (receivingServiceId != null) {
+			ReceivingService service = transferAdminDao.getReceivingService(receivingServiceId);
+			if (service == null || service.getVoided()) {
+				throw new APIException("Receiving service not found");
+			}
+			if (!receivingFacilityId.equals(service.getReceivingFacilityId())) {
+				throw new APIException("Receiving service does not belong to this facility");
+			}
+			for (ReceivingService existing : transferAdminDao.getReceivingServicesByFacility(receivingFacilityId)) {
+				if (existing.getReceivingServiceId() != null
+						&& existing.getReceivingServiceId().equals(receivingServiceId)) {
+					continue;
+				}
+				if (name.equalsIgnoreCase(existing.getServiceName())) {
+					throw new APIException("A service with this name already exists for the facility");
+				}
+			}
+			service.setServiceName(name);
+			service.setChangedBy(Context.getAuthenticatedUser());
+			service.setDateChanged(new Date());
+			return transferAdminDao.saveReceivingService(service);
 		}
 
 		for (ReceivingService existing : transferAdminDao.getReceivingServicesByFacility(receivingFacilityId)) {

@@ -41,7 +41,8 @@ public class TransferProfileServiceImpl implements TransferProfileService {
 	}
 
 	@Override
-	public TransferProfile saveProfileForCurrentUser(String licenseNumber, String phoneNumber, String qualification) {
+	public TransferProfile saveProfileForCurrentUser(String licenseNumber, String phoneNumber, String qualification,
+			String speciality) {
 		User user = Context.getAuthenticatedUser();
 		if (user == null || user.getUserId() == null) {
 			throw new APIException("You must be logged in to save your profile");
@@ -50,6 +51,7 @@ public class TransferProfileServiceImpl implements TransferProfileService {
 		String license = StringUtils.trimToNull(licenseNumber);
 		String phone = StringUtils.trimToNull(phoneNumber);
 		String qualificationValue = StringUtils.trimToNull(qualification);
+		String specialityValue = StringUtils.trimToNull(speciality);
 		if (license == null) {
 			throw new APIException("License number is required");
 		}
@@ -77,6 +79,7 @@ public class TransferProfileServiceImpl implements TransferProfileService {
 		profile.setLicenseNumber(license);
 		profile.setPhoneNumber(phone);
 		profile.setQualification(qualificationValue);
+		profile.setSpeciality(specialityValue);
 		return transferProfileDao.saveTransferProfile(profile);
 	}
 
