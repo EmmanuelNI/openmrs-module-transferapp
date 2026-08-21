@@ -31,6 +31,7 @@ import org.openmrs.module.transferapp.model.PatientInsuranceInfo;
 import org.openmrs.module.transferapp.model.ReceivingFacility;
 import org.openmrs.module.transferapp.model.Transfer;
 import org.openmrs.module.transferapp.model.TransferFormExtras;
+import org.openmrs.module.transferapp.model.TransferFormKind;
 import org.openmrs.module.transferapp.model.TransferProfile;
 import org.openmrs.module.rwandaemr.queue.QueueService;
 import org.openmrs.module.rwandaemr.queue.model.QueueEntry;
@@ -186,6 +187,12 @@ public class TransferServiceImpl implements TransferService {
 			transfer.setVoided(false);
 			transfer.setHieSent(false);
 			transfer.setReceivedFromHie(false);
+			transfer.setFormKind(TransferFormKind.GENERAL);
+		}
+
+		// This wizard always creates/updates the external (GENERAL) transfer form.
+		if (transfer.getFormKind() == null) {
+			transfer.setFormKind(TransferFormKind.GENERAL);
 		}
 
 		transfer.setDecisionToTransferAt(parseDateTimeLocal(decisionToTransferAt));
@@ -228,7 +235,8 @@ public class TransferServiceImpl implements TransferService {
 		if (isUpdate) {
 			transfer.setChangedBy(Context.getAuthenticatedUser());
 			transfer.setDateChanged(now);
-			// Any local correction must be submitted to HIE again.
+			// Local correction must be submitted to HIE again. Keep hieTransferId so the
+			// resubmit updates the same Encounter and can preserve insurance-agent decisions.
 			transfer.setHieSent(false);
 			transfer.setHieSentAt(null);
 			transfer.setHieSendError(null);
@@ -268,7 +276,7 @@ public class TransferServiceImpl implements TransferService {
 		}
 
 		applyProviderProfileDetails(transfer);
-		applyCaregiverFromCurrentUser(transfer);
+		applyCaregiverFromFormOrPatient(transfer, formExtras, replaceClinicalFields);
 
 		if (transfer.getSignedDate() == null) {
 			transfer.setSignedDate(transfer.getDateCreated());
@@ -287,30 +295,34 @@ public class TransferServiceImpl implements TransferService {
 		}
 	}
 
-	private void applyCaregiverFromCurrentUser(Transfer transfer) {
+	/**
+	 * Caregiver is the person helping the patient — never the referring clinician.
+	 * Form values win when provided; otherwise patient person-attributes are used on create.
+	 */
+	private void applyCaregiverFromFormOrPatient(Transfer transfer, TransferFormExtras formExtras,
+			boolean replaceFromForm) {
 		if (transfer == null) {
 			return;
 		}
-		User user = Context.getAuthenticatedUser();
-		if (user == null) {
-			return;
-		}
-		String userName = null;
-		if (user.getPerson() != null && user.getPerson().getPersonName() != null) {
-			userName = StringUtils.trimToNull(user.getPerson().getPersonName().getFullName());
-		}
-		if (userName == null) {
-			userName = StringUtils.trimToNull(user.getUsername());
-		}
-		if (userName != null) {
-			transfer.setCaregiverName(userName);
-		}
-
-		if (transferProfileService != null) {
-			TransferProfile profile = transferProfileService.getProfileForUser(user);
-			if (profile != null && StringUtils.isNotBlank(profile.getPhoneNumber())) {
-				transfer.setCaregiverTelephone(StringUtils.trimToNull(profile.getPhoneNumber()));
+		if (formExtras != null) {
+			if (replaceFromForm) {
+				transfer.setCaregiverName(StringUtils.trimToNull(formExtras.getCaregiverName()));
+				transfer.setCaregiverTelephone(StringUtils.trimToNull(formExtras.getCaregiverTelephone()));
 			}
+			else {
+				if (StringUtils.isNotBlank(formExtras.getCaregiverName())) {
+					transfer.setCaregiverName(StringUtils.trimToNull(formExtras.getCaregiverName()));
+				}
+				if (StringUtils.isNotBlank(formExtras.getCaregiverTelephone())) {
+					transfer.setCaregiverTelephone(StringUtils.trimToNull(formExtras.getCaregiverTelephone()));
+				}
+			}
+		}
+		if (StringUtils.isBlank(transfer.getCaregiverName()) && transfer.getPatient() != null) {
+			transfer.setCaregiverName(patientSnapshotResolver.resolveCaregiverName(transfer.getPatient()));
+		}
+		if (StringUtils.isBlank(transfer.getCaregiverTelephone()) && transfer.getPatient() != null) {
+			transfer.setCaregiverTelephone(patientSnapshotResolver.resolveCaregiverTelephone(transfer.getPatient()));
 		}
 	}
 
@@ -333,6 +345,15 @@ public class TransferServiceImpl implements TransferService {
 		}
 		transfer.setProviderQualification(StringUtils.trimToNull(profile.getQualificationWithSpeciality()));
 		transfer.setProviderPhone(StringUtils.trimToNull(profile.getPhoneNumber()));
+		String referringName = StringUtils.trimToNull(transfer.getReferringProviderName());
+		if (referringName == null && user.getPerson() != null && user.getPerson().getPersonName() != null) {
+			referringName = StringUtils.trimToNull(user.getPerson().getPersonName().getFullName());
+		}
+		if (referringName == null) {
+			referringName = StringUtils.trimToNull(user.getUsername());
+		}
+		transfer.setReferringProviderName(TransferProfile.formatCareProviderName(
+				referringName, profile.getLicenseNumber()));
 	}
 
 	protected Date parseDateValue(String value) {

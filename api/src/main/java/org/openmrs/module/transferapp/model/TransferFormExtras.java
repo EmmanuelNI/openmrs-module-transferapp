@@ -36,6 +36,10 @@ public class TransferFormExtras {
 
 	private String signedTime;
 
+	private String caregiverName;
+
+	private String caregiverTelephone;
+
 	public String getClinicalPresentation() {
 		return clinicalPresentation;
 	}
@@ -106,6 +110,22 @@ public class TransferFormExtras {
 
 	public void setSignedTime(String signedTime) {
 		this.signedTime = signedTime;
+	}
+
+	public String getCaregiverName() {
+		return caregiverName;
+	}
+
+	public void setCaregiverName(String caregiverName) {
+		this.caregiverName = caregiverName;
+	}
+
+	public String getCaregiverTelephone() {
+		return caregiverTelephone;
+	}
+
+	public void setCaregiverTelephone(String caregiverTelephone) {
+		this.caregiverTelephone = caregiverTelephone;
 	}
 
 }

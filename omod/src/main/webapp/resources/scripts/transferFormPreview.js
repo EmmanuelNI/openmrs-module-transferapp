@@ -21,6 +21,29 @@
 		return "<span class='tf-line' style='min-width:" + width + "px;'>" + safe + "</span>";
 	}
 
+	function splitClinicalPresentationLines(value) {
+		if (value === null || value === undefined) {
+			return [];
+		}
+		return String(value).split(/\r?\n/);
+	}
+
+	function hasClinicalLineData(value) {
+		return value !== null && value !== undefined && String(value).trim() !== "";
+	}
+
+	function buildClinicalPresentationSection(clinicalPresentation) {
+		var lines = splitClinicalPresentationLines(clinicalPresentation);
+		var firstLine = lines.length > 0 ? lines[0] : "";
+		var html = "<div class='tf-row'><strong>Clinical Presentation:</strong> " + line(firstLine, 780) + "</div>";
+		for (var i = 1; i <= 3; i++) {
+			if (hasClinicalLineData(lines[i])) {
+				html += "<div class='tf-lines-block'>" + escTransferPreview(String(lines[i]).trim()) + "</div>";
+			}
+		}
+		return html;
+	}
+
 	function truthy(value) {
 		return value === true || value === "true";
 	}
@@ -33,6 +56,15 @@
 			}
 		}
 		return "";
+	}
+
+	function formatAgeOrDob(normalized) {
+		var age = firstNonBlank(normalized.age, normalized.patientAge);
+		var dob = firstNonBlank(normalized.dob, normalized.dateOfBirth, normalized.patientDob);
+		if (age && dob) {
+			return age + " (" + dob + ")";
+		}
+		return firstNonBlank(age, dob);
 	}
 
 	function resolveFlag(value, fallback) {
@@ -92,9 +124,42 @@
 			+ encodeURIComponent(String(transferId).trim());
 	}
 
+	function resolveTransferFormKind(normalized) {
+		var raw = firstNonBlank(
+			normalized.formKindCode,
+			normalized.formKind,
+			normalized.transferFormKind,
+			"external"
+		);
+		var upper = String(raw).trim().toUpperCase().replace(/[\s-]+/g, "_");
+		if (upper === "MATERNITY" || upper.indexOf("MATERNITY") >= 0 || upper === "ANC") {
+			return {
+				kind: "MATERNITY",
+				code: "maternity",
+				display: "ANC, delivery and PNC external transfer form",
+				title: "ANC, DELIVERY AND PNC EXTERNAL TRANSFER FORM"
+			};
+		}
+		if (upper === "NEONATAL" || upper.indexOf("NEONATAL") >= 0 || upper === "NEONATE") {
+			return {
+				kind: "NEONATAL",
+				code: "neonatal",
+				display: "Neonatal transfer form",
+				title: "NEONATAL TRANSFER FORM"
+			};
+		}
+		return {
+			kind: "GENERAL",
+			code: "external",
+			display: "External transfer form",
+			title: "EXTERNAL TRANSFER FORM"
+		};
+	}
+
 	function normalizeTransferPreviewItem(item) {
 		var normalized = item || {};
 		var transferType = String(normalized.transferType || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+		var formKindInfo = resolveTransferFormKind(normalized);
 		var transportType = normalizeTransportType(normalized);
 		var verificationTransferId = resolveVerificationTransferId(normalized);
 		var showVerificationQr = truthy(normalized.showVerificationQr);
@@ -112,8 +177,12 @@
 		}
 
 		return {
-			province: normalized.province,
-			district: normalized.district || normalized.clientDistrict,
+			formKind: formKindInfo.kind,
+			formKindCode: formKindInfo.code,
+			formKindDisplay: formKindInfo.display,
+			formTitle: formKindInfo.title,
+			province: firstNonBlank(normalized.province, normalized.receivingProvince),
+			district: firstNonBlank(normalized.district, normalized.receivingDistrict),
 			hospitalName: normalized.hospitalName || normalized.sendingFacility,
 			referringFacilityName: normalized.referringFacilityName || normalized.sendingFacility || normalized.origin,
 			referringUnit: normalized.referringUnit || normalized.admitSource,
@@ -126,19 +195,26 @@
 				normalized.upid,
 				normalized.subject
 			),
-			clientTelephone: firstNonBlank(normalized.clientTelephone, normalized.telephone),
-			ageOrDob: normalized.ageOrDob || normalized.ageDob,
+			clientTelephone: firstNonBlank(normalized.clientTelephone, normalized.patientPhone),
+			ageOrDob: firstNonBlank(normalized.ageOrDob, normalized.ageDob, formatAgeOrDob(normalized)),
 			sex: normalized.sex,
 			caregiverName: normalized.caregiverName,
-			caregiverTelephone: firstNonBlank(normalized.caregiverTelephone, normalized.telephone),
+			caregiverTelephone: firstNonBlank(normalized.caregiverTelephone),
 			clientDistrict: firstNonBlank(normalized.clientDistrict, normalized.patientDistrict),
 			sector: normalized.sector || normalized.patientSector,
 			cell: normalized.cell || normalized.patientCell,
 			village: normalized.village || normalized.patientVillage,
 			admissionAt: normalized.admissionAt || normalized.admissionDatetime,
-			decisionToTransferAt: normalized.decisionToTransferAt || normalized.transferDecisionDatetime,
+			decisionToTransferAt: firstNonBlank(
+				normalized.decisionToTransferAt,
+				normalized.transferDecisionDatetime,
+				normalized.periodStart
+			),
 			receivingFacility: normalized.receivingFacility || normalized.destination || normalized.hospitalName,
-			receivingService: normalized.receivingService,
+			receivingService: firstNonBlank(
+				normalized.receivingService,
+				normalized.receivingDepartment
+			),
 			callingTime: normalized.callingTime,
 			staffContactedName: normalized.staffContactedName || normalized.staffContactedAtReceivingFacility,
 			staffContactedPhone: normalized.staffContactedPhone || normalized.staffContactPhone,
@@ -161,9 +237,12 @@
 			vitalHeight: normalized.vitalHeight || normalized.height,
 			vitalMuac: normalized.vitalMuac || normalized.muac,
 			laboratory: normalized.laboratory,
-			othersNotes: normalized.othersNotes || normalized.others,
+			othersNotes: firstNonBlank(normalized.othersNotes, normalized.others, normalized.additionalNotes),
 			diagnosis: normalized.diagnosis,
-			proceduresAndTreatments: normalized.proceduresAndTreatments,
+			proceduresAndTreatments: firstNonBlank(
+				normalized.proceduresAndTreatments,
+				normalized.prescriptions
+			),
 			isAmbulanceTransport: resolveFlag(normalized.isAmbulanceTransport,
 				transportType === "AMBULANCE" || transportType.indexOf("AMBULANCE") >= 0),
 			transportationOtherSpec: resolveOtherTransportSpec(normalized, transportType),
@@ -175,9 +254,9 @@
 			isNoInsurance: resolveFlag(normalized.isNoInsurance, normalized.healthInsuranceType === "NONE"),
 			referringProviderName: normalized.referringProviderName,
 			referringProviderQualification: normalized.referringProviderQualification,
-			referringSignedDate: normalized.referringSignedDate || normalized.formDate,
-			referringSignedTime: normalized.referringSignedTime || normalized.formTime,
-			referringProviderPhone: normalized.referringProviderPhone || normalized.providerPhone,
+			referringSignedDate: firstNonBlank(normalized.referringSignedDate, normalized.formDate),
+			referringSignedTime: firstNonBlank(normalized.referringSignedTime, normalized.formTime),
+			referringProviderPhone: firstNonBlank(normalized.referringProviderPhone, normalized.providerPhone),
 			signatureAndStamp: normalized.signatureAndStamp,
 			showVerificationQr: showVerificationQr,
 			verifyQrUrl: verifyQrUrl,
@@ -244,6 +323,32 @@
 
 	function buildTransferFormPreviewHtml(item) {
 		var p = normalizeTransferPreviewItem(item);
+		if (p.formKind === "MATERNITY") {
+			return buildMaternityTransferFormPreviewHtml(p);
+		}
+		if (p.formKind === "NEONATAL") {
+			return buildNeonatalTransferFormPreviewHtml(p);
+		}
+		return buildExternalTransferFormPreviewHtml(p);
+	}
+
+	function buildMaternityTransferFormPreviewHtml(p) {
+		return buildExternalTransferFormPreviewHtml(p, {
+			unsupportedNotice: "Maternity transfer form preview is not fully implemented yet. Showing external transfer layout."
+		});
+	}
+
+	function buildNeonatalTransferFormPreviewHtml(p) {
+		return buildExternalTransferFormPreviewHtml(p, {
+			unsupportedNotice: "Neonatal transfer form preview is not fully implemented yet. Showing external transfer layout."
+		});
+	}
+
+	function buildExternalTransferFormPreviewHtml(itemOrNormalized, options) {
+		var p = itemOrNormalized && itemOrNormalized.formKind
+			? itemOrNormalized
+			: normalizeTransferPreviewItem(itemOrNormalized);
+		options = options || {};
 		var logoUri = global.transferMohLogoDataUri || "";
 		var logoHtml = logoUri
 			? "<img class='tf-moh-logo' src='" + logoUri + "' alt='Ministry of Health' />"
@@ -285,32 +390,41 @@
 				+ "</table>";
 		}
 
+		var noticeHtml = options.unsupportedNotice
+			? "<div class='tf-form-kind-notice' role='status'>" + escTransferPreview(options.unsupportedNotice) + "</div>"
+			: "";
+
 		return "<div class='transfer-form-preview'"
+			+ " data-form-kind='" + escTransferPreview(p.formKind || "GENERAL") + "'"
+			+ " data-form-kind-code='" + escTransferPreview(p.formKindCode || "external") + "'"
 			+ " data-requires-insurance-agent-verification='" + (p.requiresInsuranceAgentVerification ? "true" : "false") + "'"
 			+ " data-has-agent-approved='" + (p.hasAgentApprovedExtension ? "true" : "false") + "'"
 			+ " data-agent-approved='" + (p.agentApproved ? "true" : "false") + "'"
 			+ " data-agent-rejected='" + (p.agentRejected ? "true" : "false") + "'"
 			+ " data-agent-comment='" + escTransferPreview(p.agentComment || "") + "'"
 			+ ">"
+			+ noticeHtml
 			+ buildInsuranceAgentDecisionBannerHtml(p)
 			+ "<div class='tf-sheet'>"
-			+ "<div class='tf-head'>"
-			+ "<div class='tf-left'>"
+			+ "<table class='tf-head' cellpadding='0' cellspacing='0'>"
+			+ "<tr>"
+			+ "<td class='tf-head-brand'>"
 			+ "<div class='tf-row'><strong>REPUBLIC OF RWANDA</strong></div>"
-			+ "<div class='tf-row'>" + logoHtml + "</div>"
-			+ "<div class='tf-row' style='margin-top: 22px;'><strong>MINISTRY OF HEALTH</strong></div>"
-			+ "</div>"
-			+ "<div class='tf-right'>"
-			+ "<div class='tf-row'><strong>Province:</strong>" + line(p.province, 320) + "</div>"
-			+ "<div class='tf-row'><strong>District:</strong>" + line(p.district, 332) + "</div>"
-			+ "<div class='tf-row'><strong>Name of Hospital:</strong>" + line(p.receivingFacility, 230) + "</div>"
-			+ "<div class='tf-row'><strong>Name of Referring Facility:</strong>" + line(p.referringFacilityName, 172) + "</div>"
-			+ "<div class='tf-row'><strong>Referring Unit:</strong>" + line(p.referringUnit, 280) + "</div>"
-			+ "<div class='tf-row'><strong>Receiving Clinician/Phone:</strong>" + line(p.receivingClinicianPhone, 190) + "</div>"
-			+ "</div>"
-			+ "</div>"
+			+ "<div class='tf-row tf-head-logo-row'>" + logoHtml + "</div>"
+			+ "<div class='tf-row tf-head-moh-row'><strong>MINISTRY OF HEALTH</strong></div>"
+			+ "</td>"
+			+ "<td class='tf-head-fields'>"
+			+ "<div class='tf-row'><strong>Province:</strong>" + line(p.province, 180) + "</div>"
+			+ "<div class='tf-row'><strong>District:</strong>" + line(p.district, 180) + "</div>"
+			+ "<div class='tf-row'><strong>Name of Hospital:</strong>" + line(p.receivingFacility, 160) + "</div>"
+			+ "<div class='tf-row'><strong>Name of Referring Facility:</strong>" + line(p.referringFacilityName, 120) + "</div>"
+			+ "<div class='tf-row'><strong>Referring Unit:</strong>" + line(p.referringUnit, 160) + "</div>"
+			+ "<div class='tf-row'><strong>Receiving Clinician/Phone:</strong>" + line(p.receivingClinicianPhone, 140) + "</div>"
+			+ "</td>"
+			+ "</tr>"
+			+ "</table>"
 
-			+ "<div class='tf-title'>EXTERNAL TRANSFER FORM</div>"
+			+ "<div class='tf-title'>" + escTransferPreview(p.formTitle || "EXTERNAL TRANSFER FORM") + "</div>"
 
 			+ "<div class='tf-row'><strong>Client Name:</strong> " + line(p.clientName, 280)
 			+ " <strong>EMR ID:</strong> " + line(p.serialNumberEmr, 220)
@@ -340,8 +454,7 @@
 			+ "<div class='tf-row'><strong>Reason for Transfer:</strong> " + line(p.reasonForTransfer, 830) + "</div>"
 
 			+ "<div class='tf-section-title'>Significant Findings:</div>"
-			+ "<div class='tf-row'><strong>Clinical Presentation:</strong> " + line(p.clinicalPresentation, 780) + "</div>"
-			+ "<div class='tf-lines-block'></div><div class='tf-lines-block'></div><div class='tf-lines-block'></div>"
+			+ buildClinicalPresentationSection(p.clinicalPresentation)
 			+ "<div class='tf-row'><strong>If person with disability, record the type of disability:</strong> " + line(p.disabilityType, 470) + "</div>"
 
 			+ "<div class='tf-row'><strong>Vital Signs:</strong>"
@@ -414,11 +527,22 @@
 		popup.document.open();
 		popup.document.write(
 			"<!DOCTYPE html><html><head><meta charset='utf-8'/>"
+			+ "<meta name='viewport' content='width=1200'/>"
 			+ "<title>" + escTransferPreview(title) + "</title>"
 			+ "<link rel='stylesheet' type='text/css' href='" + escTransferPreview(cssHref) + "'/>"
 			+ "<style>"
-			+ "body{margin:12px;background:#fff;}"
-			+ ".transfer-form-preview{max-width:100%;}"
+			+ "@page{size:A4 portrait;margin:10mm 12mm;}"
+			+ "body{margin:0;background:#fff;}"
+			+ ".transfer-form-preview{max-width:210mm;margin:0 auto;}"
+			+ ".tf-sheet{border:1px solid #111;padding:6px 8px;font-family:'Times New Roman',Times,serif;}"
+			+ ".tf-head{width:100%;border-collapse:collapse;table-layout:fixed;}"
+			+ ".tf-head-brand{width:52%;vertical-align:top;text-align:left;padding:0 12px 0 0;}"
+			+ ".tf-head-brand .tf-row{text-align:left;}"
+			+ ".tf-head-brand .tf-moh-logo{display:block;margin-left:0;height:90px;}"
+			+ ".tf-head-fields{width:48%;vertical-align:top;border:2px solid #111;padding:6px 10px;}"
+			+ ".tf-line{display:inline-block;border-bottom:1px dashed #111;min-height:18px;vertical-align:bottom;word-break:break-word;}"
+			+ ".tf-row{font-size:11pt;line-height:1.2;margin:1px 0;}"
+			+ ".tf-title{text-align:center;font-weight:700;text-decoration:underline;font-size:14pt;margin:6px 0 8px;}"
 			+ "@media print{body{margin:0;} .tf-no-print{display:none !important;}}"
 			+ "</style></head><body>"
 			+ "<p class='tf-no-print' style='font-family:sans-serif;font-size:13px;color:#334155;margin:0 0 12px;'>"

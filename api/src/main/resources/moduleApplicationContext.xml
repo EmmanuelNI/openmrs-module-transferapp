@@ -31,6 +31,32 @@
 		</property>
 	</bean>
 
+	<bean id="transferHistoryService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="target">
+			<bean class="org.openmrs.module.transferapp.api.impl.TransferHistoryServiceImpl">
+				<property name="patientService" ref="patientService" />
+			</bean>
+		</property>
+		<property name="preInterceptors">
+			<ref bean="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource">
+			<ref bean="transactionAttributeSource" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.TransferHistoryService</value>
+				<ref bean="transferHistoryService" />
+			</list>
+		</property>
+	</bean>
+
 	<bean id="transferDao" class="org.openmrs.module.transferapp.api.dao.hibernate.HibernateTransferDao">
 		<property name="sessionFactory" ref="dbSessionFactory" />
 	</bean>
@@ -264,10 +290,50 @@
 		</property>
 	</bean>
 
+	<bean id="intouchSmsProperties" class="org.openmrs.module.transferapp.sms.IntouchSmsProperties" />
+
+	<bean id="transferIntouchSmsClient" class="org.openmrs.module.transferapp.sms.TransferIntouchSmsClient">
+		<property name="properties" ref="intouchSmsProperties" />
+	</bean>
+
+	<bean id="intouchSmsService" class="org.openmrs.module.transferapp.sms.IntouchSmsService">
+		<property name="client" ref="transferIntouchSmsClient" />
+		<property name="properties" ref="intouchSmsProperties" />
+	</bean>
+
+	<bean id="patientSmsNotificationServiceTarget" class="org.openmrs.module.transferapp.api.impl.PatientSmsNotificationServiceImpl">
+		<property name="intouchSmsService" ref="intouchSmsService" />
+	</bean>
+
+	<bean id="patientSmsNotificationService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="target">
+			<ref bean="patientSmsNotificationServiceTarget" />
+		</property>
+		<property name="preInterceptors">
+			<ref bean="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource">
+			<ref bean="transactionAttributeSource" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.PatientSmsNotificationService</value>
+				<ref bean="patientSmsNotificationService" />
+			</list>
+		</property>
+	</bean>
+
 	<bean id="transferHieSubmissionServiceTarget" class="org.openmrs.module.transferapp.api.impl.TransferHieSubmissionServiceImpl">
 		<property name="transferDao" ref="transferDao" />
 		<property name="transferAdminService" ref="transferAdminService" />
 		<property name="transferProfileService" ref="transferProfileService" />
+		<property name="patientSmsNotificationService" ref="patientSmsNotificationService" />
 	</bean>
 
 	<bean id="transferHieSubmissionService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
@@ -350,6 +416,43 @@
 			<list>
 				<value>org.openmrs.module.transferapp.api.TransferRegistrationObsService</value>
 				<ref bean="transferAppRegistrationObsService" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="transferReferralFeedbackDao" class="org.openmrs.module.transferapp.api.dao.hibernate.HibernateTransferReferralFeedbackDao">
+		<property name="sessionFactory" ref="dbSessionFactory" />
+	</bean>
+
+	<bean id="transferReferralFeedbackServiceTarget"
+	      class="org.openmrs.module.transferapp.api.impl.TransferReferralFeedbackServiceImpl">
+		<property name="transferReferralFeedbackDao" ref="transferReferralFeedbackDao" />
+		<property name="transferDao" ref="transferDao" />
+		<property name="patientService" ref="patientService" />
+		<property name="transferProfileService" ref="transferProfileService" />
+		<property name="registrationObsService" ref="transferAppRegistrationObsService" />
+	</bean>
+
+	<bean id="transferReferralFeedbackService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="target">
+			<ref bean="transferReferralFeedbackServiceTarget" />
+		</property>
+		<property name="preInterceptors">
+			<ref bean="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource">
+			<ref bean="transactionAttributeSource" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.TransferReferralFeedbackService</value>
+				<ref bean="transferReferralFeedbackService" />
 			</list>
 		</property>
 	</bean>

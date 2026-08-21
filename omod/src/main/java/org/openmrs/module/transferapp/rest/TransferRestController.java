@@ -18,9 +18,12 @@ import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.transferapp.TransferAppActivator;
 import org.openmrs.module.transferapp.TransferPrivilegeHelper;
+import org.openmrs.module.transferapp.api.TransferFacilityRegistryService;
 import org.openmrs.module.transferapp.api.TransferHieReceiveService;
 import org.openmrs.module.transferapp.api.TransferHieSearchService;
+import org.openmrs.module.transferapp.api.TransferReferralFeedbackService;
 import org.openmrs.module.transferapp.api.TransferRegistrationObsService;
+import org.openmrs.module.transferapp.model.RegistryFacility;
 import org.openmrs.module.transferapp.model.Transfer;
 import org.openmrs.module.webservices.rest.SimpleObject;
 import org.openmrs.module.webservices.rest.web.response.IllegalRequestException;
@@ -194,6 +197,134 @@ public class TransferRestController {
 		return result;
 	}
 
+	@RequestMapping(value = "/rest/v1/transferapp/transfer/feedback/facilities", method = RequestMethod.GET)
+	@ResponseBody
+	public Object listCounterReferralFacilities(HttpServletResponse response) throws ResponseException {
+		SimpleObject result = new SimpleObject();
+		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_LIST_TRANSFERS)) {
+			result.put("status", "error");
+			result.put("message", TransferPrivilegeHelper.requiredPrivilegeMessage(
+					TransferAppActivator.PRIVILEGE_LIST_TRANSFERS));
+			result.put("requiredPrivilege", TransferAppActivator.PRIVILEGE_LIST_TRANSFERS);
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return result;
+		}
+		try {
+			List<RegistryFacility> facilities = getTransferFacilityRegistryService()
+					.listCounterReferralFacilitiesFromHie();
+			SimpleObject success = new SimpleObject();
+			success.put("status", "success");
+			success.put("facilities", toFacilityMaps(facilities));
+			return success;
+		}
+		catch (Exception ex) {
+			log.error("Unable to load counter-referral facilities", ex);
+			result.put("status", "error");
+			result.put("message", TransferPrivilegeHelper.resolveUserFacingMessage(
+					ex,
+					TransferAppActivator.PRIVILEGE_LIST_TRANSFERS,
+					"Unable to load facilities from the registry"));
+			result.put("facilities", new ArrayList<SimpleObject>());
+			if (TransferPrivilegeHelper.isPrivilegeException(ex)) {
+				result.put("requiredPrivilege", TransferAppActivator.PRIVILEGE_LIST_TRANSFERS);
+				response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			}
+			return result;
+		}
+	}
+
+	@RequestMapping(value = "/rest/v1/transferapp/transfer/feedback", method = RequestMethod.GET)
+	@ResponseBody
+	public Object getReferralFeedback(HttpServletResponse response,
+			@RequestParam("patientId") Integer patientId,
+			@RequestParam("hieTransferId") String hieTransferId) throws ResponseException {
+
+		SimpleObject result = new SimpleObject();
+		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_LIST_TRANSFERS)) {
+			result.put("status", "error");
+			result.put("message", TransferPrivilegeHelper.requiredPrivilegeMessage(
+					TransferAppActivator.PRIVILEGE_LIST_TRANSFERS));
+			result.put("requiredPrivilege", TransferAppActivator.PRIVILEGE_LIST_TRANSFERS);
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return result;
+		}
+		if (patientId == null) {
+			throw new IllegalRequestException("patientId parameter is required");
+		}
+		if (hieTransferId == null || hieTransferId.trim().isEmpty()) {
+			throw new IllegalRequestException("hieTransferId parameter is required");
+		}
+		try {
+			Map<String, Object> serviceResult = getTransferReferralFeedbackService()
+					.getFeedbackForm(patientId, hieTransferId.trim());
+			boolean hieSent = Boolean.TRUE.equals(serviceResult.get("hieSent"));
+			serviceResult.put("canSubmit", TransferPrivilegeHelper.hasPrivilege(
+					TransferAppActivator.PRIVILEGE_CREATE_TRANSFER) && !hieSent);
+			return toSimpleObject(serviceResult);
+		}
+		catch (Exception ex) {
+			log.error("Unable to load referral feedback", ex);
+			result.put("status", "error");
+			result.put("message", TransferPrivilegeHelper.resolveUserFacingMessage(
+					ex,
+					TransferAppActivator.PRIVILEGE_LIST_TRANSFERS,
+					"Unable to load referral feedback"));
+			if (TransferPrivilegeHelper.isPrivilegeException(ex)) {
+				result.put("requiredPrivilege", TransferAppActivator.PRIVILEGE_LIST_TRANSFERS);
+				response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			}
+			return result;
+		}
+	}
+
+	@RequestMapping(value = "/rest/v1/transferapp/transfer/feedback", method = RequestMethod.POST)
+	@ResponseBody
+	public Object saveReferralFeedback(HttpServletResponse response,
+			@RequestParam("patientId") Integer patientId,
+			@RequestParam("hieTransferId") String hieTransferId,
+			@RequestParam("dateOfDischarge") String dateOfDischarge,
+			@RequestParam("finalDiagnosis") String finalDiagnosis,
+			@RequestParam("treatmentGiven") String treatmentGiven,
+			@RequestParam("outcome") String outcome,
+			@RequestParam("recommendations") String recommendations,
+			@RequestParam("referBackToFacility") String referBackToFacility,
+			@RequestParam("contactPerson") String contactPerson,
+			@RequestParam("providerName") String providerName,
+			@RequestParam("qualification") String qualification,
+			@RequestParam("signedDate") String signedDate,
+			@RequestParam("signedTime") String signedTime,
+			@RequestParam("phone") String phone) throws ResponseException {
+
+		SimpleObject result = new SimpleObject();
+		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)) {
+			result.put("status", "error");
+			result.put("message", TransferPrivilegeHelper.requiredPrivilegeMessage(
+					TransferAppActivator.PRIVILEGE_CREATE_TRANSFER));
+			result.put("requiredPrivilege", TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return result;
+		}
+		try {
+			return toSimpleObject(getTransferReferralFeedbackService().saveFeedback(
+					patientId, hieTransferId, dateOfDischarge, finalDiagnosis, treatmentGiven, outcome,
+					recommendations, referBackToFacility, contactPerson, providerName, qualification,
+					signedDate, signedTime, phone));
+		}
+		catch (Exception ex) {
+			log.error("Unable to save referral feedback", ex);
+			result.put("status", "error");
+			result.put("message", TransferPrivilegeHelper.resolveUserFacingMessage(
+					ex,
+					TransferAppActivator.PRIVILEGE_CREATE_TRANSFER,
+					"Unable to save referral feedback"));
+			if (TransferPrivilegeHelper.isPrivilegeException(ex)) {
+				result.put("requiredPrivilege", TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);
+				response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			}
+			return result;
+		}
+	}
+
 	private TransferHieSearchService getTransferHieSearchService() {
 		return Context.getService(TransferHieSearchService.class);
 	}
@@ -206,6 +337,32 @@ public class TransferRestController {
 		return Context.getService(TransferRegistrationObsService.class);
 	}
 
+	private TransferFacilityRegistryService getTransferFacilityRegistryService() {
+		return Context.getService(TransferFacilityRegistryService.class);
+	}
+
+	private TransferReferralFeedbackService getTransferReferralFeedbackService() {
+		return Context.getService(TransferReferralFeedbackService.class);
+	}
+
+	private List<SimpleObject> toFacilityMaps(List<RegistryFacility> facilities) {
+		List<SimpleObject> rows = new ArrayList<SimpleObject>();
+		if (facilities == null) {
+			return rows;
+		}
+		for (RegistryFacility facility : facilities) {
+			if (facility == null) {
+				continue;
+			}
+			SimpleObject row = new SimpleObject();
+			row.put("code", facility.getCode());
+			row.put("name", facility.getName());
+			row.put("category", facility.getCategory());
+			rows.add(row);
+		}
+		return rows;
+	}
+
 	@SuppressWarnings("unchecked")
 	private SimpleObject toSimpleObject(Map<String, Object> source) {
 		SimpleObject result = new SimpleObject();
@@ -216,6 +373,15 @@ public class TransferRestController {
 			String key = entry.getKey();
 			Object value = entry.getValue();
 			if ("data".equals(key) && value instanceof List) {
+				result.put(key, toSimpleObjectList((List<Map<String, Object>>) value));
+			}
+			else if ("defaults".equals(key) && value instanceof Map) {
+				result.put(key, toSimpleObject((Map<String, Object>) value));
+			}
+			else if ("feedback".equals(key) && value instanceof Map) {
+				result.put(key, toSimpleObject((Map<String, Object>) value));
+			}
+			else if ("outcomes".equals(key) && value instanceof List) {
 				result.put(key, toSimpleObjectList((List<Map<String, Object>>) value));
 			}
 			else {

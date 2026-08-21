@@ -31,6 +31,24 @@ public interface TransferRegistrationObsService {
 
 	Encounter findRegistrationEncounterMissingTransferId(Patient patient);
 
+	/**
+	 * Transfer Id (value_text) on a registration encounter of the patient's
+	 * active visit, when that value is a valid UUID.
+	 */
+	String findRecordedHieTransferIdOnActiveVisit(Patient patient);
+
+	/**
+	 * {@code obs_datetime} of the Transfer Id observation on the active visit registration
+	 * encounter when {@code value_text} matches {@code hieTransferId}.
+	 */
+	java.util.Date findTransferIdObsDatetimeOnActiveVisit(Patient patient, String hieTransferId);
+
+	/**
+	 * Transfer Id observation for this patient whose {@code value_text} matches {@code hieTransferId}.
+	 * Prefers the active-visit registration encounter, then any matching patient obs.
+	 */
+	org.openmrs.Obs findMatchingTransferIdObs(Patient patient, String hieTransferId);
+
 	@Authorized(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)
 	Map<String, Object> validateAndSaveTransferId(Integer patientId, String hieTransferId);
 
