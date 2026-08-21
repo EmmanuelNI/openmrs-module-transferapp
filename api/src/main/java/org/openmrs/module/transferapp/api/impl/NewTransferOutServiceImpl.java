@@ -138,6 +138,8 @@ public class NewTransferOutServiceImpl implements NewTransferOutService {
 		formData.setProceduresAndTreatments(StringUtils.defaultString(transfer.getProceduresTreatments()));
 		formData.setTransportationType(StringUtils.defaultString(transfer.getTransportType()));
 		formData.setTransportationOtherSpec(StringUtils.defaultString(transfer.getTransportOther()));
+		formData.setCaregiverName(StringUtils.defaultString(transfer.getCaregiverName()));
+		formData.setCaregiverTelephone(StringUtils.defaultString(transfer.getCaregiverTelephone()));
 		if (transfer.getSignedDate() != null) {
 			formData.setReferringSignedDate(formatDate(transfer.getSignedDate()));
 		}
@@ -204,10 +206,8 @@ public class NewTransferOutServiceImpl implements NewTransferOutService {
 		formData.setClientTelephone(patientSnapshotResolver.resolvePatientPhone(patient, transferDao));
 		formData.setAgeOrDob(patientSnapshotResolver.resolveAgeOrDob(patient));
 		formData.setSex(patientSnapshotResolver.mapGender(patient.getGender()));
-		formData.setCaregiverName(patientSnapshotResolver.resolvePersonAttribute(patient,
-				"Caregiver Name", "CaregiverName", "Name of caregiver"));
-		formData.setCaregiverTelephone(patientSnapshotResolver.resolvePersonAttribute(patient,
-				"Caregiver Telephone", "Caregiver Phone", "CaregiverPhone"));
+		formData.setCaregiverName(patientSnapshotResolver.resolveCaregiverName(patient));
+		formData.setCaregiverTelephone(patientSnapshotResolver.resolveCaregiverTelephone(patient));
 
 		PersonAddress address = null;
 		if (transferDao != null) {
@@ -257,16 +257,12 @@ public class NewTransferOutServiceImpl implements NewTransferOutService {
 		if (userName == null) {
 			userName = StringUtils.trimToNull(user.getUsername());
 		}
-		if (userName != null) {
-			formData.setCaregiverName(userName);
-		}
 		if (transferProfileService != null) {
 			TransferProfile profile = transferProfileService.getProfileForUser(user);
 			if (profile != null) {
 				formData.setReferringProviderName(TransferProfile.formatCareProviderName(
 						userName, profile.getLicenseNumber()));
 				if (StringUtils.isNotBlank(profile.getPhoneNumber())) {
-					formData.setCaregiverTelephone(StringUtils.trimToNull(profile.getPhoneNumber()));
 					formData.setReferringProviderPhone(StringUtils.trimToNull(profile.getPhoneNumber()));
 				}
 			}

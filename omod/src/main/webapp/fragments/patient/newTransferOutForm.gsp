@@ -118,6 +118,25 @@ ui.includeCss("transferapp", "styles/select2.min.css")
             </div>
 
             <div class="transfer-wizard-section">
+                <h2 class="transfer-wizard-section-title">${ ui.message("transferapp.patient.transfers.caregiver") }</h2>
+                <div class="transfer-wizard-row transfer-wizard-row-two-col"
+                     style="display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:12px !important;">
+                    <div class="transfer-wizard-field">
+                        <label for="caregiverName">${ ui.message("transferapp.patient.transfers.caregiverName") }</label>
+                        <input type="text" id="caregiverName" name="caregiverName"
+                               value="${ ui.encodeHtmlAttribute(formData.caregiverName ?: '') }"
+                               placeholder="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.caregiverName.placeholder')) }" />
+                    </div>
+                    <div class="transfer-wizard-field">
+                        <label for="caregiverTelephone">${ ui.message("transferapp.patient.transfers.caregiverTelephone") }</label>
+                        <input type="tel" id="caregiverTelephone" name="caregiverTelephone"
+                               value="${ ui.encodeHtmlAttribute(formData.caregiverTelephone ?: '') }"
+                               placeholder="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.caregiverTelephone.placeholder')) }" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="transfer-wizard-section">
                 <h2 class="transfer-wizard-section-title">${ ui.message("transferapp.patient.transfers.clinicalInformation") }</h2>
                 <div class="transfer-wizard-row transfer-wizard-row-three-col"
                      style="display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:12px !important;">

@@ -110,6 +110,8 @@ public class TransferSaveController {
 			@RequestParam(value = "proceduresTreatments", required = false) String proceduresTreatments,
 			@RequestParam(value = "otherNotes", required = false) String otherNotes,
 			@RequestParam(value = "diagnosis", required = false) String diagnosis,
+			@RequestParam(value = "caregiverName", required = false) String caregiverName,
+			@RequestParam(value = "caregiverTelephone", required = false) String caregiverTelephone,
 			@RequestParam(value = "providerQualification", required = false) String providerQualification,
 			@RequestParam(value = "signedDate", required = false) String signedDate,
 			@RequestParam(value = "signedTime", required = false) String signedTime) throws Exception {
@@ -123,7 +125,8 @@ public class TransferSaveController {
 
 		try {
 			TransferFormExtras formExtras = buildFormExtras(clinicalPresentation, disabilityType, laboratory,
-					proceduresTreatments, otherNotes, diagnosis, providerQualification, signedDate, signedTime);
+					proceduresTreatments, otherNotes, diagnosis, caregiverName, caregiverTelephone,
+					providerQualification, signedDate, signedTime);
 			Transfer transfer = transferService.saveReferralTransfer(
 					patientId,
 					transferUuid,
@@ -320,6 +323,10 @@ public class TransferSaveController {
 		preview.put("hieSendError", nullToEmpty(transfer.getHieSendError()));
 		preview.put("receivedFromHie", transfer.isReceivedFromHie());
 		preview.put("hieTransferId", nullToEmpty(transfer.getHieTransferId()));
+		org.openmrs.module.transferapp.model.TransferFormKind formKind = transfer.getFormKind();
+		preview.put("formKind", formKind.name());
+		preview.put("formKindCode", formKind.getCode());
+		preview.put("formKindDisplay", formKind.getDisplay());
 
 		TransferVerificationUrlService verificationUrlService = getTransferVerificationUrlService();
 		boolean showVerificationQr = verificationUrlService.shouldShowVerificationQr(transfer);
@@ -397,11 +404,12 @@ public class TransferSaveController {
 	}
 
 	private TransferFormExtras buildFormExtras(String clinicalPresentation, String disabilityType, String laboratory,
-			String proceduresTreatments, String otherNotes, String diagnosis, String providerQualification,
-			String signedDate, String signedTime) {
+			String proceduresTreatments, String otherNotes, String diagnosis, String caregiverName,
+			String caregiverTelephone, String providerQualification, String signedDate, String signedTime) {
 		if (StringUtils.isBlank(clinicalPresentation) && StringUtils.isBlank(disabilityType)
 				&& StringUtils.isBlank(laboratory) && StringUtils.isBlank(proceduresTreatments)
 				&& StringUtils.isBlank(otherNotes) && StringUtils.isBlank(diagnosis)
+				&& StringUtils.isBlank(caregiverName) && StringUtils.isBlank(caregiverTelephone)
 				&& StringUtils.isBlank(providerQualification)
 				&& StringUtils.isBlank(signedDate) && StringUtils.isBlank(signedTime)) {
 			return null;
@@ -413,6 +421,8 @@ public class TransferSaveController {
 		extras.setProceduresTreatments(proceduresTreatments);
 		extras.setOtherNotes(otherNotes);
 		extras.setDiagnosis(diagnosis);
+		extras.setCaregiverName(caregiverName);
+		extras.setCaregiverTelephone(caregiverTelephone);
 		extras.setProviderQualification(providerQualification);
 		extras.setSignedDate(signedDate);
 		extras.setSignedTime(signedTime);

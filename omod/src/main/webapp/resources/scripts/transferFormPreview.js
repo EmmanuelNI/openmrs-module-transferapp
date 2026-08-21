@@ -58,6 +58,15 @@
 		return "";
 	}
 
+	function formatAgeOrDob(normalized) {
+		var age = firstNonBlank(normalized.age, normalized.patientAge);
+		var dob = firstNonBlank(normalized.dob, normalized.dateOfBirth, normalized.patientDob);
+		if (age && dob) {
+			return age + " (" + dob + ")";
+		}
+		return firstNonBlank(age, dob);
+	}
+
 	function resolveFlag(value, fallback) {
 		if (value === null || value === undefined || value === "") {
 			return !!fallback;
@@ -115,9 +124,42 @@
 			+ encodeURIComponent(String(transferId).trim());
 	}
 
+	function resolveTransferFormKind(normalized) {
+		var raw = firstNonBlank(
+			normalized.formKindCode,
+			normalized.formKind,
+			normalized.transferFormKind,
+			"external"
+		);
+		var upper = String(raw).trim().toUpperCase().replace(/[\s-]+/g, "_");
+		if (upper === "MATERNITY" || upper.indexOf("MATERNITY") >= 0 || upper === "ANC") {
+			return {
+				kind: "MATERNITY",
+				code: "maternity",
+				display: "ANC, delivery and PNC external transfer form",
+				title: "ANC, DELIVERY AND PNC EXTERNAL TRANSFER FORM"
+			};
+		}
+		if (upper === "NEONATAL" || upper.indexOf("NEONATAL") >= 0 || upper === "NEONATE") {
+			return {
+				kind: "NEONATAL",
+				code: "neonatal",
+				display: "Neonatal transfer form",
+				title: "NEONATAL TRANSFER FORM"
+			};
+		}
+		return {
+			kind: "GENERAL",
+			code: "external",
+			display: "External transfer form",
+			title: "EXTERNAL TRANSFER FORM"
+		};
+	}
+
 	function normalizeTransferPreviewItem(item) {
 		var normalized = item || {};
 		var transferType = String(normalized.transferType || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+		var formKindInfo = resolveTransferFormKind(normalized);
 		var transportType = normalizeTransportType(normalized);
 		var verificationTransferId = resolveVerificationTransferId(normalized);
 		var showVerificationQr = truthy(normalized.showVerificationQr);
@@ -135,8 +177,12 @@
 		}
 
 		return {
-			province: normalized.province,
-			district: normalized.district || normalized.clientDistrict,
+			formKind: formKindInfo.kind,
+			formKindCode: formKindInfo.code,
+			formKindDisplay: formKindInfo.display,
+			formTitle: formKindInfo.title,
+			province: firstNonBlank(normalized.province, normalized.receivingProvince),
+			district: firstNonBlank(normalized.district, normalized.receivingDistrict),
 			hospitalName: normalized.hospitalName || normalized.sendingFacility,
 			referringFacilityName: normalized.referringFacilityName || normalized.sendingFacility || normalized.origin,
 			referringUnit: normalized.referringUnit || normalized.admitSource,
@@ -149,19 +195,26 @@
 				normalized.upid,
 				normalized.subject
 			),
-			clientTelephone: firstNonBlank(normalized.clientTelephone, normalized.telephone),
-			ageOrDob: normalized.ageOrDob || normalized.ageDob,
+			clientTelephone: firstNonBlank(normalized.clientTelephone, normalized.patientPhone),
+			ageOrDob: firstNonBlank(normalized.ageOrDob, normalized.ageDob, formatAgeOrDob(normalized)),
 			sex: normalized.sex,
 			caregiverName: normalized.caregiverName,
-			caregiverTelephone: firstNonBlank(normalized.caregiverTelephone, normalized.telephone),
+			caregiverTelephone: firstNonBlank(normalized.caregiverTelephone),
 			clientDistrict: firstNonBlank(normalized.clientDistrict, normalized.patientDistrict),
 			sector: normalized.sector || normalized.patientSector,
 			cell: normalized.cell || normalized.patientCell,
 			village: normalized.village || normalized.patientVillage,
 			admissionAt: normalized.admissionAt || normalized.admissionDatetime,
-			decisionToTransferAt: normalized.decisionToTransferAt || normalized.transferDecisionDatetime,
+			decisionToTransferAt: firstNonBlank(
+				normalized.decisionToTransferAt,
+				normalized.transferDecisionDatetime,
+				normalized.periodStart
+			),
 			receivingFacility: normalized.receivingFacility || normalized.destination || normalized.hospitalName,
-			receivingService: normalized.receivingService,
+			receivingService: firstNonBlank(
+				normalized.receivingService,
+				normalized.receivingDepartment
+			),
 			callingTime: normalized.callingTime,
 			staffContactedName: normalized.staffContactedName || normalized.staffContactedAtReceivingFacility,
 			staffContactedPhone: normalized.staffContactedPhone || normalized.staffContactPhone,
@@ -184,9 +237,12 @@
 			vitalHeight: normalized.vitalHeight || normalized.height,
 			vitalMuac: normalized.vitalMuac || normalized.muac,
 			laboratory: normalized.laboratory,
-			othersNotes: normalized.othersNotes || normalized.others,
+			othersNotes: firstNonBlank(normalized.othersNotes, normalized.others, normalized.additionalNotes),
 			diagnosis: normalized.diagnosis,
-			proceduresAndTreatments: normalized.proceduresAndTreatments,
+			proceduresAndTreatments: firstNonBlank(
+				normalized.proceduresAndTreatments,
+				normalized.prescriptions
+			),
 			isAmbulanceTransport: resolveFlag(normalized.isAmbulanceTransport,
 				transportType === "AMBULANCE" || transportType.indexOf("AMBULANCE") >= 0),
 			transportationOtherSpec: resolveOtherTransportSpec(normalized, transportType),
@@ -198,9 +254,9 @@
 			isNoInsurance: resolveFlag(normalized.isNoInsurance, normalized.healthInsuranceType === "NONE"),
 			referringProviderName: normalized.referringProviderName,
 			referringProviderQualification: normalized.referringProviderQualification,
-			referringSignedDate: normalized.referringSignedDate || normalized.formDate,
-			referringSignedTime: normalized.referringSignedTime || normalized.formTime,
-			referringProviderPhone: normalized.referringProviderPhone || normalized.providerPhone,
+			referringSignedDate: firstNonBlank(normalized.referringSignedDate, normalized.formDate),
+			referringSignedTime: firstNonBlank(normalized.referringSignedTime, normalized.formTime),
+			referringProviderPhone: firstNonBlank(normalized.referringProviderPhone, normalized.providerPhone),
 			signatureAndStamp: normalized.signatureAndStamp,
 			showVerificationQr: showVerificationQr,
 			verifyQrUrl: verifyQrUrl,
@@ -267,6 +323,32 @@
 
 	function buildTransferFormPreviewHtml(item) {
 		var p = normalizeTransferPreviewItem(item);
+		if (p.formKind === "MATERNITY") {
+			return buildMaternityTransferFormPreviewHtml(p);
+		}
+		if (p.formKind === "NEONATAL") {
+			return buildNeonatalTransferFormPreviewHtml(p);
+		}
+		return buildExternalTransferFormPreviewHtml(p);
+	}
+
+	function buildMaternityTransferFormPreviewHtml(p) {
+		return buildExternalTransferFormPreviewHtml(p, {
+			unsupportedNotice: "Maternity transfer form preview is not fully implemented yet. Showing external transfer layout."
+		});
+	}
+
+	function buildNeonatalTransferFormPreviewHtml(p) {
+		return buildExternalTransferFormPreviewHtml(p, {
+			unsupportedNotice: "Neonatal transfer form preview is not fully implemented yet. Showing external transfer layout."
+		});
+	}
+
+	function buildExternalTransferFormPreviewHtml(itemOrNormalized, options) {
+		var p = itemOrNormalized && itemOrNormalized.formKind
+			? itemOrNormalized
+			: normalizeTransferPreviewItem(itemOrNormalized);
+		options = options || {};
 		var logoUri = global.transferMohLogoDataUri || "";
 		var logoHtml = logoUri
 			? "<img class='tf-moh-logo' src='" + logoUri + "' alt='Ministry of Health' />"
@@ -308,13 +390,20 @@
 				+ "</table>";
 		}
 
+		var noticeHtml = options.unsupportedNotice
+			? "<div class='tf-form-kind-notice' role='status'>" + escTransferPreview(options.unsupportedNotice) + "</div>"
+			: "";
+
 		return "<div class='transfer-form-preview'"
+			+ " data-form-kind='" + escTransferPreview(p.formKind || "GENERAL") + "'"
+			+ " data-form-kind-code='" + escTransferPreview(p.formKindCode || "external") + "'"
 			+ " data-requires-insurance-agent-verification='" + (p.requiresInsuranceAgentVerification ? "true" : "false") + "'"
 			+ " data-has-agent-approved='" + (p.hasAgentApprovedExtension ? "true" : "false") + "'"
 			+ " data-agent-approved='" + (p.agentApproved ? "true" : "false") + "'"
 			+ " data-agent-rejected='" + (p.agentRejected ? "true" : "false") + "'"
 			+ " data-agent-comment='" + escTransferPreview(p.agentComment || "") + "'"
 			+ ">"
+			+ noticeHtml
 			+ buildInsuranceAgentDecisionBannerHtml(p)
 			+ "<div class='tf-sheet'>"
 			+ "<table class='tf-head' cellpadding='0' cellspacing='0'>"
@@ -335,7 +424,7 @@
 			+ "</tr>"
 			+ "</table>"
 
-			+ "<div class='tf-title'>EXTERNAL TRANSFER FORM</div>"
+			+ "<div class='tf-title'>" + escTransferPreview(p.formTitle || "EXTERNAL TRANSFER FORM") + "</div>"
 
 			+ "<div class='tf-row'><strong>Client Name:</strong> " + line(p.clientName, 280)
 			+ " <strong>EMR ID:</strong> " + line(p.serialNumberEmr, 220)

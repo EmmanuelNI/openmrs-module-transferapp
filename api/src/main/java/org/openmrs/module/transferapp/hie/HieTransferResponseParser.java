@@ -59,6 +59,8 @@ public class HieTransferResponseParser {
             "http://example.org/fhir/StructureDefinition/others-notes";
     private static final String EXT_PROCEDURES_AND_TREATMENTS =
             "http://example.org/fhir/StructureDefinition/procedures-treatments";
+    private static final String EXT_ADDITIONAL_NOTES =
+            "http://example.org/fhir/StructureDefinition/additional-notes";
     private static final String EXT_VITAL_SIGNS =
             "http://example.org/fhir/StructureDefinition/vital-signs";
     private static final String EXT_EXTENDED_VITALS =
@@ -69,6 +71,8 @@ public class HieTransferResponseParser {
             "http://example.org/fhir/StructureDefinition/agent-approved";
     private static final String EXT_AGENT_COMMENT =
             "http://example.org/fhir/StructureDefinition/agent-comment";
+    private static final String EXT_TRANSFER_FORM_KIND =
+            "http://example.org/fhir/StructureDefinition/transfer-form-kind";
 
     public List<Map<String, Object>> parse(String jsonData) throws Exception {
         return parsePage(jsonData).getTransfers();
@@ -242,6 +246,9 @@ public class HieTransferResponseParser {
         transfer.put("staffContactPhone", "");
 
         transfer.put("transferType", "");
+        transfer.put("formKind", "GENERAL");
+        transfer.put("formKindCode", "external");
+        transfer.put("formKindDisplay", "External transfer form");
         transfer.put("isEmergency", "");
         transfer.put("isNonEmergency", "");
         transfer.put("isFollowUp", "");
@@ -309,14 +316,17 @@ public class HieTransferResponseParser {
         transfer.put("serialNumberOrEmrId", firstNonBlank(
                 extractNestedExtensionValue(resource, EXT_PATIENT_DEMOGRAPHICS, "serial-number"),
                 asString(transfer.get("serialNumberOrEmrId"))));
-        transfer.put("ageDob", extractNestedExtensionValue(resource, EXT_PATIENT_DEMOGRAPHICS, "dob"));
+        String patientDob = extractNestedExtensionValue(resource, EXT_PATIENT_DEMOGRAPHICS, "dob");
+        String patientAge = extractNestedExtensionValue(resource, EXT_PATIENT_DEMOGRAPHICS, "age");
+        transfer.put("ageDob", formatAgeOrDob(patientAge, patientDob));
         transfer.put("sex", extractNestedExtensionValue(resource, EXT_PATIENT_DEMOGRAPHICS, "gender"));
+        String patientPhone = extractNestedExtensionValue(resource, EXT_PATIENT_DEMOGRAPHICS, "phone");
+        transfer.put("clientTelephone", patientPhone);
 
         transfer.put("caregiverName", extractNestedExtensionValue(resource, EXT_CAREGIVER_INFO, "name"));
         String caregiverPhone = extractNestedExtensionValue(resource, EXT_CAREGIVER_INFO, "phone");
-        transfer.put("telephone", caregiverPhone);
         transfer.put("caregiverTelephone", caregiverPhone);
-        transfer.put("providerPhone", caregiverPhone);
+        transfer.put("telephone", firstNonBlank(patientPhone, caregiverPhone));
 
         transfer.put("province", stripCodePrefix(extractExtensionValue(resource, EXT_RECEIVING_PROVINCE)));
         transfer.put("district", stripCodePrefix(extractExtensionValue(resource, EXT_RECEIVING_DISTRICT)));
@@ -328,20 +338,17 @@ public class HieTransferResponseParser {
 
         JsonNode period = resource.get("period");
         String periodStart = "";
-        String periodEnd = "";
         if (period != null && !period.isNull()) {
             periodStart = textOrDefault(period.get("start"), "");
-            periodEnd = textOrDefault(period.get("end"), "");
         }
 		transfer.put("admissionDatetime", firstNonBlank(
 				extractExtensionDateTime(resource, EXT_ADMISSION_DATETIME),
 				extractNestedExtensionValue(resource, EXT_TRANSFER_FLAGS, "admission-date"),
 				periodStart));
-		transfer.put("transferDecisionDatetime",
-				extractExtensionDateTime(resource, EXT_DECISION_TO_TRANSFER_DATETIME));
-		transfer.put("departureTime", firstNonBlank(
-				extractExtensionDateTime(resource, EXT_DEPARTURE_TIME),
-				periodEnd));
+		transfer.put("transferDecisionDatetime", firstNonBlank(
+				extractExtensionDateTime(resource, EXT_DECISION_TO_TRANSFER_DATETIME),
+				periodStart));
+		transfer.put("departureTime", extractExtensionDateTime(resource, EXT_DEPARTURE_TIME));
         transfer.put("ambulanceCalledTime", extractExtensionDateTime(resource, EXT_AMBULANCE_CALL_TIME));
         transfer.put("callingTime", firstNonBlank(
                 extractExtensionDateTime(resource, EXT_CALLING_TIME),
@@ -353,6 +360,8 @@ public class HieTransferResponseParser {
         transfer.put("isEmergency", String.valueOf(transferTypeLower.contains("emergency") && !transferTypeLower.contains("non")));
         transfer.put("isNonEmergency", String.valueOf(transferTypeLower.contains("non-emergency") || transferTypeLower.contains("non emergency")));
         transfer.put("isFollowUp", String.valueOf(transferTypeLower.contains("follow")));
+
+        applyTransferFormKind(resource, transfer);
 
         JsonNode hospitalization = resource.get("hospitalization");
         String originDisplay = "";
@@ -392,9 +401,9 @@ public class HieTransferResponseParser {
                 extractExtensionValue(resource, EXT_REFERRING_DEPARTMENT),
                 admitSourceDisplay));
         transfer.put("receivingService", firstNonBlank(
+                extractExtensionValue(resource, EXT_RECEIVING_DEPARTMENT),
                 serviceTypeDisplay,
-                dischargeDispositionDisplay,
-                extractExtensionValue(resource, EXT_RECEIVING_DEPARTMENT)));
+                dischargeDispositionDisplay));
 
         String receivingClinicianContact = extractExtensionValue(resource, EXT_RECEIVING_CLINICIAN_CONTACT);
         String[] clinicianContactParts = parseReceivingClinicianContact(receivingClinicianContact);
@@ -423,6 +432,7 @@ public class HieTransferResponseParser {
 
         transfer.put("reasonForTransfer", firstNonBlank(
                 extractNestedExtensionValue(resource, EXT_CLINICAL_PRESENTATION, "immediate-condition"),
+                extractNestedExtensionValue(resource, EXT_TRANSFER_FLAGS, "consultation-motif"),
                 extractExtensionValue(resource, EXT_CLINICAL_PRESENTATION),
                 reasonCodeText));
         transfer.put("clinicalPresentation", firstNonBlank(
@@ -432,20 +442,34 @@ public class HieTransferResponseParser {
         transfer.put("diagnosis", diagnosisDisplay);
 
         String referringProviderName = "";
+        String referringProviderLicense = "";
         JsonNode participants = resource.get("participant");
         JsonNode firstParticipant = firstArrayElement(participants);
         if (firstParticipant != null) {
             JsonNode individual = firstParticipant.get("individual");
             if (individual != null && !individual.isNull()) {
                 referringProviderName = textOrDefault(individual.get("display"), "");
+                JsonNode practitionerIdentifier = individual.get("identifier");
+                if (practitionerIdentifier != null && !practitionerIdentifier.isNull()) {
+                    referringProviderLicense = textOrDefault(practitionerIdentifier.get("value"), "");
+                }
             }
         }
         transfer.put("referringProviderName", TransferProfile.formatCareProviderName(
                 firstNonBlank(
                         extractNestedExtensionValue(resource, EXT_PRACTITIONER_INFO, "name"),
                         referringProviderName),
-                extractNestedExtensionValue(resource, EXT_PRACTITIONER_INFO, "license-number")));
+                firstNonBlank(
+                        extractNestedExtensionValue(resource, EXT_PRACTITIONER_INFO, "license-number"),
+                        referringProviderLicense)));
         transfer.put("referringProviderQualification", extractNestedExtensionValue(resource, EXT_PRACTITIONER_INFO, "qualification"));
+        transfer.put("providerPhone", extractNestedExtensionValue(resource, EXT_PRACTITIONER_INFO, "phone"));
+        transfer.put("formDate", firstNonBlank(
+                extractNestedExtensionValue(resource, EXT_PRACTITIONER_INFO, "signed-date"),
+                toDateOnly(periodStart)));
+        transfer.put("formTime", firstNonBlank(
+                extractNestedExtensionValue(resource, EXT_PRACTITIONER_INFO, "signed-time"),
+                toTimeOnly(periodStart)));
 
         String transportType = extractExtensionDisplay(resource, EXT_TRANSPORT_TYPE);
         transfer.put("transportType", transportType);
@@ -464,25 +488,46 @@ public class HieTransferResponseParser {
         transfer.put("isNoInsurance", String.valueOf(insurance.trim().isEmpty()));
 
         transfer.put("laboratory", extractExtensionValue(resource, EXT_LAB_RESULTS));
-        transfer.put("others", extractExtensionValue(resource, EXT_OTHERS));
-        transfer.put("proceduresAndTreatments", extractExtensionValue(resource, EXT_PROCEDURES_AND_TREATMENTS));
+        transfer.put("others", firstNonBlank(
+                extractExtensionValue(resource, EXT_OTHERS),
+                extractExtensionValue(resource, EXT_ADDITIONAL_NOTES)));
+        transfer.put("proceduresAndTreatments", firstNonBlank(
+                extractExtensionValue(resource, EXT_PROCEDURES_AND_TREATMENTS),
+                extractNestedExtensionValue(resource, EXT_TRANSFER_FLAGS, "prescriptions")));
         String vitals = extractExtensionValue(resource, EXT_VITAL_SIGNS);
         parseVitalSignsIntoTransfer(vitals, transfer);
 
         String extWeight = extractNestedExtensionValue(resource, EXT_EXTENDED_VITALS, "weight");
         String extHeight = extractNestedExtensionValue(resource, EXT_EXTENDED_VITALS, "height");
+        String extMuac = extractNestedExtensionValue(resource, EXT_EXTENDED_VITALS, "muac");
         if (extWeight != null && extWeight.trim().length() > 0) {
             transfer.put("weight", extWeight.trim());
         }
         if (extHeight != null && extHeight.trim().length() > 0) {
             transfer.put("height", extHeight.trim());
         }
+        if (extMuac != null && extMuac.trim().length() > 0) {
+            transfer.put("muac", extMuac.trim());
+        }
 
         applyInsuranceAgentVerificationFlags(resource, transfer);
         applyEtransferFormFallback(transfer, extractEtransferFormNode(resource));
         transfer.put("referringProviderName", TransferProfile.formatCareProviderName(
                 asString(transfer.get("referringProviderName")),
-                extractNestedExtensionValue(resource, EXT_PRACTITIONER_INFO, "license-number")));
+                firstNonBlank(
+                        extractNestedExtensionValue(resource, EXT_PRACTITIONER_INFO, "license-number"),
+                        referringProviderLicense)));
+    }
+
+    private void applyTransferFormKind(JsonNode resource, Map<String, Object> transfer) {
+        String formKindCode = firstNonBlank(
+                extractExtensionCode(resource, EXT_TRANSFER_FORM_KIND),
+                extractExtensionDisplay(resource, EXT_TRANSFER_FORM_KIND));
+        org.openmrs.module.transferapp.model.TransferFormKind kind =
+                org.openmrs.module.transferapp.model.TransferFormKind.fromCodeOrLabel(formKindCode);
+        transfer.put("formKind", kind.name());
+        transfer.put("formKindCode", kind.getCode());
+        transfer.put("formKindDisplay", kind.getDisplay());
     }
 
     /**
@@ -686,6 +731,32 @@ public class HieTransferResponseParser {
 
     private String extractExtensionDisplay(JsonNode resource, String extensionUrl) {
         return extractExtensionValue(resource, extensionUrl);
+    }
+
+    private String extractExtensionCode(JsonNode resource, String extensionUrl) {
+        JsonNode extensions = resource.get("extension");
+        if (extensions == null || !extensions.isArray() || extensionUrl == null) {
+            return "";
+        }
+        Iterator<JsonNode> extensionIterator = extensions.getElements();
+        while (extensionIterator.hasNext()) {
+            JsonNode ext = extensionIterator.next();
+            if (!extensionUrl.equals(textOrDefault(ext.get("url"), ""))) {
+                continue;
+            }
+            JsonNode valueCodeableConcept = ext.get("valueCodeableConcept");
+            if (valueCodeableConcept == null || valueCodeableConcept.isNull()) {
+                continue;
+            }
+            JsonNode firstCoding = firstArrayElement(valueCodeableConcept.get("coding"));
+            if (firstCoding != null) {
+                String code = textOrDefault(firstCoding.get("code"), "");
+                if (!code.trim().isEmpty()) {
+                    return code;
+                }
+            }
+        }
+        return "";
     }
 
     private String extractExtensionDateTime(JsonNode resource, String extensionUrl) {
@@ -923,6 +994,15 @@ public class HieTransferResponseParser {
         return value == null ? "" : String.valueOf(value);
     }
 
+    private String formatAgeOrDob(String age, String dob) {
+        String ageText = age == null ? "" : age.trim();
+        String dobText = dob == null ? "" : dob.trim();
+        if (!ageText.isEmpty() && !dobText.isEmpty()) {
+            return ageText + " (" + dobText + ")";
+        }
+        return firstNonBlank(ageText, dobText);
+    }
+
     private String toDateOnly(String value) {
         if (value == null || value.trim().isEmpty()) {
             return "";
@@ -936,5 +1016,34 @@ public class HieTransferResponseParser {
             return text.substring(0, 10);
         }
         return text;
+    }
+
+    private String toTimeOnly(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return "";
+        }
+        String text = value.trim();
+        int tIndex = text.indexOf('T');
+        if (tIndex < 0 || tIndex + 1 >= text.length()) {
+            return "";
+        }
+        String time = text.substring(tIndex + 1);
+        int plus = time.indexOf('+');
+        int zIndex = time.indexOf('Z');
+        int cut = time.length();
+        if (plus > 0) {
+            cut = Math.min(cut, plus);
+        }
+        if (zIndex > 0) {
+            cut = Math.min(cut, zIndex);
+        }
+        time = time.substring(0, cut);
+        if (time.length() >= 8) {
+            return time.substring(0, 8);
+        }
+        if (time.length() >= 5) {
+            return time.substring(0, 5);
+        }
+        return time;
     }
 }

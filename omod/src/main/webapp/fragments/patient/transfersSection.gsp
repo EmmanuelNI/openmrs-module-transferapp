@@ -382,7 +382,7 @@
                 <% } %>
             </div>
         <% } %>
-        <% if (canListTransfers && hasRecordedHieTransfer) {
+        <% if (canListTransfers && (hasRecordedHieTransfer || (historyPageUrl != null && historyPageUrl.trim().length() > 0))) {
             def recordedCtxPath = (ui.contextPath() ?: "").toString()
             while (recordedCtxPath.startsWith("/")) {
                 recordedCtxPath = recordedCtxPath.substring(1)
@@ -390,6 +390,7 @@
             def recordedHieRestUrl = "/" + recordedCtxPath + "/ws/rest/v1/transferapp/transfer"
             def recordedFeedbackRestUrl = "/" + recordedCtxPath + "/ws/rest/v1/transferapp/transfer/feedback"
         %>
+            <% if (hasRecordedHieTransfer) { %>
             <div id="transfer-recorded-hie-config" style="display:none;"
                  data-patient-id="${ ui.encodeHtmlAttribute((patientId ?: '') as String) }"
                  data-upid="${ ui.encodeHtmlAttribute(recordedHieTransferUpid) }"
@@ -399,7 +400,9 @@
                  data-facilities-url="${ ui.encodeHtmlAttribute(recordedFeedbackRestUrl + '/facilities') }"
                  data-has-transfer-id="true"
                  data-can-provide-feedback="${ canProvideFeedback ? 'true' : 'false' }"></div>
+            <% } %>
             <div class="transfer-open-recorded-wrap">
+                <% if (hasRecordedHieTransfer) { %>
                 <a id="patient-open-recorded-transfer"
                    class="transfer-open-recorded-link hie-transfer-view-link"
                    href="javascript:void(0);"
@@ -414,8 +417,19 @@
                    title="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.hieTransfer.openTransfer')) }">
                     <i class="icon-eye-open"></i> ${ ui.message("transferapp.patient.hieTransfer.openTransfer") }
                 </a>
+                <% } %>
+                <% if (historyPageUrl != null && historyPageUrl.trim().length() > 0) { %>
+                <a id="patient-transfer-history-link"
+                   class="transfer-open-recorded-link transfer-history-link"
+                   href="${ ui.encodeHtmlAttribute(historyPageUrl) }"
+                   title="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.history')) }">
+                    <i class="icon-time"></i> ${ ui.message("transferapp.patient.transfers.history") }
+                </a>
+                <% } %>
             </div>
+            <% if (hasRecordedHieTransfer) { %>
             ${ ui.includeFragment("transferapp", "patient/hieTransferPreviewDialog") }
+            <% } %>
         <% } %>
     </div>
 </div>
@@ -668,6 +682,7 @@
     var transferPreviewScriptsLoading = null;
     var currentPreviewTransferUuid = null;
     var currentPreviewTransferSent = false;
+    var currentPreviewIsHieUpdate = false;
 
     function syncTransferPreviewSubmitButton() {
         var submitBtn = jq("#transfer-preview-submit");
@@ -676,6 +691,8 @@
         }
         if (currentPreviewTransferSent) {
             submitBtn.prop("disabled", true).text("${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.alreadySent')) }");
+        } else if (currentPreviewIsHieUpdate) {
+            submitBtn.prop("disabled", false).text("${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.updateOnHie')) }");
         } else {
             submitBtn.prop("disabled", false).text("${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.submitToHie')) }");
         }
@@ -736,6 +753,7 @@
             : "<p style='color:red;'>Preview renderer not loaded.</p>";
         jq("#transfer-preview-body").html(previewHtml);
         currentPreviewTransferSent = !!(transfer && (transfer.hieSent === true || transfer.hieSent === "true"));
+        currentPreviewIsHieUpdate = !currentPreviewTransferSent && !!(transfer && String(transfer.hieTransferId || "").trim());
         syncTransferPreviewSubmitButton();
     }
 
@@ -766,6 +784,7 @@
         jq("#transfer-preview-body").html("<div style='padding: 10px;'><i class='icon-spinner icon-spin'></i> ${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.previewLoading')) }</div>");
         currentPreviewTransferUuid = transferUuid;
         currentPreviewTransferSent = false;
+        currentPreviewIsHieUpdate = false;
         syncTransferPreviewSubmitButton();
         showTransferPreviewDialog();
 
@@ -806,11 +825,15 @@
                 dataType: "json"
             }).done(function(response) {
                 if (response && response.status === "success") {
+                    var wasUpdate = currentPreviewIsHieUpdate;
                     currentPreviewTransferSent = true;
+                    currentPreviewIsHieUpdate = false;
                     syncTransferPreviewSubmitButton();
                     markTransferRowHieStatus(currentPreviewTransferUuid, true);
                     if (typeof emr !== "undefined" && typeof emr.successMessage === "function") {
-                        emr.successMessage("${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.submitToHieSuccess')) }");
+                        emr.successMessage(wasUpdate
+                            ? "${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.updateOnHieSuccess')) }"
+                            : "${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.submitToHieSuccess')) }");
                     }
                     window.location.reload();
                     return;

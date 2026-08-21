@@ -150,12 +150,10 @@ public class TransferHieReceiveServiceImpl implements TransferHieReceiveService 
 		}
 
 		if (StringUtils.isBlank(transfer.getCaregiverName())) {
-			transfer.setCaregiverName(patientSnapshotResolver.resolvePersonAttribute(patient,
-					"Caregiver Name", "CaregiverName", "Name of caregiver"));
+			transfer.setCaregiverName(patientSnapshotResolver.resolveCaregiverName(patient));
 		}
 		if (StringUtils.isBlank(transfer.getCaregiverTelephone())) {
-			transfer.setCaregiverTelephone(patientSnapshotResolver.resolvePersonAttribute(patient,
-					"Caregiver Telephone", "Caregiver Phone", "CaregiverPhone"));
+			transfer.setCaregiverTelephone(patientSnapshotResolver.resolveCaregiverTelephone(patient));
 		}
 
 		PersonAddress address = transferDao != null

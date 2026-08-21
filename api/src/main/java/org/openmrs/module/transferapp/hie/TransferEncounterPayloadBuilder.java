@@ -24,6 +24,7 @@ import org.openmrs.module.transferapp.api.TransferAdminService;
 import org.openmrs.module.transferapp.api.TransferProfileService;
 import org.openmrs.module.transferapp.model.ReceivingFacility;
 import org.openmrs.module.transferapp.model.Transfer;
+import org.openmrs.module.transferapp.model.TransferFormKind;
 import org.openmrs.module.transferapp.model.TransferProfile;
 
 import java.text.SimpleDateFormat;
@@ -62,15 +63,25 @@ public class TransferEncounterPayloadBuilder {
 	}
 
 	public String buildEncounterJson(Transfer transfer, User user, String receivingFacilityLabel) {
-		boolean externalReceivingFacility = resolveExternalReceivingFacility(transfer);
-		return buildEncounterJson(transfer, user, receivingFacilityLabel, externalReceivingFacility);
+		boolean externalReceivingFacility = isExternalReceivingFacility(transfer);
+		return buildEncounterJson(transfer, user, receivingFacilityLabel, externalReceivingFacility, null);
 	}
 
 	public String buildEncounterJson(Transfer transfer, User user, String receivingFacilityLabel,
 			boolean externalReceivingFacility) {
+		return buildEncounterJson(transfer, user, receivingFacilityLabel, externalReceivingFacility, null);
+	}
+
+	/**
+	 * @param forcedEncounterId when set, reused as Encounter.id so HIE updates the same resource
+	 */
+	public String buildEncounterJson(Transfer transfer, User user, String receivingFacilityLabel,
+			boolean externalReceivingFacility, String forcedEncounterId) {
 		try {
 			String upi = requireUpi(transfer);
-			String encounterId = transfer.getUuid() != null ? transfer.getUuid() : UUID.randomUUID().toString();
+			String encounterId = StringUtils.isNotBlank(forcedEncounterId)
+					? forcedEncounterId.trim()
+					: (transfer.getUuid() != null ? transfer.getUuid() : UUID.randomUUID().toString());
 			ObjectNode encounter = objectMapper.createObjectNode();
 			encounter.put("resourceType", "Encounter");
 			encounter.put("id", encounterId);
@@ -102,6 +113,13 @@ public class TransferEncounterPayloadBuilder {
 		catch (Exception ex) {
 			throw new HieApiException("Failed to build transfer encounter payload", ex);
 		}
+	}
+
+	/**
+	 * Reads Destinations configuration for the transfer's selected receiving facility code.
+	 */
+	public boolean isExternalReceivingFacility(Transfer transfer) {
+		return resolveExternalReceivingFacility(transfer);
 	}
 
 	/**
@@ -147,6 +165,7 @@ public class TransferEncounterPayloadBuilder {
 
 	private void addExtensions(ObjectNode encounter, Transfer transfer, User user, String receivingFacilityLabel,
 			boolean externalReceivingFacility) {
+		addTransferFormKindExtension(encounter, transfer);
 		addTransferTypeExtension(encounter, transfer.getTransferType());
 		// Dedicated timestamps (not derived from Encounter.period / length calculations).
 		addDateTimeExtension(encounter, "http://example.org/fhir/StructureDefinition/admission-datetime",
@@ -372,6 +391,21 @@ public class TransferEncounterPayloadBuilder {
 				TransferAppConstants.GP_SENDING_FOSA_ID,
 				TransferAppConstants.DEFAULT_SENDING_FOSA_ID);
 		return StringUtils.trimToNull(fosaId);
+	}
+
+	/**
+	 * Marks which transfer form this Encounter represents so consumers can choose the
+	 * correct preview / PDF layout (external vs maternity vs neonatal).
+	 */
+	private void addTransferFormKindExtension(ObjectNode encounter, Transfer transfer) {
+		TransferFormKind kind = transfer != null && transfer.getFormKind() != null
+				? transfer.getFormKind()
+				: TransferFormKind.GENERAL;
+		addCodeableConceptExtension(encounter,
+				TransferFormKind.EXTENSION_URL,
+				TransferFormKind.CODE_SYSTEM,
+				kind.getCode(),
+				kind.getDisplay());
 	}
 
 	private void addTransferTypeExtension(ObjectNode encounter, String transferType) {

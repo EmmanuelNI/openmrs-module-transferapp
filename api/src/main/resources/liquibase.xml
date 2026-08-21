@@ -757,4 +757,58 @@
         </addColumn>
     </changeSet>
 
+    <changeSet id="transferapp-20260820-patient-sms-columns" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfers"/>
+                <not>
+                    <columnExists tableName="transfers" columnName="patient_sms_status"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Track patient InTouch SMS status after HIE accepts an outbound transfer</comment>
+        <addColumn tableName="transfers">
+            <column name="patient_sms_status" type="varchar(20)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="transfers">
+            <column name="patient_sms_message_id" type="varchar(64)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="transfers">
+            <column name="patient_sms_sent_at" type="datetime">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="transfers">
+            <column name="patient_sms_last_attempt_at" type="datetime">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="transfers">
+            <column name="patient_sms_last_error" type="varchar(500)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="transferapp-20260821-transfer-form-kind" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfers"/>
+                <not>
+                    <columnExists tableName="transfers" columnName="form_kind"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Distinguish external vs maternity vs neonatal transfer form layouts</comment>
+        <addColumn tableName="transfers">
+            <column name="form_kind" type="varchar(20)" defaultValue="GENERAL">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
 </databaseChangeLog>

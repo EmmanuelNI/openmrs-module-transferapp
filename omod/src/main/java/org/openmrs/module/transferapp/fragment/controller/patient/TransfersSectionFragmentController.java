@@ -137,26 +137,41 @@ public class TransfersSectionFragmentController {
 				+ "&app=transferapp.dashboard";
 
 		String recordedHieTransferId = null;
-		String recordedHieTransferUpid = null;
+		String patientUpid = null;
+		if (patientWrapper.getPatient() != null) {
+			try {
+				patientUpid = new TransferPatientSnapshotResolver().resolveUpid(patientWrapper.getPatient());
+			}
+			catch (Exception ignored) {
+				patientUpid = null;
+			}
+		}
 		if (canListTransfers && patientWrapper.getPatient() != null) {
 			try {
 				recordedHieTransferId = registrationObsService.findRecordedHieTransferIdOnActiveVisit(
 						patientWrapper.getPatient());
-				if (recordedHieTransferId != null) {
-					recordedHieTransferUpid = new TransferPatientSnapshotResolver()
-							.resolveUpid(patientWrapper.getPatient());
-				}
 			}
 			catch (Exception ignored) {
 				recordedHieTransferId = null;
-				recordedHieTransferUpid = null;
 			}
 		}
 		boolean hasRecordedHieTransfer = recordedHieTransferId != null
-				&& recordedHieTransferUpid != null
-				&& recordedHieTransferUpid.trim().length() > 0;
+				&& patientUpid != null
+				&& patientUpid.trim().length() > 0;
 		boolean canProvideFeedback = canCreateTransfer && hasRecordedHieTransfer;
 		Integer patientId = patientWrapper.getPatient() != null ? patientWrapper.getPatient().getPatientId() : null;
+		String historyPageUrl = null;
+		if (patientUpid != null && patientUpid.trim().length() > 0) {
+			String encodedUpid;
+			try {
+				encodedUpid = java.net.URLEncoder.encode(patientUpid.trim(), "UTF-8");
+			}
+			catch (java.io.UnsupportedEncodingException ex) {
+				encodedUpid = patientUpid.trim();
+			}
+			historyPageUrl = ui.pageLink("transferapp", "history")
+					+ "?app=transferapp.dashboard&upid=" + encodedUpid;
+		}
 
 		model.addAttribute("patient", patientWrapper);
 		model.addAttribute("transfers", transfers);
@@ -166,7 +181,9 @@ public class TransfersSectionFragmentController {
 		model.addAttribute("recordsPageUrl", recordsPageUrl);
 		model.addAttribute("hasRecordedHieTransfer", hasRecordedHieTransfer);
 		model.addAttribute("recordedHieTransferId", recordedHieTransferId != null ? recordedHieTransferId : "");
-		model.addAttribute("recordedHieTransferUpid", recordedHieTransferUpid != null ? recordedHieTransferUpid : "");
+		model.addAttribute("recordedHieTransferUpid", patientUpid != null ? patientUpid : "");
+		model.addAttribute("patientUpid", patientUpid != null ? patientUpid : "");
+		model.addAttribute("historyPageUrl", historyPageUrl != null ? historyPageUrl : "");
 		model.addAttribute("canListTransfers", canListTransfers);
 		model.addAttribute("canCreateTransfer", canCreateTransfer);
 		model.addAttribute("canProvideFeedback", canProvideFeedback);

@@ -191,6 +191,10 @@ a.transfer-edit-link:hover {
   margin-top: 12px;
   padding-top: 8px;
   border-top: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 a.transfer-open-recorded-link {
@@ -212,7 +216,11 @@ a.transfer-open-recorded-link:hover {
 }
 
 a.transfer-open-recorded-link i {
-  font-size: 16px;
+  font-size: 14px;
+}
+
+a.transfer-history-link {
+  color: #0f766e;
 }
 
 .transfer-pagination {
