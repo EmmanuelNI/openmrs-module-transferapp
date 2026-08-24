@@ -179,6 +179,7 @@
         var currentPreviewTransferUuid = null;
         var currentPreviewTransferSent = false;
         var currentPreviewFormType = "External";
+        var currentPreviewIsHieUpdate = false;
 
         function syncTransferPreviewSubmitButton() {
             var submitBtn = jq("#transfer-preview-submit");
@@ -192,6 +193,8 @@
             submitBtn.show();
             if (currentPreviewTransferSent) {
                 submitBtn.prop("disabled", true).text("Sent to HIE");
+            } else if (currentPreviewIsHieUpdate) {
+                submitBtn.prop("disabled", false).text("Update on HIE");
             } else {
                 submitBtn.prop("disabled", false).text("Submit");
             }
@@ -259,6 +262,8 @@
             jq("#transfer-preview-body").html(previewHtml);
             currentPreviewTransferSent = currentPreviewFormType === "External"
                 && !!(transfer && (transfer.hieSent === true || transfer.hieSent === "true"));
+            currentPreviewIsHieUpdate = currentPreviewFormType === "External"
+                && !currentPreviewTransferSent && !!(transfer && String(transfer.hieTransferId || "").trim());
             syncTransferPreviewSubmitButton();
         }
 
@@ -310,6 +315,7 @@
             currentPreviewTransferUuid = transferUuid;
             currentPreviewTransferSent = false;
             currentPreviewFormType = (formType === "Maternity" || formType === "Neonatal") ? formType : "External";
+            currentPreviewIsHieUpdate = false;
             syncTransferPreviewSubmitButton();
             showTransferPreviewDialog();
 
@@ -368,11 +374,15 @@
                 dataType: "json"
             }).done(function(response) {
                 if (response && response.status === "success") {
+                    var wasUpdate = currentPreviewIsHieUpdate;
                     currentPreviewTransferSent = true;
+                    currentPreviewIsHieUpdate = false;
                     syncTransferPreviewSubmitButton();
                     markTransferRowHieStatus(currentPreviewTransferUuid, true);
                     if (typeof emr !== "undefined" && typeof emr.successMessage === "function") {
-                        emr.successMessage("Transfer sent to HIE successfully.");
+                        emr.successMessage(wasUpdate
+                            ? "Transfer updated on HIE successfully. Insurance approval was preserved when present."
+                            : "Transfer sent to HIE successfully.");
                     }
                     window.location.reload();
                     return;

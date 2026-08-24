@@ -45,13 +45,30 @@ public class TransferFacilityRegistryServiceImpl implements TransferFacilityRegi
 	 * Only hospital-level facilities are selectable as transfer destinations.
 	 * Matching is case-insensitive against {@code urn:frpr:org-category}.
 	 */
-	private static final Set<String> ALLOWED_CATEGORIES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+	private static final Set<String> RECEIVING_CATEGORIES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
 			"district hospital",
 			"referral hospital",
 			"provincial hospital",
 			"specialised hospital",
+			"specialized hospital",
 			"private hospital",
 			"medical clinic")));
+
+	/**
+	 * Counter-referral destinations: health centres/posts plus hospital levels.
+	 */
+	private static final Set<String> COUNTER_REFERRAL_CATEGORIES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+			"health center",
+			"health centre",
+			"medical clinic",
+			"health post",
+			"referral hospital",
+			"health post 2nd generation",
+			"health post 2nd-generation",
+			"specialised hospital",
+			"specialized hospital",
+			"provincial hospital",
+			"district hospital")));
 
 	private HieConnectionResolver hieConnectionResolver = new HieConnectionResolver();
 
@@ -61,6 +78,15 @@ public class TransferFacilityRegistryServiceImpl implements TransferFacilityRegi
 
 	@Override
 	public List<RegistryFacility> listReceivingFacilitiesFromHie() {
+		return listFacilitiesFromHie(RECEIVING_CATEGORIES);
+	}
+
+	@Override
+	public List<RegistryFacility> listCounterReferralFacilitiesFromHie() {
+		return listFacilitiesFromHie(COUNTER_REFERRAL_CATEGORIES);
+	}
+
+	private List<RegistryFacility> listFacilitiesFromHie(Set<String> allowedCategories) {
 		String authToken = resolveAuthToken();
 		if (StringUtils.isBlank(authToken)) {
 			throw new APIException("Facility registry token is not configured (transferapp.fr_token)");
@@ -88,7 +114,7 @@ public class TransferFacilityRegistryServiceImpl implements TransferFacilityRegi
 		List<RegistryFacility> facilities = facilityBundleParser.parse(json);
 		List<RegistryFacility> filtered = new ArrayList<RegistryFacility>();
 		for (RegistryFacility facility : facilities) {
-			if (facility != null && isAllowedCategory(facility.getCategory())) {
+			if (facility != null && isAllowedCategory(facility.getCategory(), allowedCategories)) {
 				filtered.add(facility);
 			}
 		}
@@ -109,11 +135,15 @@ public class TransferFacilityRegistryServiceImpl implements TransferFacilityRegi
 		return StringUtils.trimToNull(adminService.getGlobalProperty(TransferAppConstants.GP_FR_TOKEN));
 	}
 
-	private static boolean isAllowedCategory(String category) {
-		if (StringUtils.isBlank(category)) {
+	private static boolean isAllowedCategory(String category, Set<String> allowedCategories) {
+		if (StringUtils.isBlank(category) || allowedCategories == null || allowedCategories.isEmpty()) {
 			return false;
 		}
-		return ALLOWED_CATEGORIES.contains(category.trim().toLowerCase());
+		return allowedCategories.contains(normalizeCategory(category));
+	}
+
+	private static String normalizeCategory(String category) {
+		return category.trim().toLowerCase().replaceAll("[-_]+", " ").replaceAll("\\s+", " ");
 	}
 
 	private static void validateBundleResponse(String body) {

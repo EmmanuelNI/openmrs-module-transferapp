@@ -34,6 +34,8 @@ public class HieReceivedTransferMapper {
 		transfer.setReceivedFromHie(true);
 		transfer.setHieSent(false);
 		transfer.setHieTransferId(truncate(stringValue(hieData.get("id")), 64));
+		transfer.setFormKind(org.openmrs.module.transferapp.model.TransferFormKind.fromCodeOrLabel(
+				firstNonBlank(stringValue(hieData.get("formKindCode")), stringValue(hieData.get("formKind")))));
 
 		transfer.setSendingFacility(firstNonBlank(
 				stringValue(hieData.get("origin")),

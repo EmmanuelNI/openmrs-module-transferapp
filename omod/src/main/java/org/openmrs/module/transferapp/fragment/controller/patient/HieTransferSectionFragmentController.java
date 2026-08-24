@@ -84,6 +84,7 @@ public class HieTransferSectionFragmentController {
 		model.addAttribute("hasRegistrationEncounter", false);
 		model.addAttribute("hasTransferIdObs", false);
 		model.addAttribute("listFromHie", false);
+		model.addAttribute("canProvideFeedback", false);
 		model.addAttribute("transferId", "");
 		model.addAttribute("upid", "");
 		model.addAttribute("patientId", null);
@@ -170,6 +171,7 @@ public class HieTransferSectionFragmentController {
 			model.addAttribute("hasTransferIdObs", true);
 			model.addAttribute("transferId", transferId.trim());
 			model.addAttribute("listFromHie", false);
+			model.addAttribute("canProvideFeedback", canCreateTransfer);
 			return;
 		}
 

@@ -13,6 +13,7 @@
  */
 package org.openmrs.module.transferapp.hie;
 
+import org.apache.commons.lang.StringUtils;
 import org.openmrs.module.transferapp.TransferAppConstants;
 
 import java.io.BufferedReader;
@@ -21,6 +22,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.Base64;
 
 public class HieShrClient {
@@ -35,6 +37,32 @@ public class HieShrClient {
 
 	public void postTransferEncounter(HieBasicConnection connection, String encounterJson) {
 		executeRequest(connection, "POST", TransferAppConstants.HIE_TRANSFER_ENCOUNTER_PATH, encounterJson, null);
+	}
+
+	/**
+	 * Same endpoint as create — HIE upserts by Encounter.id (mirrors eTransfer updateTransferEncounter).
+	 */
+	public void updateTransferEncounter(HieBasicConnection connection, String encounterJson) {
+		postTransferEncounter(connection, encounterJson);
+	}
+
+	/**
+	 * {@code GET /shr/Encounter/{id}}. Returns null when the encounter is not found (HTTP 404).
+	 */
+	public String fetchEncounterById(HieBasicConnection connection, String encounterId) {
+		if (connection == null || StringUtils.isBlank(encounterId)) {
+			return null;
+		}
+		String path = TransferAppConstants.HIE_ENCOUNTER_BY_ID_PATH + encodePathSegment(encounterId.trim());
+		try {
+			return executeRequest(connection, "GET", path, null, null);
+		}
+		catch (HieApiException ex) {
+			if (isNotFound(ex)) {
+				return null;
+			}
+			throw ex;
+		}
 	}
 
 	private String executeRequest(HieBasicConnection connection, String method, String pathWithQuery, String requestBody,
@@ -91,6 +119,23 @@ public class HieShrClient {
 			if (httpConnection != null) {
 				httpConnection.disconnect();
 			}
+		}
+	}
+
+	private static boolean isNotFound(HieApiException ex) {
+		if (ex == null || ex.getMessage() == null) {
+			return false;
+		}
+		String message = ex.getMessage();
+		return message.contains("(404)") || message.contains(" 404 ");
+	}
+
+	private static String encodePathSegment(String value) {
+		try {
+			return URLEncoder.encode(value, "UTF-8").replace("+", "%20");
+		}
+		catch (Exception ex) {
+			return value;
 		}
 	}
 

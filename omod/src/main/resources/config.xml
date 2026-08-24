@@ -195,6 +195,66 @@
 		<description>Facility display name used for HIE pending-transfer targetOrg and outbound sendingFacility matching. When blank, falls back to the session location parent name (or the location name)</description>
 	</globalProperty>
 
+	<globalProperty>
+		<property>transferapp.sms.intouch.enabled</property>
+		<defaultValue>false</defaultValue>
+		<description>When true, send patient SMS via InTouch after HIE successfully accepts an outbound transfer (same gateway as eTransfer)</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.sms.intouch.base_url</property>
+		<defaultValue>https://www.intouchsms.co.rw:1402</defaultValue>
+		<description>InTouch SMS gateway base URL</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.sms.intouch.send_path</property>
+		<defaultValue>/send</defaultValue>
+		<description>InTouch SMS send path appended to the base URL</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.sms.intouch.username</property>
+		<defaultValue></defaultValue>
+		<description>InTouch SMS gateway username (same credentials as eTransfer)</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.sms.intouch.password</property>
+		<defaultValue></defaultValue>
+		<description>InTouch SMS gateway password</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.sms.intouch.sender_id</property>
+		<defaultValue>eBuzima</defaultValue>
+		<description>InTouch SMS sender id (from field)</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.sms.intouch.coding</property>
+		<defaultValue>0</defaultValue>
+		<description>InTouch SMS coding parameter</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.sms.intouch.dlr_level</property>
+		<defaultValue>2</defaultValue>
+		<description>InTouch SMS delivery-report level</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.sms.intouch.dlr_url</property>
+		<defaultValue></defaultValue>
+		<description>Optional delivery-report callback URL for InTouch SMS</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.sms.intouch.log_outbound_message</property>
+		<defaultValue>false</defaultValue>
+		<description>When true, log outbound SMS content locally before sending</description>
+	</globalProperty>
+
 	<privilege>
 		<name>App: transferapp.dashboard</name>
 		<description>Able to access the transfer dashboard</description>

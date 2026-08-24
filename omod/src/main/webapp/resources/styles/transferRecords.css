@@ -26,6 +26,35 @@
   align-items: end;
 }
 
+.transfer-history-filters-grid {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.2fr) minmax(180px, 1fr) auto;
+  gap: 14px 16px;
+  align-items: end;
+}
+
+.transfer-history-description {
+  margin: -8px 0 16px;
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.transfer-history-filter-hint {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #0f766e;
+}
+
+.transfer-history-transfer-id {
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.transfer-history-missing {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
 .transfer-records-filter-field label {
   display: block;
   margin-bottom: 6px;
@@ -38,7 +67,9 @@
 .transfer-records-destination-select,
 .transfer-pending-period-select,
 .transfer-pending-date-select,
-.transfer-pending-service-select {
+.transfer-pending-service-select,
+.transfer-history-filters-grid select,
+.transfer-history-filters-grid input[type="text"] {
   width: 100%;
   box-sizing: border-box;
   padding: 7px 10px;
@@ -242,27 +273,35 @@
 #transfer-pending-table_wrapper .dataTables_length,
 #transfer-pending-table_wrapper .dataTables_filter,
 #transfer-pending-table_wrapper .dataTables_info,
-#transfer-pending-table_wrapper .dataTables_paginate {
+#transfer-pending-table_wrapper .dataTables_paginate,
+#transfer-history-table_wrapper .dataTables_length,
+#transfer-history-table_wrapper .dataTables_filter,
+#transfer-history-table_wrapper .dataTables_info,
+#transfer-history-table_wrapper .dataTables_paginate {
   margin: 10px 0;
 }
 
 #transfer-records-table_wrapper .dataTables_length,
 #transfer-records-table_wrapper .dataTables_filter,
 #transfer-pending-table_wrapper .dataTables_length,
-#transfer-pending-table_wrapper .dataTables_filter {
+#transfer-pending-table_wrapper .dataTables_filter,
+#transfer-history-table_wrapper .dataTables_length,
+#transfer-history-table_wrapper .dataTables_filter {
   float: none;
   width: auto;
 }
 
 #transfer-records-table_wrapper .dataTables_info,
-#transfer-pending-table_wrapper .dataTables_info {
+#transfer-pending-table_wrapper .dataTables_info,
+#transfer-history-table_wrapper .dataTables_info {
   float: left;
   width: auto;
   padding-top: 2px;
 }
 
 #transfer-records-table_wrapper .dataTables_paginate,
-#transfer-pending-table_wrapper .dataTables_paginate {
+#transfer-pending-table_wrapper .dataTables_paginate,
+#transfer-history-table_wrapper .dataTables_paginate {
   float: right;
   width: auto !important;
   clear: none;
@@ -272,7 +311,9 @@
 #transfer-records-table_wrapper .paging_two_button,
 #transfer-records-table_wrapper .paging_full_numbers,
 #transfer-pending-table_wrapper .paging_two_button,
-#transfer-pending-table_wrapper .paging_full_numbers {
+#transfer-pending-table_wrapper .paging_full_numbers,
+#transfer-history-table_wrapper .paging_two_button,
+#transfer-history-table_wrapper .paging_full_numbers {
   width: auto !important;
 }
 
@@ -285,7 +326,13 @@
 #transfer-pending-table_wrapper .dataTables_paginate .paginate_active,
 #transfer-pending-table_wrapper .dataTables_paginate .paginate_enabled,
 #transfer-pending-table_wrapper .dataTables_paginate .paginate_disabled,
-#transfer-pending-table_wrapper .dataTables_paginate .fg-button {
+#transfer-pending-table_wrapper .dataTables_paginate .fg-button,
+#transfer-history-table_wrapper .dataTables_paginate .paginate_button,
+#transfer-history-table_wrapper .dataTables_paginate .paginate_active,
+#transfer-history-table_wrapper .dataTables_paginate .paginate_enabled,
+#transfer-history-table_wrapper .dataTables_paginate .paginate_disabled,
+#transfer-history-table_wrapper .dataTables_paginate .fg-button,
+#transfer-history-table_wrapper .dataTables_paginate a {
   display: inline-block !important;
   float: none !important;
   position: static !important;
@@ -310,7 +357,9 @@
 #transfer-records-table_wrapper .dataTables_paginate .paginate_button.current,
 #transfer-records-table_wrapper .dataTables_paginate .paginate_active,
 #transfer-pending-table_wrapper .dataTables_paginate .paginate_button.current,
-#transfer-pending-table_wrapper .dataTables_paginate .paginate_active {
+#transfer-pending-table_wrapper .dataTables_paginate .paginate_active,
+#transfer-history-table_wrapper .dataTables_paginate .paginate_button.current,
+#transfer-history-table_wrapper .dataTables_paginate .paginate_active {
   background: #0f766e;
   color: #fff !important;
   border-color: #0a5c52;
@@ -322,26 +371,33 @@
 #transfer-records-table_wrapper .dataTables_paginate .paginate_button.paginate_button_disabled,
 #transfer-pending-table_wrapper .dataTables_paginate .paginate_button.disabled,
 #transfer-pending-table_wrapper .dataTables_paginate .paginate_disabled,
-#transfer-pending-table_wrapper .dataTables_paginate .paginate_button.paginate_button_disabled {
+#transfer-pending-table_wrapper .dataTables_paginate .paginate_button.paginate_button_disabled,
+#transfer-history-table_wrapper .dataTables_paginate .paginate_button.disabled,
+#transfer-history-table_wrapper .dataTables_paginate .paginate_disabled,
+#transfer-history-table_wrapper .dataTables_paginate .paginate_button.paginate_button_disabled,
+#transfer-history-table_wrapper .dataTables_paginate .ui-state-disabled {
   opacity: 0.5;
   cursor: not-allowed;
   pointer-events: none;
 }
 
 #transfer-records-table_wrapper .fg-buttonset,
-#transfer-pending-table_wrapper .fg-buttonset {
+#transfer-pending-table_wrapper .fg-buttonset,
+#transfer-history-table_wrapper .fg-buttonset {
   display: inline-block;
   white-space: nowrap;
 }
 
 #transfer-records-table_wrapper::after,
-#transfer-pending-table_wrapper::after {
+#transfer-pending-table_wrapper::after,
+#transfer-history-table_wrapper::after {
   content: "";
   display: table;
   clear: both;
 }
 
-#transfer-preview-dialog.transfer-preview-dialog.dialog {
+#transfer-preview-dialog.transfer-preview-dialog.dialog,
+#transfer-history-preview-dialog.transfer-preview-dialog.dialog {
   position: fixed;
   top: 50%;
   left: 50%;
@@ -354,53 +410,66 @@
   max-width: 95%;
   max-height: 92vh;
   width: 1400px;
-  display: flex;
+  display: none;
   flex-direction: column;
   margin: 0;
 }
 
-#transfer-preview-overlay {
-  z-index: 20000 !important;
-}
-
-#transfer-preview-dialog .dialog-header {
+#transfer-preview-dialog .dialog-header,
+#transfer-history-preview-dialog .dialog-header {
   padding: 15px 20px;
   border-bottom: 1px solid #00473f;
   background: #00473f;
   border-radius: 4px 4px 0 0;
-  flex-shrink: 0;
   color: #fff;
+  flex: 0 0 auto;
 }
 
-#transfer-preview-dialog .dialog-header h3 {
+#transfer-preview-dialog .dialog-header h3,
+#transfer-history-preview-dialog .dialog-header h3 {
   margin: 0;
   font-size: 18px;
   font-weight: bold;
   color: #fff;
 }
 
-#transfer-preview-dialog .dialog-content {
+#transfer-preview-dialog .dialog-content,
+#transfer-history-preview-dialog .dialog-content {
   padding: 20px;
   overflow-y: auto;
-  overflow-x: hidden;
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
 }
 
-#transfer-preview-dialog .transfer-preview-actions {
+#transfer-preview-dialog .transfer-preview-actions,
+#transfer-history-preview-dialog .transfer-preview-actions {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 4px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+#transfer-preview-dialog #transfer-preview-submit {
+  margin-right: 0;
+}
+
+#transfer-preview-dialog #transfer-preview-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+body.transfer-history-preview-open {
+  overflow: hidden;
+}
+
+#transfer-preview-overlay,
+#transfer-history-preview-overlay {
+  z-index: 20000 !important;
 }
 
 #transfer-preview-dialog #transfer-preview-submit {
   background: #0f766e;
   color: #fff;
   border: 1px solid #0a5c52;
-}
-
-#transfer-preview-dialog #transfer-preview-submit:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
