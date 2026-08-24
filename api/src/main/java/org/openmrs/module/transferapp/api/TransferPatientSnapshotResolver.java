@@ -85,8 +85,8 @@ public class TransferPatientSnapshotResolver {
 			transfer.setIdentifierValue(nationalId.getIdentifier());
 		}
 
-		transfer.setCaregiverName(resolvePersonAttribute(patient, "Caregiver Name", "CaregiverName", "Name of caregiver"));
-		transfer.setCaregiverTelephone(resolvePersonAttribute(patient, "Caregiver Telephone", "Caregiver Phone", "CaregiverPhone"));
+		transfer.setCaregiverName(resolveCaregiverName(patient));
+		transfer.setCaregiverTelephone(resolveCaregiverTelephone(patient));
 
 		transfer.setAdmissionAt(resolveAdmissionDatetime(patient));
 		transfer.setDiagnosis(resolveDiagnosis(patient));
@@ -185,6 +185,41 @@ public class TransferPatientSnapshotResolver {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Name of the person helping the patient (not the referring clinician).
+	 * Prefers explicit caregiver attributes, then mother/father/next-of-kin.
+	 */
+	public String resolveCaregiverName(Patient patient) {
+		return resolvePersonAttribute(patient,
+				"Caregiver Name",
+				"CaregiverName",
+				"Name of caregiver",
+				"Mother's Name",
+				"Mothers Name",
+				"Mother Name",
+				"Father's Name",
+				"Fathers Name",
+				"Father Name",
+				"Next of Kin",
+				"Next of Kin Name",
+				"Contact Name",
+				"Contact Person");
+	}
+
+	/**
+	 * Telephone for the caregiver / helper (not the referring clinician's phone).
+	 */
+	public String resolveCaregiverTelephone(Patient patient) {
+		return resolvePersonAttribute(patient,
+				"Caregiver Telephone",
+				"Caregiver Phone",
+				"CaregiverPhone",
+				"Contact Telephone",
+				"Contact Phone",
+				"Next of Kin Phone",
+				"Next of Kin Telephone");
 	}
 
 	public PatientIdentifier resolveNationalIdentifier(Patient patient) {

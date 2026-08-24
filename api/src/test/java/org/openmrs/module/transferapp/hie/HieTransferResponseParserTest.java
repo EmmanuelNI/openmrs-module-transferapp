@@ -38,6 +38,28 @@ public class HieTransferResponseParserTest {
 		assertEquals(Integer.valueOf(1), page.getTotal());
 	}
 
+	@Test
+	public void mapsResponseTwoPreviewFallbacks() throws Exception {
+		java.io.File jsonFile = new java.io.File("../devs/response_two.json");
+		if (!jsonFile.exists()) {
+			jsonFile = new java.io.File("devs/response_two.json");
+		}
+		assertTrue("response_two.json should exist for preview fallback mapping", jsonFile.exists());
+
+		String json = new String(java.nio.file.Files.readAllBytes(jsonFile.toPath()), "UTF-8");
+		java.util.Map<String, Object> transfer = new HieTransferResponseParser().parse(json).get(0);
+
+		assertEquals("20 (2006-01-22)", transfer.get("ageDob"));
+		assertEquals("N/A", transfer.get("clientTelephone"));
+		assertEquals("opd", transfer.get("receivingService"));
+		assertEquals("NA", transfer.get("others"));
+		assertEquals("27", transfer.get("muac"));
+		assertEquals("No drug prescriptions", transfer.get("proceduresAndTreatments"));
+		assertEquals("", transfer.get("caregiverName"));
+		assertEquals("", transfer.get("providerPhone"));
+		assertTrue(String.valueOf(transfer.get("referringProviderName")).contains("HLC-PRAC-2024-00074"));
+	}
+
 	static String pageJson(int page, boolean hasMore, int total, String... encounterIds) {
 		StringBuilder entries = new StringBuilder();
 		for (String encounterId : encounterIds) {

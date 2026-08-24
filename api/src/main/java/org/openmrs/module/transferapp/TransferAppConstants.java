@@ -136,6 +136,33 @@ public final class TransferAppConstants {
 	/** Display name of this facility used for HIE targetOrg / outbound sendingFacility matching. */
 	public static final String GP_SENDING_FACILITY_NAME = "transferapp.sendingFacilityName";
 
+	/** When true and credentials are set, send patient SMS after HIE accepts the transfer. */
+	public static final String GP_SMS_INTOUCH_ENABLED = "transferapp.sms.intouch.enabled";
+
+	public static final String GP_SMS_INTOUCH_BASE_URL = "transferapp.sms.intouch.base_url";
+
+	public static final String DEFAULT_SMS_INTOUCH_BASE_URL = "https://www.intouchsms.co.rw:1402";
+
+	public static final String GP_SMS_INTOUCH_SEND_PATH = "transferapp.sms.intouch.send_path";
+
+	public static final String DEFAULT_SMS_INTOUCH_SEND_PATH = "/send";
+
+	public static final String GP_SMS_INTOUCH_USERNAME = "transferapp.sms.intouch.username";
+
+	public static final String GP_SMS_INTOUCH_PASSWORD = "transferapp.sms.intouch.password";
+
+	public static final String GP_SMS_INTOUCH_SENDER_ID = "transferapp.sms.intouch.sender_id";
+
+	public static final String DEFAULT_SMS_INTOUCH_SENDER_ID = "eBuzima";
+
+	public static final String GP_SMS_INTOUCH_CODING = "transferapp.sms.intouch.coding";
+
+	public static final String GP_SMS_INTOUCH_DLR_LEVEL = "transferapp.sms.intouch.dlr_level";
+
+	public static final String GP_SMS_INTOUCH_DLR_URL = "transferapp.sms.intouch.dlr_url";
+
+	public static final String GP_SMS_INTOUCH_LOG_OUTBOUND = "transferapp.sms.intouch.log_outbound_message";
+
 	public static final String UPID_IDENTIFIER_TYPE_NAME = "UPID";
 
 	public static final String PENDING_TRANSFER_EXISTING_PATIENT_KEY = "existingPatient";
@@ -149,6 +176,10 @@ public final class TransferAppConstants {
 	public static final String HIE_TRANSFER_ENCOUNTER_PATH = "/shr/Encounter/transfer";
 
 	public static final String HIE_LIST_TRANSFERS_PATH = "/shr/Encounter/$list-transfers";
+
+	public static final String HIE_ENCOUNTER_BY_ID_PATH = "/shr/Encounter/";
+
+	public static final String HIE_CLIENT_REGISTRY_PATIENT_PATH = "/clientregistry/Patient";
 
 	public static final String HIE_FACILITY_REGISTRY_PATH = "/facility-registry/fhir";
 

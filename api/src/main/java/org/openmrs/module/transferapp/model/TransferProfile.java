@@ -134,4 +134,23 @@ public class TransferProfile extends BaseOpenmrsData {
 				&& StringUtils.isNotBlank(speciality);
 	}
 
+	/**
+	 * Preview / HIE display: {@code Name(LICENSE)} when a license number is available.
+	 */
+	public static String formatCareProviderName(String name, String licenseNumber) {
+		String displayName = StringUtils.trimToEmpty(name);
+		String license = StringUtils.trimToEmpty(licenseNumber);
+		if (StringUtils.isBlank(displayName)) {
+			return StringUtils.isNotBlank(license) ? "(" + license + ")" : "";
+		}
+		if (StringUtils.isBlank(license)) {
+			return displayName;
+		}
+		String suffix = "(" + license + ")";
+		if (displayName.endsWith(suffix) || displayName.contains("(" + license + ")")) {
+			return displayName;
+		}
+		return displayName + suffix;
+	}
+
 }

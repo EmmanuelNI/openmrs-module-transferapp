@@ -122,6 +122,95 @@ public class TransferRegistrationObsServiceImpl implements TransferRegistrationO
 	}
 
 	@Override
+	public String findRecordedHieTransferIdOnActiveVisit(Patient patient) {
+		if (patient == null) {
+			return null;
+		}
+		Visit activeVisit = resolveActiveVisit(patient);
+		if (activeVisit == null) {
+			return null;
+		}
+		Integer registrationTypeId = resolveRegistrationEncounterTypeId();
+		if (registrationTypeId == null) {
+			return null;
+		}
+		Concept transferIdConcept = resolveTransferIdConcept();
+		if (transferIdConcept == null) {
+			return null;
+		}
+		List<Encounter> registrationEncounters = findRegistrationEncountersOnVisit(
+				Context.getEncounterService().getEncountersByPatient(patient),
+				registrationTypeId,
+				activeVisit);
+		if (registrationEncounters.isEmpty()) {
+			return null;
+		}
+		TransferVerificationUrlService verificationUrlService = Context.getService(TransferVerificationUrlService.class);
+		if (verificationUrlService == null) {
+			return null;
+		}
+		for (Encounter registration : registrationEncounters) {
+			String transferId = findTransferIdValueText(registration, transferIdConcept);
+			if (StringUtils.isBlank(transferId)) {
+				continue;
+			}
+			if (verificationUrlService.isValidVerificationTransferId(transferId)) {
+				return transferId.trim();
+			}
+		}
+		return null;
+	}
+
+	@Override
+	public Date findTransferIdObsDatetimeOnActiveVisit(Patient patient, String hieTransferId) {
+		Obs obs = findMatchingTransferIdObs(patient, hieTransferId);
+		return obs != null ? obs.getObsDatetime() : null;
+	}
+
+	@Override
+	public Obs findMatchingTransferIdObs(Patient patient, String hieTransferId) {
+		if (patient == null || StringUtils.isBlank(hieTransferId)) {
+			return null;
+		}
+		Concept transferIdConcept = resolveTransferIdConcept();
+		if (transferIdConcept == null) {
+			return null;
+		}
+		String normalizedTransferId = normalizeTransferUuid(hieTransferId);
+		Visit activeVisit = resolveActiveVisit(patient);
+		Integer registrationTypeId = resolveRegistrationEncounterTypeId();
+		if (activeVisit != null && registrationTypeId != null) {
+			List<Encounter> registrationEncounters = findRegistrationEncountersOnVisit(
+					Context.getEncounterService().getEncountersByPatient(patient),
+					registrationTypeId,
+					activeVisit);
+			for (Encounter registration : registrationEncounters) {
+				Obs transferIdObs = findTransferIdObs(registration, transferIdConcept, normalizedTransferId, null);
+				if (transferIdObs != null) {
+					return transferIdObs;
+				}
+			}
+		}
+		List<Obs> matches = obsService.getObservationsByPersonAndConcept(patient, transferIdConcept);
+		if (matches == null) {
+			return null;
+		}
+		for (Obs obs : matches) {
+			if (obs == null || Boolean.TRUE.equals(obs.getVoided())) {
+				continue;
+			}
+			String valueText = StringUtils.trimToNull(obs.getValueText());
+			if (valueText == null) {
+				valueText = StringUtils.trimToNull(obs.getValueAsString(Context.getLocale()));
+			}
+			if (valueText != null && normalizedTransferId.equals(normalizeTransferUuid(valueText))) {
+				return obs;
+			}
+		}
+		return null;
+	}
+
+	@Override
 	@SuppressWarnings("unchecked")
 	public Map<String, Object> validateAndSaveTransferId(Integer patientId, String hieTransferId) {
 		Map<String, Object> result = new LinkedHashMap<String, Object>();
@@ -331,6 +420,19 @@ public class TransferRegistrationObsServiceImpl implements TransferRegistrationO
 	}
 
 	private String findTransferIdValueText(Encounter registration, Concept transferIdConcept) {
+		Obs obs = findTransferIdObs(registration, transferIdConcept, null, null);
+		if (obs == null) {
+			return null;
+		}
+		String valueText = StringUtils.trimToNull(obs.getValueText());
+		if (valueText != null) {
+			return valueText;
+		}
+		return StringUtils.trimToNull(obs.getValueAsString(Context.getLocale()));
+	}
+
+	private Obs findTransferIdObs(Encounter registration, Concept transferIdConcept, String requiredTransferId,
+			TransferVerificationUrlService verificationUrlService) {
 		Set<Obs> obsSet = registration.getAllObs(false);
 		if (obsSet == null || obsSet.isEmpty()) {
 			return null;
@@ -343,15 +445,31 @@ public class TransferRegistrationObsServiceImpl implements TransferRegistrationO
 				continue;
 			}
 			String valueText = StringUtils.trimToNull(obs.getValueText());
-			if (valueText != null) {
-				return valueText;
+			if (valueText == null) {
+				valueText = StringUtils.trimToNull(obs.getValueAsString(Context.getLocale()));
 			}
-			String asString = StringUtils.trimToNull(obs.getValueAsString(Context.getLocale()));
-			if (asString != null) {
-				return asString;
+			if (valueText == null) {
+				continue;
 			}
+			if (requiredTransferId != null) {
+				if (!normalizeTransferUuid(requiredTransferId).equals(normalizeTransferUuid(valueText))) {
+					continue;
+				}
+			}
+			return obs;
 		}
 		return null;
+	}
+
+	private static String normalizeTransferUuid(String value) {
+		if (value == null) {
+			return "";
+		}
+		String normalized = value.trim();
+		if (normalized.startsWith("{") && normalized.endsWith("}") && normalized.length() > 2) {
+			normalized = normalized.substring(1, normalized.length() - 1).trim();
+		}
+		return normalized.toLowerCase();
 	}
 
 	private static String asString(Object value) {

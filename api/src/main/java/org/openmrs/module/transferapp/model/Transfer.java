@@ -13,11 +13,15 @@
  */
 package org.openmrs.module.transferapp.model;
 
+import org.apache.commons.lang.StringUtils;
 import org.openmrs.BaseOpenmrsData;
 import org.openmrs.Patient;
+import org.openmrs.module.transferapp.sms.PatientSmsNotificationStatus;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -170,6 +174,14 @@ public class Transfer extends BaseOpenmrsData {
 	@Column(name = "health_insurance_other", length = 255)
 	private String healthInsuranceOther;
 
+	/**
+	 * Which transfer form this record uses (external / maternity / neonatal).
+	 * Defaults to GENERAL (external transfer form).
+	 */
+	@Enumerated(EnumType.STRING)
+	@Column(name = "form_kind", length = 20)
+	private TransferFormKind formKind = TransferFormKind.GENERAL;
+
 	@Column(name = "hie_sent")
 	private Boolean hieSent;
 
@@ -181,6 +193,22 @@ public class Transfer extends BaseOpenmrsData {
 
 	@Column(name = "hie_transfer_id", length = 64)
 	private String hieTransferId;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "patient_sms_status", length = 20)
+	private PatientSmsNotificationStatus patientSmsStatus;
+
+	@Column(name = "patient_sms_message_id", length = 64)
+	private String patientSmsMessageId;
+
+	@Column(name = "patient_sms_sent_at")
+	private Date patientSmsSentAt;
+
+	@Column(name = "patient_sms_last_attempt_at")
+	private Date patientSmsLastAttemptAt;
+
+	@Column(name = "patient_sms_last_error", length = 500)
+	private String patientSmsLastError;
 
 	@Column(name = "received_from_hie", nullable = true)
 	private Boolean receivedFromHie;
@@ -574,6 +602,14 @@ public class Transfer extends BaseOpenmrsData {
 		this.healthInsuranceOther = healthInsuranceOther;
 	}
 
+	public TransferFormKind getFormKind() {
+		return formKind != null ? formKind : TransferFormKind.GENERAL;
+	}
+
+	public void setFormKind(TransferFormKind formKind) {
+		this.formKind = formKind != null ? formKind : TransferFormKind.GENERAL;
+	}
+
 	public Boolean getHieSent() {
 		return hieSent;
 	}
@@ -692,6 +728,84 @@ public class Transfer extends BaseOpenmrsData {
 
 	public void setSignedTime(String signedTime) {
 		this.signedTime = signedTime;
+	}
+
+	public PatientSmsNotificationStatus getPatientSmsStatus() {
+		return patientSmsStatus;
+	}
+
+	public void setPatientSmsStatus(PatientSmsNotificationStatus patientSmsStatus) {
+		this.patientSmsStatus = patientSmsStatus;
+	}
+
+	public String getPatientSmsMessageId() {
+		return patientSmsMessageId;
+	}
+
+	public void setPatientSmsMessageId(String patientSmsMessageId) {
+		this.patientSmsMessageId = patientSmsMessageId;
+	}
+
+	public Date getPatientSmsSentAt() {
+		return patientSmsSentAt;
+	}
+
+	public void setPatientSmsSentAt(Date patientSmsSentAt) {
+		this.patientSmsSentAt = patientSmsSentAt;
+	}
+
+	public Date getPatientSmsLastAttemptAt() {
+		return patientSmsLastAttemptAt;
+	}
+
+	public void setPatientSmsLastAttemptAt(Date patientSmsLastAttemptAt) {
+		this.patientSmsLastAttemptAt = patientSmsLastAttemptAt;
+	}
+
+	public String getPatientSmsLastError() {
+		return patientSmsLastError;
+	}
+
+	public void setPatientSmsLastError(String patientSmsLastError) {
+		this.patientSmsLastError = patientSmsLastError;
+	}
+
+	public boolean isPatientSmsSent() {
+		return patientSmsStatus == PatientSmsNotificationStatus.SENT
+				&& StringUtils.isNotBlank(patientSmsMessageId);
+	}
+
+	public void markPatientSmsSent(String messageId, Date sentAt) {
+		this.patientSmsStatus = PatientSmsNotificationStatus.SENT;
+		this.patientSmsMessageId = messageId != null ? messageId.trim() : null;
+		this.patientSmsSentAt = sentAt;
+		this.patientSmsLastAttemptAt = sentAt;
+		this.patientSmsLastError = null;
+	}
+
+	public void markPatientSmsFailed(String errorMessage) {
+		this.patientSmsStatus = PatientSmsNotificationStatus.FAILED;
+		this.patientSmsMessageId = null;
+		this.patientSmsSentAt = null;
+		this.patientSmsLastError = truncateSmsError(errorMessage);
+	}
+
+	public void markPatientSmsSkipped(String reason) {
+		this.patientSmsStatus = PatientSmsNotificationStatus.SKIPPED;
+		this.patientSmsMessageId = null;
+		this.patientSmsSentAt = null;
+		this.patientSmsLastError = truncateSmsError(reason);
+	}
+
+	private static String truncateSmsError(String errorMessage) {
+		if (errorMessage == null) {
+			return null;
+		}
+		String trimmed = errorMessage.trim();
+		if (trimmed.length() <= 500) {
+			return trimmed;
+		}
+		return trimmed.substring(0, 497) + "...";
 	}
 
 }

@@ -166,6 +166,7 @@
         var transferPreviewScriptsLoading = null;
         var currentPreviewTransferUuid = null;
         var currentPreviewTransferSent = false;
+        var currentPreviewIsHieUpdate = false;
 
         function syncTransferPreviewSubmitButton() {
             var submitBtn = jq("#transfer-preview-submit");
@@ -174,6 +175,8 @@
             }
             if (currentPreviewTransferSent) {
                 submitBtn.prop("disabled", true).text("Sent to HIE");
+            } else if (currentPreviewIsHieUpdate) {
+                submitBtn.prop("disabled", false).text("Update on HIE");
             } else {
                 submitBtn.prop("disabled", false).text("Submit");
             }
@@ -231,6 +234,7 @@
                 : "<p style='color:red;'>Preview renderer not loaded.</p>";
             jq("#transfer-preview-body").html(previewHtml);
             currentPreviewTransferSent = !!(transfer && (transfer.hieSent === true || transfer.hieSent === "true"));
+            currentPreviewIsHieUpdate = !currentPreviewTransferSent && !!(transfer && String(transfer.hieTransferId || "").trim());
             syncTransferPreviewSubmitButton();
         }
 
@@ -281,6 +285,7 @@
             jq("#transfer-preview-body").html("<div style='padding:10px;'><i class='icon-spinner icon-spin'></i> Loading...</div>");
             currentPreviewTransferUuid = transferUuid;
             currentPreviewTransferSent = false;
+            currentPreviewIsHieUpdate = false;
             syncTransferPreviewSubmitButton();
             showTransferPreviewDialog();
 
@@ -337,11 +342,15 @@
                 dataType: "json"
             }).done(function(response) {
                 if (response && response.status === "success") {
+                    var wasUpdate = currentPreviewIsHieUpdate;
                     currentPreviewTransferSent = true;
+                    currentPreviewIsHieUpdate = false;
                     syncTransferPreviewSubmitButton();
                     markTransferRowHieStatus(currentPreviewTransferUuid, true);
                     if (typeof emr !== "undefined" && typeof emr.successMessage === "function") {
-                        emr.successMessage("Transfer sent to HIE successfully.");
+                        emr.successMessage(wasUpdate
+                            ? "Transfer updated on HIE successfully. Insurance approval was preserved when present."
+                            : "Transfer sent to HIE successfully.");
                     }
                     window.location.reload();
                     return;
