@@ -17,13 +17,17 @@ import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.transferapp.TransferAppActivator;
+import org.openmrs.module.transferapp.TransferAppConstants;
 import org.openmrs.module.transferapp.TransferPrivilegeHelper;
 import org.openmrs.module.transferapp.api.TransferAdminService;
+import org.openmrs.module.transferapp.api.TransferAmbulanceVoucherService;
 import org.openmrs.module.transferapp.api.TransferHieSubmissionService;
 import org.openmrs.module.transferapp.api.TransferProfileService;
 import org.openmrs.module.transferapp.api.TransferQrCodeService;
 import org.openmrs.module.transferapp.api.TransferService;
 import org.openmrs.module.transferapp.api.TransferVerificationUrlService;
+import org.openmrs.module.transferapp.api.impl.PatientInsuranceServiceImpl;
+import org.openmrs.module.transferapp.model.AmbulanceVoucherPreview;
 import org.openmrs.module.transferapp.model.Transfer;
 import org.openmrs.module.transferapp.model.TransferFormExtras;
 import org.openmrs.module.transferapp.model.TransferProfile;
@@ -50,6 +54,9 @@ public class TransferSaveController {
 	@Autowired
 	private TransferAdminService transferAdminService;
 
+	@Autowired
+	private TransferAmbulanceVoucherService transferAmbulanceVoucherService;
+
 	private TransferHieSubmissionService getTransferHieSubmissionService() {
 		return Context.getService(TransferHieSubmissionService.class);
 	}
@@ -70,6 +77,14 @@ public class TransferSaveController {
 
 		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)) {
 			writePrivilegeDenied(response, data, TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);
+			return;
+		}
+
+		if (!transferAdminService.isOutboundFacilityNameConfigured()) {
+			data.put("status", "error");
+			data.put("message", Context.getMessageSourceService().getMessage(
+					"transferapp.patient.transfers.outboundFacilityRequired"));
+			writeJson(response, data);
 			return;
 		}
 
@@ -120,6 +135,14 @@ public class TransferSaveController {
 
 		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)) {
 			writePrivilegeDenied(response, data, TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);
+			return;
+		}
+
+		if (!transferAdminService.isOutboundFacilityNameConfigured()) {
+			data.put("status", "error");
+			data.put("message", Context.getMessageSourceService().getMessage(
+					"transferapp.patient.transfers.outboundFacilityRequired"));
+			writeJson(response, data);
 			return;
 		}
 
@@ -186,6 +209,29 @@ public class TransferSaveController {
 		writeJson(response, data);
 	}
 
+	@RequestMapping(value = "/module/transferapp/transfer/ambulanceVoucherPreview.form", method = RequestMethod.GET)
+	public void previewAmbulanceVoucher(HttpServletResponse response,
+			@RequestParam("uuid") String uuid) throws Exception {
+
+		Map<String, Object> data = new HashMap<String, Object>();
+
+		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_LIST_TRANSFERS)) {
+			writePrivilegeDenied(response, data, TransferAppActivator.PRIVILEGE_LIST_TRANSFERS);
+			return;
+		}
+
+		try {
+			AmbulanceVoucherPreview preview = transferAmbulanceVoucherService.getVoucherPreview(uuid);
+			data.put("status", "success");
+			data.put("voucher", toAmbulanceVoucherMap(preview));
+		}
+		catch (Exception e) {
+			putError(data, e, TransferAppActivator.PRIVILEGE_LIST_TRANSFERS, "Unable to load ambulance voucher");
+		}
+
+		writeJson(response, data);
+	}
+
 	@RequestMapping(value = "/module/transferapp/transfer/verifyQr.form", method = RequestMethod.GET)
 	public void verifyQr(HttpServletResponse response,
 			@RequestParam(value = "uuid", required = false) String uuid,
@@ -233,6 +279,39 @@ public class TransferSaveController {
 			response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
 					e.getMessage() != null ? e.getMessage() : "Unable to generate QR code");
 		}
+	}
+
+	private Map<String, Object> toAmbulanceVoucherMap(AmbulanceVoucherPreview preview) {
+		Map<String, Object> map = new HashMap<String, Object>();
+		if (preview == null) {
+			return map;
+		}
+		map.put("transferUuid", nullToEmpty(preview.getTransferUuid()));
+		map.put("organizationName", nullToEmpty(preview.getOrganizationName()));
+		map.put("fax", nullToEmpty(preview.getFax()));
+		map.put("title", nullToEmpty(preview.getTitle()));
+		map.put("province", nullToEmpty(preview.getProvince()));
+		map.put("district", nullToEmpty(preview.getDistrict()));
+		map.put("sectionHospital", nullToEmpty(preview.getSectionHospital()));
+		map.put("date", nullToEmpty(preview.getDate()));
+		map.put("departureTime", nullToEmpty(preview.getDepartureTime()));
+		map.put("patientCount", preview.getPatientCount() != null ? preview.getPatientCount() : 1);
+		map.put("voucherId", nullToEmpty(preview.getVoucherId()));
+		map.put("destination", nullToEmpty(preview.getDestination()));
+		map.put("distanceKm", preview.getDistanceKm());
+		map.put("patientName", nullToEmpty(preview.getPatientName()));
+		map.put("affiliationNumber", nullToEmpty(preview.getAffiliationNumber()));
+		map.put("driverName", nullToEmpty(preview.getDriverName()));
+		map.put("accompanyingNurse", nullToEmpty(preview.getAccompanyingNurse()));
+		map.put("arrivalDate", nullToEmpty(preview.getArrivalDate()));
+		map.put("arrivalTime", nullToEmpty(preview.getArrivalTime()));
+		map.put("cbhiAgentName", nullToEmpty(preview.getCbhiAgentName()));
+		map.put("receivingClinicianName", nullToEmpty(preview.getReceivingClinicianName()));
+		map.put("amount", preview.getAmount() != null ? preview.getAmount().toPlainString() : "");
+		map.put("consommationId", preview.getConsommationId());
+		map.put("noteReferral", nullToEmpty(preview.getNoteReferral()));
+		map.put("noteInvoice", nullToEmpty(preview.getNoteInvoice()));
+		return map;
 	}
 
 	private Map<String, Object> toPreviewMap(Transfer transfer) {
@@ -303,13 +382,16 @@ public class TransferSaveController {
 		preview.put("transportationOtherSpec", nullToEmpty(transfer.getTransportOther()));
 		preview.put("isNaTransport", "NA".equals(transportType));
 
-		String healthInsuranceType = nullToEmpty(transfer.getHealthInsuranceType());
-		preview.put("healthInsuranceType", healthInsuranceType);
-		preview.put("isCbhiInsurance", "CBHI".equals(healthInsuranceType));
-		preview.put("isRssbInsurance", "RSSB".equals(healthInsuranceType));
-		preview.put("isMmiInsurance", "MMI".equals(healthInsuranceType));
-		preview.put("healthInsuranceOtherSpec", nullToEmpty(transfer.getHealthInsuranceOther()));
-		preview.put("isNoInsurance", "NONE".equals(healthInsuranceType));
+		String healthInsuranceType = nullToEmpty(transfer.getHealthInsuranceType()).trim();
+		String healthInsuranceOther = nullToEmpty(transfer.getHealthInsuranceOther()).trim();
+		boolean isNoInsurance = isNoInsurancePreview(healthInsuranceType, healthInsuranceOther);
+		boolean isOtherInsurance = "OTHER".equalsIgnoreCase(healthInsuranceType) && !isNoInsurance;
+		preview.put("healthInsuranceType", isNoInsurance ? "NONE" : healthInsuranceType);
+		preview.put("isCbhiInsurance", "CBHI".equalsIgnoreCase(healthInsuranceType) && !isNoInsurance);
+		preview.put("isRssbInsurance", "RSSB".equalsIgnoreCase(healthInsuranceType) && !isNoInsurance);
+		preview.put("isMmiInsurance", "MMI".equalsIgnoreCase(healthInsuranceType) && !isNoInsurance);
+		preview.put("healthInsuranceOtherSpec", isOtherInsurance ? healthInsuranceOther : "");
+		preview.put("isNoInsurance", isNoInsurance);
 
 		preview.put("referringProviderName", formatReferringProviderNameForPreview(transfer));
 		preview.put("referringProviderQualification", nullToEmpty(transfer.getProviderQualification()));
@@ -362,6 +444,28 @@ public class TransferSaveController {
 
 	private String nullToEmpty(String value) {
 		return value != null ? value : "";
+	}
+
+	/**
+	 * Treats stored OTHER + otherSpec "NONE" (and similar labels) as no insurance so the
+	 * preview checks None instead of filling Other (Specify).
+	 */
+	private static boolean isNoInsurancePreview(String healthInsuranceType, String healthInsuranceOther) {
+		String type = StringUtils.trimToEmpty(healthInsuranceType);
+		String other = StringUtils.trimToEmpty(healthInsuranceOther);
+		if (TransferAppConstants.HEALTH_INSURANCE_NONE.equals(
+				PatientInsuranceServiceImpl.matchCategoryByDisplayName(type))) {
+			return true;
+		}
+		if (TransferAppConstants.HEALTH_INSURANCE_NONE.equalsIgnoreCase(type)) {
+			return true;
+		}
+		if (TransferAppConstants.HEALTH_INSURANCE_OTHER.equalsIgnoreCase(type)
+				|| StringUtils.isBlank(type)) {
+			return TransferAppConstants.HEALTH_INSURANCE_NONE.equals(
+					PatientInsuranceServiceImpl.matchCategoryByDisplayName(other));
+		}
+		return false;
 	}
 
 	private String resolveFacilityLabel(String facilityCode) {

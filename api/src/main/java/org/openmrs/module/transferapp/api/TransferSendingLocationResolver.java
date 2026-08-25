@@ -18,6 +18,12 @@ import org.openmrs.Location;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.transferapp.TransferAppConstants;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
 public class TransferSendingLocationResolver {
 
 	public Integer resolveCurrentSendingLocationId() {
@@ -32,25 +38,97 @@ public class TransferSendingLocationResolver {
 	}
 
 	/**
-	 * Prefer {@link TransferAppConstants#GP_SENDING_FACILITY_NAME} when set, so the HIE facility
-	 * name can be configured without relying on the OpenMRS location hierarchy. Falls back to the
-	 * session location's parent name (or the location itself when it has no parent).
+	 * Whether {@code transferapp.outboundFacilityName} is set (required before clinicians may start
+	 * an outbound transfer form). Does not fall back to sending aliases or session location.
+	 */
+	public boolean isOutboundFacilityNameConfigured() {
+		return readOutboundFacilityNameProperty() != null;
+	}
+
+	/**
+	 * Normalized facility name for outbound HIE payloads ({@code transferapp.outboundFacilityName}).
+	 * Falls back to the first {@code transferapp.sendingFacilityName} alias, then session location,
+	 * only when the outbound GP is blank (callers that create transfers should require
+	 * {@link #isOutboundFacilityNameConfigured()} first).
+	 */
+	public String resolveOutboundFacilityName() {
+		String outbound = readOutboundFacilityNameProperty();
+		if (outbound != null) {
+			return outbound;
+		}
+		List<String> aliases = parseFacilityNames(readSendingFacilityNameProperty());
+		if (!aliases.isEmpty()) {
+			return aliases.get(0);
+		}
+		return resolveSessionLocationFacilityName();
+	}
+
+	/**
+	 * Single facility name used for local outbound filters / form prefill / HIE submit.
+	 * Delegates to {@link #resolveOutboundFacilityName()}.
 	 */
 	public String resolveCurrentSendingFacilityName() {
-		String configuredName = StringUtils.trimToNull(
-				Context.getAdministrationService().getGlobalProperty(TransferAppConstants.GP_SENDING_FACILITY_NAME));
-		if (configuredName != null) {
-			return configuredName;
-		}
+		return resolveOutboundFacilityName();
+	}
 
+	/**
+	 * Facility aliases for inbound destination matching and pending targetOrg queries:
+	 * {@code transferapp.sendingFacilityName} (comma-separated) plus outbound name when set.
+	 */
+	public List<String> resolveCurrentSendingFacilityNames() {
+		Set<String> unique = new LinkedHashSet<String>();
+		unique.addAll(parseFacilityNames(readSendingFacilityNameProperty()));
+		String outbound = readOutboundFacilityNameProperty();
+		if (outbound != null) {
+			unique.add(outbound);
+		}
+		if (!unique.isEmpty()) {
+			return new ArrayList<String>(unique);
+		}
+		String locationName = resolveSessionLocationFacilityName();
+		if (locationName == null) {
+			return Collections.emptyList();
+		}
+		return Collections.singletonList(locationName);
+	}
+
+	private String readOutboundFacilityNameProperty() {
+		return StringUtils.trimToNull(
+				Context.getAdministrationService().getGlobalProperty(TransferAppConstants.GP_OUTBOUND_FACILITY_NAME));
+	}
+
+	private String readSendingFacilityNameProperty() {
+		return StringUtils.trimToNull(
+				Context.getAdministrationService().getGlobalProperty(TransferAppConstants.GP_SENDING_FACILITY_NAME));
+	}
+
+	private String resolveSessionLocationFacilityName() {
 		Location sessionLocation = Context.getUserContext().getLocation();
 		if (sessionLocation == null) {
 			return null;
 		}
-		if (sessionLocation.getParentLocation() != null) {
-			return sessionLocation.getParentLocation().getName();
+		String locationName = sessionLocation.getParentLocation() != null
+				? sessionLocation.getParentLocation().getName()
+				: sessionLocation.getName();
+		return StringUtils.trimToNull(locationName);
+	}
+
+	/**
+	 * Splits a comma-separated facility name GP into distinct trimmed aliases.
+	 */
+	public static List<String> parseFacilityNames(String raw) {
+		if (StringUtils.isBlank(raw)) {
+			return Collections.emptyList();
 		}
-		return sessionLocation.getName();
+		Set<String> unique = new LinkedHashSet<String>();
+		String[] parts = raw.split(",");
+		for (String part : parts) {
+			String trimmed = StringUtils.trimToNull(part);
+			if (trimmed != null) {
+				unique.add(trimmed);
+			}
+		}
+		return new ArrayList<String>(unique);
 	}
 
 }

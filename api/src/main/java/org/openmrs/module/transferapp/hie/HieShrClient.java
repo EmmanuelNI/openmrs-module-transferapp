@@ -47,7 +47,8 @@ public class HieShrClient {
 	}
 
 	/**
-	 * {@code GET /shr/Encounter/{id}}. Returns null when the encounter is not found (HTTP 404).
+	 * {@code GET /shr/Encounter/{id}}. Returns null when the encounter is not present in HIE
+	 * (HTTP 404, or RHIE OperationOutcome saying Encounter … not found — often HTTP 500).
 	 */
 	public String fetchEncounterById(HieBasicConnection connection, String encounterId) {
 		if (connection == null || StringUtils.isBlank(encounterId)) {
@@ -58,7 +59,7 @@ public class HieShrClient {
 			return executeRequest(connection, "GET", path, null, null);
 		}
 		catch (HieApiException ex) {
-			if (isNotFound(ex)) {
+			if (HieEncounterNotFoundClassifier.isEncounterNotFound(ex.getMessage())) {
 				return null;
 			}
 			throw ex;
@@ -120,14 +121,6 @@ public class HieShrClient {
 				httpConnection.disconnect();
 			}
 		}
-	}
-
-	private static boolean isNotFound(HieApiException ex) {
-		if (ex == null || ex.getMessage() == null) {
-			return false;
-		}
-		String message = ex.getMessage();
-		return message.contains("(404)") || message.contains(" 404 ");
 	}
 
 	private static String encodePathSegment(String value) {

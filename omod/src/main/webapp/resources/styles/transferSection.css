@@ -45,11 +45,20 @@ a.transfer-new-btn.transfer-new-btn-disabled,
   color: #94a3b8;
 }
 
+.dashboard .info-body .transfer-section p,
+.dashboard .transfer-section .info-body p,
+.transfer-section .transfer-insurance-missing {
+  max-width: none;
+  display: block;
+  float: none;
+}
+
 .transfer-insurance-missing {
   font-size: 13px;
   color: #b45309;
   font-style: italic;
   line-height: 1.4;
+  max-width: none;
 }
 
 a.transfer-new-btn {
@@ -149,27 +158,37 @@ table.transfer-datatable tbody tr.transfer-row-sent:hover {
   font-weight: 600;
 }
 
-a.transfer-view-link {
+td.transfer-action-cell {
+  white-space: nowrap;
+}
+
+a.transfer-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-right: 6px;
   color: #0f766e;
-  font-weight: 600;
   text-decoration: none;
+  border-radius: 4px;
+  vertical-align: middle;
 }
 
-a.transfer-view-link:hover {
-  color: #0d9488;
-  text-decoration: underline;
+a.transfer-action-icon:last-child {
+  margin-right: 0;
 }
 
-a.transfer-edit-link {
-  margin-left: 12px;
-  color: #0f766e;
-  font-weight: 600;
-  text-decoration: none;
+a.transfer-action-icon i {
+  font-size: 16px;
+  line-height: 1;
 }
 
+a.transfer-view-link:hover,
 a.transfer-edit-link:hover {
   color: #0d9488;
-  text-decoration: underline;
+  background: #ecfdf5;
+  text-decoration: none;
 }
 
 .transfer-records-link-wrap {

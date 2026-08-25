@@ -811,4 +811,21 @@
         </addColumn>
     </changeSet>
 
+    <changeSet id="transferapp-20260824-ambulance-consommation-id" author="MoH Team">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="transfers"/>
+                <not>
+                    <columnExists tableName="transfers" columnName="ambulance_consommation_id"/>
+                </not>
+            </and>
+        </preConditions>
+        <comment>Link outbound ambulance transfers to mohbilling Consommation for create/update/delete</comment>
+        <addColumn tableName="transfers">
+            <column name="ambulance_consommation_id" type="int">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
 </databaseChangeLog>

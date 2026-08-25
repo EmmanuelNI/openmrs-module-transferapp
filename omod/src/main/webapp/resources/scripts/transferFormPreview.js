@@ -48,6 +48,31 @@
 		return value === true || value === "true";
 	}
 
+	/**
+	 * OpenMRS is almost always deployed under a context path (e.g. /openmrs).
+	 * Absolute paths like /module/... omit it and break QR img src / links.
+	 */
+	function resolveOpenmrsContextPath() {
+		var path = global.transferOpenmrsPath;
+		if (path === undefined || path === null || String(path).trim() === "") {
+			path = (typeof openmrsContextPath !== "undefined") ? openmrsContextPath : "";
+		}
+		if (path === undefined || path === null || String(path).trim() === "") {
+			path = "/openmrs";
+		}
+		path = String(path).trim();
+		if (path.charAt(0) !== "/") {
+			path = "/" + path;
+		}
+		while (path.length > 1 && path.charAt(path.length - 1) === "/") {
+			path = path.substring(0, path.length - 1);
+		}
+		if (path === "/" || path === "") {
+			return "";
+		}
+		return path;
+	}
+
 	function firstNonBlank() {
 		for (var i = 0; i < arguments.length; i++) {
 			var value = arguments[i];
@@ -90,6 +115,56 @@
 		return other;
 	}
 
+	function isNoneInsuranceLabel(value) {
+		var normalized = String(value || "").trim().toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
+		return normalized === "none"
+			|| normalized === "n/a"
+			|| normalized === "na"
+			|| normalized === "no"
+			|| normalized === "no insurance"
+			|| normalized === "without insurance"
+			|| normalized === "uninsured";
+	}
+
+	/**
+	 * Maps stored insurance fields onto preview circles. Handles legacy rows where NONE was
+	 * saved as OTHER + otherSpec "NONE".
+	 */
+	function resolveInsurancePreviewFlags(normalized) {
+		var type = String(normalized.healthInsuranceType || "").trim().toUpperCase();
+		var other = firstNonBlank(normalized.otherInsurance, normalized.healthInsuranceOtherSpec, "");
+		var display = firstNonBlank(normalized.healthInsurance, "");
+		var isNone = isNoneInsuranceLabel(type)
+			|| isNoneInsuranceLabel(display)
+			|| ((type === "OTHER" || !type) && isNoneInsuranceLabel(other))
+			|| resolveFlag(normalized.isNoInsurance, false);
+
+		if (isNone) {
+			return {
+				isCbhiInsurance: false,
+				isRssbInsurance: false,
+				isMmiInsurance: false,
+				otherInsurance: "",
+				isNoInsurance: true
+			};
+		}
+
+		var isCbhi = resolveFlag(normalized.isCbhiInsurance, type === "CBHI")
+			|| /cbhi|mutuelle/i.test(display);
+		var isRssb = resolveFlag(normalized.isRssbInsurance, type === "RSSB")
+			|| /rssb/i.test(display);
+		var isMmi = resolveFlag(normalized.isMmiInsurance, type === "MMI")
+			|| /mmi/i.test(display);
+		var known = isCbhi || isRssb || isMmi;
+		return {
+			isCbhiInsurance: !!isCbhi,
+			isRssbInsurance: !!isRssb,
+			isMmiInsurance: !!isMmi,
+			otherInsurance: known ? "" : other,
+			isNoInsurance: false
+		};
+	}
+
 	function isValidVerificationUuid(value) {
 		if (value === null || value === undefined) {
 			return false;
@@ -120,7 +195,7 @@
 		if (!isValidVerificationUuid(transferId)) {
 			return "";
 		}
-		return "/module/transferapp/transfer/verifyQr.form?transferId="
+		return resolveOpenmrsContextPath() + "/module/transferapp/transfer/verifyQr.form?transferId="
 			+ encodeURIComponent(String(transferId).trim());
 	}
 
@@ -175,6 +250,7 @@
 			verifyRemoteUrl = String(global.transferVerifyBaseUrl).replace(/\/+$/, "")
 				+ "/verify/transfer/" + encodeURIComponent(verificationTransferId) + "/remote";
 		}
+		var insuranceFlags = resolveInsurancePreviewFlags(normalized);
 
 		return {
 			formKind: formKindInfo.kind,
@@ -247,11 +323,11 @@
 				transportType === "AMBULANCE" || transportType.indexOf("AMBULANCE") >= 0),
 			transportationOtherSpec: resolveOtherTransportSpec(normalized, transportType),
 			isNaTransport: resolveFlag(normalized.isNaTransport, transportType === "NA" || transportType === "N/A"),
-			isCbhiInsurance: resolveFlag(normalized.isCbhiInsurance, normalized.healthInsuranceType === "CBHI"),
-			isRssbInsurance: resolveFlag(normalized.isRssbInsurance, normalized.healthInsuranceType === "RSSB"),
-			isMmiInsurance: resolveFlag(normalized.isMmiInsurance, normalized.healthInsuranceType === "MMI"),
-			otherInsurance: normalized.otherInsurance || normalized.healthInsuranceOtherSpec,
-			isNoInsurance: resolveFlag(normalized.isNoInsurance, normalized.healthInsuranceType === "NONE"),
+			isCbhiInsurance: insuranceFlags.isCbhiInsurance,
+			isRssbInsurance: insuranceFlags.isRssbInsurance,
+			isMmiInsurance: insuranceFlags.isMmiInsurance,
+			otherInsurance: insuranceFlags.otherInsurance,
+			isNoInsurance: insuranceFlags.isNoInsurance,
 			referringProviderName: normalized.referringProviderName,
 			referringProviderQualification: normalized.referringProviderQualification,
 			referringSignedDate: firstNonBlank(normalized.referringSignedDate, normalized.formDate),
@@ -314,11 +390,20 @@
 		if (/^https?:\/\//i.test(verifyQrUrl)) {
 			return verifyQrUrl;
 		}
-		var openmrsPath = global.transferOpenmrsPath || "";
-		if (verifyQrUrl.charAt(0) === "/") {
-			return openmrsPath + verifyQrUrl;
+		var openmrsPath = resolveOpenmrsContextPath();
+		var path = String(verifyQrUrl).trim();
+		if (openmrsPath && path.indexOf(openmrsPath + "/") === 0) {
+			return path;
 		}
-		return openmrsPath + "/" + verifyQrUrl;
+		// Legacy absolute module path without context: /module/...
+		if (path.indexOf("/module/") === 0 || path.indexOf("/ws/") === 0
+				|| path.indexOf("/moduleResources/") === 0) {
+			return openmrsPath + path;
+		}
+		if (path.charAt(0) === "/") {
+			return openmrsPath ? (openmrsPath + path) : path;
+		}
+		return openmrsPath + "/" + path;
 	}
 
 	function buildTransferFormPreviewHtml(item) {
@@ -512,8 +597,7 @@
 			return false;
 		}
 
-		var openmrsPath = global.transferOpenmrsPath
-			|| (typeof openmrsContextPath !== "undefined" ? openmrsContextPath : "/openmrs");
+		var openmrsPath = resolveOpenmrsContextPath();
 		while (openmrsPath.length > 1 && openmrsPath.charAt(openmrsPath.length - 1) === "/") {
 			openmrsPath = openmrsPath.substring(0, openmrsPath.length - 1);
 		}

@@ -27,6 +27,10 @@
 		<require_module version="${addresshierarchyVersion}">org.openmrs.module.addresshierarchy</require_module>
 	</require_modules>
 
+	<aware_of_modules>
+		<aware_of_module version="${mohbillingVersion}">org.openmrs.module.mohbilling</aware_of_module>
+	</aware_of_modules>
+
 	<!-- Module Activator -->
 	<activator>${project.parent.groupId}.${project.parent.artifactId}.TransferAppActivator</activator>
 
@@ -71,16 +75,19 @@
 
 	<globalProperty>
 		<property>transferapp.insuranceCBHI</property>
+		<defaultValue>6738</defaultValue>
 		<description>Comma-separated concept IDs (value_coded) mapped to CBHI on the transfer preview</description>
 	</globalProperty>
 
 	<globalProperty>
 		<property>transferapp.insuranceRSSB</property>
+		<defaultValue>6739</defaultValue>
 		<description>Comma-separated concept IDs (value_coded) mapped to RSSB on the transfer preview</description>
 	</globalProperty>
 
 	<globalProperty>
 		<property>transferapp.insuranceMMI</property>
+		<defaultValue>6955</defaultValue>
 		<description>Comma-separated concept IDs (value_coded) mapped to MMI on the transfer preview</description>
 	</globalProperty>
 
@@ -91,6 +98,7 @@
 
 	<globalProperty>
 		<property>transferapp.insuranceNone</property>
+		<defaultValue>1107</defaultValue>
 		<description>Comma-separated concept IDs (value_coded) mapped to None on the transfer preview</description>
 	</globalProperty>
 
@@ -192,7 +200,13 @@
 	<globalProperty>
 		<property>transferapp.sendingFacilityName</property>
 		<defaultValue></defaultValue>
-		<description>Facility display name used for HIE pending-transfer targetOrg and outbound sendingFacility matching. When blank, falls back to the session location parent name (or the location name)</description>
+		<description>Comma-separated facility name aliases for inbound destination matching and pending targetOrg queries (including older/alternate HIE names). Example: Munini DH, Munini District Hospital. When blank, falls back to outboundFacilityName then session location</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>transferapp.outboundFacilityName</property>
+		<defaultValue></defaultValue>
+		<description>Normalized facility display name written on outbound HIE transfer payloads (sendingFacility). Required before clinicians can open the outbound transfer form. Use the canonical HIE name</description>
 	</globalProperty>
 
 	<globalProperty>

@@ -196,7 +196,9 @@
             5 * 60 * 1000
         );
 
-        var transferOpenmrsPath = (typeof openmrsContextPath !== "undefined" ? openmrsContextPath : "");
+        var transferOpenmrsPath = (typeof openmrsContextPath !== "undefined" && openmrsContextPath)
+            ? openmrsContextPath
+            : "/openmrs";
         window.transferOpenmrsPath = transferOpenmrsPath;
         var transferHiePreviewUrl = normalizeRootUrl(transferOpenmrsPath + "/ws/rest/v1/transferapp/transfer");
         var transferPreviewResourcesBase = normalizeRootUrl(transferOpenmrsPath + "/moduleResources/transferapp/scripts/");

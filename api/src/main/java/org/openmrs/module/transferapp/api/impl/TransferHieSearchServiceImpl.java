@@ -118,20 +118,21 @@ public class TransferHieSearchServiceImpl implements TransferHieSearchService {
 		Map<String, Object> result = new LinkedHashMap<String, Object>();
 		int selectedWeeks = normalizePendingWeeks(weeks);
 
-		String targetOrg = sendingLocationResolver.resolveCurrentSendingFacilityName();
-		if (StringUtils.isBlank(targetOrg)) {
+		List<String> targetOrgs = sendingLocationResolver.resolveCurrentSendingFacilityNames();
+		if (targetOrgs == null || targetOrgs.isEmpty()) {
 			result.put("status", "error");
 			result.put("message", "Current facility location is not available");
 			result.put("targetOrg", "");
 			result.put("data", Collections.emptyList());
 			return result;
 		}
+		String targetOrgDisplay = joinFacilityNames(targetOrgs);
 
 		if (!hieConnectionResolver.isHieConfigured()) {
 			log.warn("HIE is not configured for pending transfer list");
 			result.put("status", "error");
 			result.put("message", "HIE is not enabled");
-			result.put("targetOrg", targetOrg.trim());
+			result.put("targetOrg", targetOrgDisplay);
 			result.put("data", Collections.emptyList());
 			return result;
 		}
@@ -143,27 +144,59 @@ public class TransferHieSearchServiceImpl implements TransferHieSearchService {
 			String endDate = today.plusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE);
 
 			HieBasicConnection connection = hieConnectionResolver.resolveConnection();
-			String pathWithQuery = buildTargetOrgListTransfersPath(targetOrg.trim(), fromDate, endDate);
-			log.info("Requesting pending transfers from HIE: " + connection.getBaseUrl() + pathWithQuery);
-
-			List<Map<String, Object>> transfers = enrichTransfers(
-					fetchAllTransferPages(connection, pathWithQuery));
+			List<Map<String, Object>> transfers = new ArrayList<Map<String, Object>>();
+			Set<String> seenIds = new HashSet<String>();
+			for (String targetOrg : targetOrgs) {
+				String pathWithQuery = buildTargetOrgListTransfersPath(targetOrg, fromDate, endDate);
+				log.info("Requesting pending transfers from HIE: " + connection.getBaseUrl() + pathWithQuery);
+				List<Map<String, Object>> pageTransfers = fetchAllTransferPages(connection, pathWithQuery);
+				if (pageTransfers == null) {
+					continue;
+				}
+				for (Map<String, Object> transfer : pageTransfers) {
+					if (transfer == null) {
+						continue;
+					}
+					String id = asString(transfer.get("id"));
+					if (StringUtils.isNotBlank(id) && !seenIds.add(id)) {
+						continue;
+					}
+					transfers.add(transfer);
+				}
+			}
 			result.put("status", "success");
-			result.put("targetOrg", targetOrg.trim());
+			result.put("targetOrg", targetOrgDisplay);
 			result.put("fromDate", fromDate);
 			result.put("endDate", endDate);
 			result.put("weeks", selectedWeeks);
-			result.put("data", transfers);
+			result.put("data", enrichTransfers(transfers));
 			return result;
 		}
 		catch (Exception ex) {
-			log.error("Error fetching pending transfers from HIE for targetOrg: " + targetOrg, ex);
+			log.error("Error fetching pending transfers from HIE for targetOrg: " + targetOrgDisplay, ex);
 			result.put("status", "error");
 			result.put("message", ex.getMessage() != null ? ex.getMessage() : "Failed to fetch pending transfers from HIE");
-			result.put("targetOrg", targetOrg.trim());
+			result.put("targetOrg", targetOrgDisplay);
 			result.put("data", Collections.emptyList());
 			return result;
 		}
+	}
+
+	private static String joinFacilityNames(List<String> names) {
+		if (names == null || names.isEmpty()) {
+			return "";
+		}
+		StringBuilder builder = new StringBuilder();
+		for (String name : names) {
+			if (StringUtils.isBlank(name)) {
+				continue;
+			}
+			if (builder.length() > 0) {
+				builder.append(", ");
+			}
+			builder.append(name.trim());
+		}
+		return builder.toString();
 	}
 
 	static int normalizePendingWeeks(int weeks) {

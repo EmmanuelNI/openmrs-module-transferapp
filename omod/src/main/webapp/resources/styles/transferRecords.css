@@ -33,6 +33,26 @@
   align-items: end;
 }
 
+.transfer-ambulance-voucher-filters-grid {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) auto;
+  gap: 14px 16px;
+  align-items: end;
+}
+
+.transfer-ambulance-voucher-pagination {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.transfer-ambulance-voucher-pagination .button[disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .transfer-history-description {
   margin: -8px 0 16px;
   color: #4b5563;
@@ -69,7 +89,8 @@
 .transfer-pending-date-select,
 .transfer-pending-service-select,
 .transfer-history-filters-grid select,
-.transfer-history-filters-grid input[type="text"] {
+.transfer-history-filters-grid input[type="text"],
+.transfer-ambulance-voucher-filters-grid select {
   width: 100%;
   box-sizing: border-box;
   padding: 7px 10px;
@@ -472,4 +493,70 @@ body.transfer-history-preview-open {
   background: #0f766e;
   color: #fff;
   border: 1px solid #0a5c52;
+}
+
+.transfer-records-filter-error {
+  margin: 10px 0 0;
+  color: #b45309;
+  font-size: 13px;
+}
+
+#transfer-ambulance-voucher-table_wrapper .dataTables_length,
+#transfer-ambulance-voucher-table_wrapper .dataTables_filter,
+#transfer-ambulance-voucher-table_wrapper .dataTables_info,
+#transfer-ambulance-voucher-table_wrapper .dataTables_paginate {
+  margin: 10px 0;
+}
+
+#transfer-ambulance-voucher-table_wrapper .dataTables_length,
+#transfer-ambulance-voucher-table_wrapper .dataTables_filter {
+  float: none;
+  width: auto;
+}
+
+#transfer-ambulance-voucher-table_wrapper .dataTables_info {
+  float: left;
+  width: auto;
+  padding-top: 2px;
+}
+
+#transfer-ambulance-voucher-table_wrapper .dataTables_paginate {
+  float: right;
+  width: auto !important;
+  clear: none;
+  white-space: nowrap;
+}
+
+#transfer-ambulance-voucher-table_wrapper .paging_full_numbers {
+  width: auto !important;
+}
+
+#transfer-ambulance-voucher-table_wrapper .dataTables_paginate .paginate_button,
+#transfer-ambulance-voucher-table_wrapper .dataTables_paginate .paginate_active,
+#transfer-ambulance-voucher-table_wrapper .dataTables_paginate .paginate_enabled,
+#transfer-ambulance-voucher-table_wrapper .dataTables_paginate .paginate_disabled,
+#transfer-ambulance-voucher-table_wrapper .dataTables_paginate .fg-button,
+#transfer-ambulance-voucher-table_wrapper .dataTables_paginate a {
+  display: inline-block !important;
+  float: none !important;
+  margin: 0 3px;
+  padding: 4px 10px;
+  border: 1px solid #c7e7e2;
+  border-radius: 3px;
+  background: #fff;
+  color: #0f766e;
+  text-decoration: none;
+}
+
+#transfer-ambulance-voucher-table_wrapper .dataTables_paginate .paginate_button.current,
+#transfer-ambulance-voucher-table_wrapper .dataTables_paginate .paginate_active {
+  background: #0f766e;
+  color: #fff;
+  border-color: #0a5c52;
+}
+
+#transfer-ambulance-voucher-table_wrapper::after {
+  content: "";
+  display: table;
+  clear: both;
 }

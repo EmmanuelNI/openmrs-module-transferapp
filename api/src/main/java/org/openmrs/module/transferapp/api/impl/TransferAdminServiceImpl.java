@@ -287,6 +287,16 @@ public class TransferAdminServiceImpl implements TransferAdminService {
 		return sendingLocationResolver.resolveCurrentSendingFacilityName();
 	}
 
+	@Override
+	public String resolveOutboundFacilityName() {
+		return sendingLocationResolver.resolveOutboundFacilityName();
+	}
+
+	@Override
+	public boolean isOutboundFacilityNameConfigured() {
+		return sendingLocationResolver.isOutboundFacilityNameConfigured();
+	}
+
 	private void requireSendingLocationId(Integer sendingLocationId) {
 		if (sendingLocationId == null) {
 			throw new APIException("Sending facility is required");
