@@ -74,14 +74,29 @@ public class TransferRegistrationObsServiceImpl implements TransferRegistrationO
 
 	@Override
 	public boolean destinationMatchesCurrentFacility(String destination) {
-		String currentFacility = normalizeFacilityName(resolveCurrentFacilityName());
+		return destinationMatchesAnyFacility(destination, sendingLocationResolver.resolveCurrentSendingFacilityNames());
+	}
+
+	/**
+	 * True when {@code destination} equals / contains / is contained by any configured facility alias.
+	 */
+	public static boolean destinationMatchesAnyFacility(String destination, List<String> facilityNames) {
 		String normalizedDestination = normalizeFacilityName(destination);
-		if (StringUtils.isBlank(currentFacility) || StringUtils.isBlank(normalizedDestination)) {
+		if (StringUtils.isBlank(normalizedDestination) || facilityNames == null || facilityNames.isEmpty()) {
 			return false;
 		}
-		return normalizedDestination.equals(currentFacility)
-				|| normalizedDestination.contains(currentFacility)
-				|| currentFacility.contains(normalizedDestination);
+		for (String facilityName : facilityNames) {
+			String currentFacility = normalizeFacilityName(facilityName);
+			if (StringUtils.isBlank(currentFacility)) {
+				continue;
+			}
+			if (normalizedDestination.equals(currentFacility)
+					|| normalizedDestination.contains(currentFacility)
+					|| currentFacility.contains(normalizedDestination)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@Override

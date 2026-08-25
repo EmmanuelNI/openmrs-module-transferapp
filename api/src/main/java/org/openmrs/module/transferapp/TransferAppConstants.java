@@ -131,10 +131,13 @@ public final class TransferAppConstants {
 
 	public static final String GP_SENDING_FOSA_ID = "transferapp.sendingFosaId";
 
-	public static final String DEFAULT_SENDING_FOSA_ID = "0074";
+	public static final String DEFAULT_SENDING_FOSA_ID = "";
 
-	/** Display name of this facility used for HIE targetOrg / outbound sendingFacility matching. */
+	/** Comma-separated aliases for inbound destination matching and pending targetOrg (old/alternate names). */
 	public static final String GP_SENDING_FACILITY_NAME = "transferapp.sendingFacilityName";
+
+	/** Normalized facility display name used on outbound HIE payloads (sendingFacility). */
+	public static final String GP_OUTBOUND_FACILITY_NAME = "transferapp.outboundFacilityName";
 
 	/** When true and credentials are set, send patient SMS after HIE accepts the transfer. */
 	public static final String GP_SMS_INTOUCH_ENABLED = "transferapp.sms.intouch.enabled";

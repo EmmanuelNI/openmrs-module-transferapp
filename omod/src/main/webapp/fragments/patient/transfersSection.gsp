@@ -304,7 +304,7 @@
         <h3>${ ui.message(config.label ? config.label : "transferapp.patient.transfers.title").toUpperCase() }</h3>
     </div>
     <div class="info-body">
-        <% if (canCreateTransfer && patientInsuranceAvailable) { %>
+        <% if (canCreateTransfer && outboundFacilityConfigured && patientInsuranceAvailable) { %>
             <div class="transfer-new-btn-wrap">
                 <a id="open-new-transfer-out"
                    class="transfer-new-btn"
@@ -323,6 +323,8 @@
                     ${ ui.encodeHtmlContent(patientInsuranceNumber) }
                 </span>
             </div>
+        <% } else if (canCreateTransfer && !outboundFacilityConfigured) { %>
+            <p class="transfer-insurance-missing">${ ui.message("transferapp.patient.transfers.outboundFacilityRequired") }</p>
         <% } else if (canCreateTransfer) { %>
             <p class="transfer-insurance-missing">${ ui.message("transferapp.patient.transfers.insuranceRequired") }</p>
         <% } %>
@@ -333,7 +335,7 @@
                     <thead>
                         <tr>
                             <th>${ ui.message("transferapp.patient.transfers.column.date") }</th>
-                            <th>${ ui.message("transferapp.patient.transfers.column.from") }</th>
+                            <th>${ ui.message("transferapp.patient.transfers.column.to") }</th>
                             <th>${ ui.message("transferapp.patient.transfers.column.service") }</th>
                             <th>${ ui.message("transferapp.patient.transfers.column.status") }</th>
                             <th>${ ui.message("transferapp.patient.transfers.column.action") }</th>
@@ -343,7 +345,7 @@
                         <% transfers.each { transfer -> %>
                             <tr class="transfer-row${ transfer.hieSent ? ' transfer-row-sent' : '' }" data-transfer-id="${ ui.encodeHtmlAttribute(transfer.id) }" data-hie-sent="${ transfer.hieSent ? 'true' : 'false' }">
                                 <td>${ ui.format(transfer.transferDate) }</td>
-                                <td>${ ui.format(transfer.fromFacility) }</td>
+                                <td>${ ui.format(transfer.toFacility) }</td>
                                 <td>${ ui.format(transfer.service) }</td>
                                 <td>
                                     <% if (transfer.hieSent) { %>
@@ -352,20 +354,22 @@
                                         <span class="transfer-status-pending">${ ui.message("transferapp.patient.transfers.statusPending") }</span>
                                     <% } %>
                                 </td>
-                                <td>
-                                    <a class="transfer-view-link"
+                                <td class="transfer-action-cell">
+                                    <a class="transfer-view-link transfer-action-icon"
                                        href="javascript:void(0);"
                                        data-transfer-id="${ ui.encodeHtmlAttribute(transfer.id) }"
-                                       title="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.view')) }">
-                                        <i class="icon-share-alt"></i> ${ ui.message("transferapp.patient.transfers.view") }
+                                       title="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.view')) }"
+                                       aria-label="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.view')) }">
+                                        <i class="icon-eye-open"></i>
                                     </a>
-                                    <% if (canCreateTransfer) { %>
-                                    <a class="transfer-edit-link"
+                                    <% if (canCreateTransfer && outboundFacilityConfigured) { %>
+                                    <a class="transfer-edit-link transfer-action-icon"
                                        href="javascript:void(0);"
                                        data-transfer-id="${ ui.encodeHtmlAttribute(transfer.id) }"
                                        data-load-url="${ ui.encodeHtmlAttribute(ui.pageLink('transferapp', 'patient/newTransferOutForm') + '?patientId=' + patient.patient.patientId + '&transferUuid=' + transfer.id) }"
-                                       title="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.edit')) }">
-                                        <i class="icon-pencil"></i> ${ ui.message("transferapp.patient.transfers.edit") }
+                                       title="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.edit')) }"
+                                       aria-label="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.edit')) }">
+                                        <i class="icon-pencil"></i>
                                     </a>
                                     <% } %>
                                 </td>

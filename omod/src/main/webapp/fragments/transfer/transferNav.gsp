@@ -5,6 +5,7 @@
     def historyUrl = ui.pageLink("transferapp", "history") + "?app=" + appParam
     def recordsUrl = ui.pageLink("transferapp", "records") + "?app=" + appParam
     def pendingUrl = ui.pageLink("transferapp", "pending") + "?app=" + appParam
+    def ambulanceVoucherUrl = ui.pageLink("transferapp", "ambulanceVoucher") + "?app=" + appParam
     def adminUrl = ui.pageLink("transferapp", "transferAdmin") + "?app=" + appParam
     def profileUrl = ui.pageLink("transferapp", "transferProfile") + "?app=" + appParam
 %>
@@ -20,6 +21,9 @@
     <span class="transfer-app-nav-separator">|</span>
     <a href="${ pendingUrl }"
        class="transfer-app-nav-link ${ activeTab == 'pending' ? 'active' : '' }">${ ui.message("transferapp.nav.pending") }</a>
+    <span class="transfer-app-nav-separator">|</span>
+    <a href="${ ambulanceVoucherUrl }"
+       class="transfer-app-nav-link ${ activeTab == 'ambulanceVoucher' ? 'active' : '' }">${ ui.message("transferapp.nav.ambulanceVoucher") }</a>
     <span class="transfer-app-nav-separator">|</span>
     <a href="${ adminUrl }"
        class="transfer-app-nav-link ${ activeTab == 'admin' ? 'active' : '' }">${ ui.message("transferapp.nav.admin") }</a>

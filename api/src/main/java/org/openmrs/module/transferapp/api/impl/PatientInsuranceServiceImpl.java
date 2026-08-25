@@ -15,17 +15,23 @@ package org.openmrs.module.transferapp.api.impl;
 
 import org.apache.commons.lang.StringUtils;
 import org.openmrs.Concept;
+import org.openmrs.Encounter;
+import org.openmrs.EncounterType;
 import org.openmrs.Obs;
 import org.openmrs.Patient;
 import org.openmrs.api.AdministrationService;
 import org.openmrs.api.ConceptService;
+import org.openmrs.api.EncounterService;
 import org.openmrs.api.ObsService;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.transferapp.TransferAppConstants;
 import org.openmrs.module.transferapp.api.PatientInsuranceService;
 import org.openmrs.module.transferapp.model.PatientInsuranceInfo;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -70,32 +76,189 @@ public class PatientInsuranceServiceImpl implements PatientInsuranceService {
 		return info;
 	}
 
+	@Override
+	public String resolveInsuranceCardNumber(Patient patient) {
+		if (patient == null || patient.getPatientId() == null) {
+			return null;
+		}
+		String fromRegistration = resolveInsuranceNumberFromLatestRegistration(patient);
+		if (fromRegistration != null) {
+			return fromRegistration;
+		}
+		PatientInsuranceInfo info = getPatientInsurance(patient);
+		return info != null ? StringUtils.trimToNull(info.getInsuranceNumber()) : null;
+	}
+
+	private String resolveInsuranceNumberFromLatestRegistration(Patient patient) {
+		Concept numberConcept = getConceptByGlobalProperty(
+				TransferAppConstants.GP_INSURANCE_NUMBER_CONCEPT_UUID,
+				TransferAppConstants.DEFAULT_INSURANCE_NUMBER_CONCEPT_UUID);
+		if (numberConcept == null) {
+			return null;
+		}
+		Encounter registration = findLatestRegistrationEncounter(patient);
+		if (registration == null) {
+			return null;
+		}
+		Set<Obs> obsSet = registration.getAllObs(false);
+		if (obsSet == null || obsSet.isEmpty()) {
+			return null;
+		}
+		for (Obs obs : obsSet) {
+			if (obs == null || Boolean.TRUE.equals(obs.getVoided()) || obs.getConcept() == null) {
+				continue;
+			}
+			if (!numberConcept.equals(obs.getConcept())) {
+				continue;
+			}
+			String number = StringUtils.trimToNull(obs.getValueText());
+			if (number == null) {
+				number = StringUtils.trimToNull(obs.getValueAsString(Context.getLocale()));
+			}
+			if (number != null) {
+				return number;
+			}
+		}
+		return null;
+	}
+
+	private Encounter findLatestRegistrationEncounter(Patient patient) {
+		Integer registrationTypeId = resolveRegistrationEncounterTypeId();
+		if (registrationTypeId == null) {
+			return null;
+		}
+		List<Encounter> encounters = getEncounterService().getEncountersByPatient(patient);
+		if (encounters == null || encounters.isEmpty()) {
+			return null;
+		}
+		List<Encounter> registrationEncounters = new ArrayList<Encounter>();
+		for (Encounter encounter : encounters) {
+			if (encounter == null || Boolean.TRUE.equals(encounter.getVoided())) {
+				continue;
+			}
+			EncounterType type = encounter.getEncounterType();
+			if (type == null || type.getEncounterTypeId() == null) {
+				continue;
+			}
+			if (registrationTypeId.equals(type.getEncounterTypeId())) {
+				registrationEncounters.add(encounter);
+			}
+		}
+		if (registrationEncounters.isEmpty()) {
+			return null;
+		}
+		Collections.sort(registrationEncounters, new Comparator<Encounter>() {
+			@Override
+			public int compare(Encounter left, Encounter right) {
+				Date leftDate = left != null ? left.getEncounterDatetime() : null;
+				Date rightDate = right != null ? right.getEncounterDatetime() : null;
+				if (leftDate == null && rightDate == null) {
+					return 0;
+				}
+				if (leftDate == null) {
+					return 1;
+				}
+				if (rightDate == null) {
+					return -1;
+				}
+				return rightDate.compareTo(leftDate);
+			}
+		});
+		return registrationEncounters.get(0);
+	}
+
+	private Integer resolveRegistrationEncounterTypeId() {
+		String raw = StringUtils.trimToNull(getAdministrationService().getGlobalProperty(
+				TransferAppConstants.GP_REGISTRATION_ENCOUNTER_TYPE_ID,
+				TransferAppConstants.DEFAULT_REGISTRATION_ENCOUNTER_TYPE_ID));
+		if (raw == null) {
+			raw = StringUtils.trimToNull(getAdministrationService().getGlobalProperty(
+					TransferAppConstants.GP_RWANDAEMR_REGISTRATION_ENCOUNTER_TYPE_ID));
+		}
+		if (raw == null) {
+			return null;
+		}
+		try {
+			int id = Integer.parseInt(raw);
+			return id > 0 ? Integer.valueOf(id) : null;
+		}
+		catch (NumberFormatException ex) {
+			return null;
+		}
+	}
+
 	private void resolveHealthInsuranceCategory(PatientInsuranceInfo info) {
-		if (info.getInsuranceTypeCodedId() == null) {
+		Integer codedId = info.getInsuranceTypeCodedId();
+		if (codedId != null) {
+			if (matchesConceptList(codedId, TransferAppConstants.GP_INSURANCE_CBHI)) {
+				info.setHealthInsuranceCategory(TransferAppConstants.HEALTH_INSURANCE_CBHI);
+				return;
+			}
+			if (matchesConceptList(codedId, TransferAppConstants.GP_INSURANCE_RSSB)) {
+				info.setHealthInsuranceCategory(TransferAppConstants.HEALTH_INSURANCE_RSSB);
+				return;
+			}
+			if (matchesConceptList(codedId, TransferAppConstants.GP_INSURANCE_MMI)) {
+				info.setHealthInsuranceCategory(TransferAppConstants.HEALTH_INSURANCE_MMI);
+				return;
+			}
+			if (matchesConceptList(codedId, TransferAppConstants.GP_INSURANCE_NONE)) {
+				info.setHealthInsuranceCategory(TransferAppConstants.HEALTH_INSURANCE_NONE);
+				return;
+			}
+			if (matchesConceptList(codedId, TransferAppConstants.GP_INSURANCE_OTHER)) {
+				info.setHealthInsuranceCategory(TransferAppConstants.HEALTH_INSURANCE_OTHER);
+				info.setHealthInsuranceOtherSpec(info.getInsuranceType());
+				return;
+			}
+		}
+
+		// Concept-id GPs may be unset; match common display labels (e.g. "NONE") so we do not
+		// store NONE as OTHER + otherSpec "NONE".
+		String byDisplay = matchCategoryByDisplayName(info.getInsuranceType());
+		if (byDisplay != null) {
+			info.setHealthInsuranceCategory(byDisplay);
+			if (TransferAppConstants.HEALTH_INSURANCE_OTHER.equals(byDisplay)) {
+				info.setHealthInsuranceOtherSpec(info.getInsuranceType());
+			}
 			return;
 		}
 
-		Integer codedId = info.getInsuranceTypeCodedId();
-		if (matchesConceptList(codedId, TransferAppConstants.GP_INSURANCE_CBHI)) {
-			info.setHealthInsuranceCategory(TransferAppConstants.HEALTH_INSURANCE_CBHI);
-		}
-		else if (matchesConceptList(codedId, TransferAppConstants.GP_INSURANCE_RSSB)) {
-			info.setHealthInsuranceCategory(TransferAppConstants.HEALTH_INSURANCE_RSSB);
-		}
-		else if (matchesConceptList(codedId, TransferAppConstants.GP_INSURANCE_MMI)) {
-			info.setHealthInsuranceCategory(TransferAppConstants.HEALTH_INSURANCE_MMI);
-		}
-		else if (matchesConceptList(codedId, TransferAppConstants.GP_INSURANCE_NONE)) {
-			info.setHealthInsuranceCategory(TransferAppConstants.HEALTH_INSURANCE_NONE);
-		}
-		else if (matchesConceptList(codedId, TransferAppConstants.GP_INSURANCE_OTHER)) {
+		if (StringUtils.isNotBlank(info.getInsuranceType())) {
 			info.setHealthInsuranceCategory(TransferAppConstants.HEALTH_INSURANCE_OTHER);
 			info.setHealthInsuranceOtherSpec(info.getInsuranceType());
 		}
-		else {
-			info.setHealthInsuranceCategory(TransferAppConstants.HEALTH_INSURANCE_OTHER);
-			info.setHealthInsuranceOtherSpec(info.getInsuranceType());
+	}
+
+	/**
+	 * Maps insurance type display text to transfer categories when concept-id GPs do not match.
+	 */
+	public static String matchCategoryByDisplayName(String displayName) {
+		String raw = StringUtils.trimToNull(displayName);
+		if (raw == null) {
+			return null;
 		}
+		String normalized = raw.toLowerCase().replace('_', ' ').replace('-', ' ');
+		normalized = normalized.replaceAll("\\s+", " ").trim();
+
+		if ("none".equals(normalized) || "n/a".equals(normalized) || "na".equals(normalized)
+				|| "no".equals(normalized) || "no insurance".equals(normalized)
+				|| "without insurance".equals(normalized) || "uninsured".equals(normalized)) {
+			return TransferAppConstants.HEALTH_INSURANCE_NONE;
+		}
+		if (normalized.contains("cbhi") || normalized.contains("mutuelle")) {
+			return TransferAppConstants.HEALTH_INSURANCE_CBHI;
+		}
+		if (normalized.contains("rssb")) {
+			return TransferAppConstants.HEALTH_INSURANCE_RSSB;
+		}
+		if (normalized.contains("mmi")) {
+			return TransferAppConstants.HEALTH_INSURANCE_MMI;
+		}
+		if ("other".equals(normalized) || normalized.startsWith("other ")) {
+			return TransferAppConstants.HEALTH_INSURANCE_OTHER;
+		}
+		return null;
 	}
 
 	private boolean matchesConceptList(Integer conceptId, String globalPropertyName) {
@@ -168,6 +331,10 @@ public class PatientInsuranceServiceImpl implements PatientInsuranceService {
 
 	protected ObsService getObsService() {
 		return Context.getObsService();
+	}
+
+	protected EncounterService getEncounterService() {
+		return Context.getEncounterService();
 	}
 
 }

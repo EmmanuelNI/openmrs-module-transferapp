@@ -334,7 +334,7 @@ public class TransferPatientSnapshotResolver {
 	}
 
 	protected String resolveCurrentFacilityName() {
-		return new TransferSendingLocationResolver().resolveCurrentSendingFacilityName();
+		return new TransferSendingLocationResolver().resolveOutboundFacilityName();
 	}
 
 	protected String resolveReferringUnit() {

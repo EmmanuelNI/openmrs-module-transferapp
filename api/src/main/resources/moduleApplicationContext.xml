@@ -126,6 +126,36 @@
 		</property>
 	</bean>
 
+	<bean id="transferAmbulanceBillingServiceTarget" class="org.openmrs.module.transferapp.api.impl.TransferAmbulanceBillingServiceImpl">
+		<property name="transferAdminService" ref="transferAdminService" />
+		<property name="patientInsuranceService" ref="patientInsuranceService" />
+		<property name="transferDao" ref="transferDao" />
+	</bean>
+
+	<bean id="transferAmbulanceBillingService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="target">
+			<ref bean="transferAmbulanceBillingServiceTarget" />
+		</property>
+		<property name="preInterceptors">
+			<ref bean="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource">
+			<ref bean="transactionAttributeSource" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.TransferAmbulanceBillingService</value>
+				<ref bean="transferAmbulanceBillingService" />
+			</list>
+		</property>
+	</bean>
+
 	<bean id="transferServiceTarget" class="org.openmrs.module.transferapp.api.impl.TransferServiceImpl">
 		<property name="transferDao" ref="transferDao" />
 		<property name="patientService" ref="patientService" />
@@ -133,6 +163,7 @@
 		<property name="patientInsuranceService" ref="patientInsuranceService" />
 		<property name="transferProfileService" ref="transferProfileService" />
 		<property name="queueService" ref="queueService" />
+		<property name="transferAmbulanceBillingService" ref="transferAmbulanceBillingService" />
 	</bean>
 
 	<bean id="transferService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
@@ -166,6 +197,7 @@
 		<property name="target">
 			<bean class="org.openmrs.module.transferapp.api.impl.PatientTransferListServiceImpl">
 				<property name="transferService" ref="transferService" />
+				<property name="transferAdminService" ref="transferAdminService" />
 			</bean>
 		</property>
 		<property name="preInterceptors">
@@ -208,6 +240,34 @@
 			<list>
 				<value>org.openmrs.module.transferapp.api.FacilityTransferRecordsService</value>
 				<ref bean="facilityTransferRecordsService" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="transferAmbulanceVoucherService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager">
+			<ref bean="transactionManager" />
+		</property>
+		<property name="target">
+			<bean class="org.openmrs.module.transferapp.api.impl.TransferAmbulanceVoucherServiceImpl">
+				<property name="transferDao" ref="transferDao" />
+				<property name="transferAdminService" ref="transferAdminService" />
+				<property name="patientInsuranceService" ref="patientInsuranceService" />
+			</bean>
+		</property>
+		<property name="preInterceptors">
+			<ref bean="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource">
+			<ref bean="transactionAttributeSource" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.transferapp.api.TransferAmbulanceVoucherService</value>
+				<ref bean="transferAmbulanceVoucherService" />
 			</list>
 		</property>
 	</bean>

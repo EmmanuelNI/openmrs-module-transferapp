@@ -24,7 +24,7 @@ public class PatientTransferListItem {
 
 	private Date transferDate;
 
-	private String fromFacility;
+	private String toFacility;
 
 	private String service;
 
@@ -50,12 +50,12 @@ public class PatientTransferListItem {
 		this.transferDate = transferDate;
 	}
 
-	public String getFromFacility() {
-		return fromFacility;
+	public String getToFacility() {
+		return toFacility;
 	}
 
-	public void setFromFacility(String fromFacility) {
-		this.fromFacility = fromFacility;
+	public void setToFacility(String toFacility) {
+		this.toFacility = toFacility;
 	}
 
 	public String getService() {

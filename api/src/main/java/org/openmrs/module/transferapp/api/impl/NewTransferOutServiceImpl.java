@@ -283,7 +283,7 @@ public class NewTransferOutServiceImpl implements NewTransferOutService {
 
 	protected String getCurrentFacilityName() {
 		if (transferAdminService != null) {
-			String configuredName = transferAdminService.resolveCurrentSendingFacilityName();
+			String configuredName = transferAdminService.resolveOutboundFacilityName();
 			if (StringUtils.isNotBlank(configuredName)) {
 				return configuredName.trim();
 			}

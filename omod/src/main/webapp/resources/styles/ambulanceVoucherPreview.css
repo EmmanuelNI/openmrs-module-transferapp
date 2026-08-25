@@ -1,0 +1,282 @@
+.ambulance-voucher-preview-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 10040;
+}
+
+.ambulance-voucher-preview-dialog.dialog {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 10050 !important;
+  width: 920px !important;
+  max-width: 96vw !important;
+  max-height: 92vh !important;
+  margin: 0 !important;
+  display: none;
+  flex-direction: column;
+  background: #f4f7f6;
+  border: 1px solid #c7e7e2;
+  border-radius: 10px;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.25);
+  overflow: hidden;
+}
+
+.ambulance-voucher-preview-dialog.dialog.is-open {
+  display: flex !important;
+}
+
+.ambulance-voucher-preview-dialog .dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: #0f766e;
+  color: #fff;
+}
+
+.ambulance-voucher-preview-dialog .dialog-header h3,
+.ambulance-voucher-preview-dialog .dialog-header i {
+  color: #fff;
+  margin: 0;
+}
+
+.ambulance-voucher-preview-dialog .dialog-content {
+  padding: 16px 18px 18px;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.ambulance-voucher-preview-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.ambulance-voucher-preview-link {
+  color: #0f766e;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ambulance-voucher-preview-link:hover {
+  text-decoration: underline;
+}
+
+.bon-loading,
+.bon-error {
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.bon-error {
+  color: #b91c1c;
+}
+
+.bon-ambulance {
+  background: #fff;
+  border: 1px solid #d7e5e2;
+  border-radius: 8px;
+  padding: 22px 24px 18px;
+  color: #12332f;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.04);
+}
+
+.bon-ambulance-header {
+  text-align: center;
+  margin-bottom: 18px;
+  border-bottom: 2px solid #0f766e;
+  padding-bottom: 14px;
+}
+
+.bon-ambulance-brand {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  color: #0f766e;
+  text-transform: uppercase;
+}
+
+.bon-ambulance-fax {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #4b635f;
+}
+
+.bon-ambulance-title {
+  margin: 12px 0 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #0b4f49;
+}
+
+.bon-ambulance-location {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.bon-ambulance-location div {
+  background: #f3faf8;
+  border: 1px solid #d5ebe6;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.bon-ambulance-location span {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5f7a75;
+  margin-bottom: 4px;
+}
+
+.bon-ambulance-location strong {
+  display: block;
+  min-height: 1.2em;
+  font-size: 14px;
+  font-weight: 600;
+  color: #12332f;
+}
+
+.bon-ambulance-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.bon-field {
+  border: 1px solid #d7e5e2;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #fcfefd;
+}
+
+.bon-field-wide {
+  grid-column: 1 / -1;
+}
+
+.bon-field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f766e;
+}
+
+.bon-field > div,
+.bon-sign-line,
+.bon-sign-space {
+  min-height: 28px;
+  border-bottom: 1px dashed #b7d2cc;
+  padding-bottom: 4px;
+  font-size: 14px;
+}
+
+.bon-patients {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 16px;
+  font-size: 13px;
+}
+
+.bon-patients th,
+.bon-patients td {
+  border: 1px solid #c9ddd8;
+  padding: 10px 12px;
+  vertical-align: top;
+}
+
+.bon-patients th {
+  background: #e8f5f2;
+  color: #0f766e;
+  text-align: left;
+  font-size: 12px;
+}
+
+.bon-patients td:first-child,
+.bon-patients th:first-child {
+  width: 40px;
+  text-align: center;
+}
+
+.bon-signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.bon-sign-box {
+  border: 1px solid #d7e5e2;
+  border-radius: 6px;
+  padding: 12px;
+  min-height: 120px;
+  background: #fff;
+}
+
+.bon-sign-box label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f766e;
+  margin-bottom: 18px;
+  line-height: 1.35;
+}
+
+.bon-sign-space {
+  min-height: 54px;
+}
+
+.bon-notes {
+  border-top: 1px solid #d7e5e2;
+  padding-top: 12px;
+  font-size: 12px;
+  color: #405753;
+  line-height: 1.45;
+}
+
+.bon-notes p {
+  margin: 0 0 6px;
+}
+
+body.ambulance-voucher-preview-open {
+  overflow: hidden;
+}
+
+.bon-print-body {
+  margin: 0;
+  padding: 18px;
+  background: #fff;
+}
+
+@media print {
+  .ambulance-voucher-preview-actions,
+  .dialog-header,
+  .transfer-app-nav,
+  .transfer-records-filters {
+    display: none !important;
+  }
+
+  .bon-ambulance {
+    box-shadow: none;
+    border: none;
+  }
+}
+
+@media (max-width: 800px) {
+  .bon-ambulance-location,
+  .bon-ambulance-grid,
+  .bon-signatures {
+    grid-template-columns: 1fr;
+  }
+}

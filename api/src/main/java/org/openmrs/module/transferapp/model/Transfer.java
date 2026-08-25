@@ -194,6 +194,10 @@ public class Transfer extends BaseOpenmrsData {
 	@Column(name = "hie_transfer_id", length = 64)
 	private String hieTransferId;
 
+	/** mohbilling Consommation id created for ambulance transport billing. */
+	@Column(name = "ambulance_consommation_id")
+	private Integer ambulanceConsommationId;
+
 	@Enumerated(EnumType.STRING)
 	@Column(name = "patient_sms_status", length = 20)
 	private PatientSmsNotificationStatus patientSmsStatus;
@@ -644,6 +648,14 @@ public class Transfer extends BaseOpenmrsData {
 
 	public void setHieTransferId(String hieTransferId) {
 		this.hieTransferId = hieTransferId;
+	}
+
+	public Integer getAmbulanceConsommationId() {
+		return ambulanceConsommationId;
+	}
+
+	public void setAmbulanceConsommationId(Integer ambulanceConsommationId) {
+		this.ambulanceConsommationId = ambulanceConsommationId;
 	}
 
 	public Boolean getReceivedFromHie() {

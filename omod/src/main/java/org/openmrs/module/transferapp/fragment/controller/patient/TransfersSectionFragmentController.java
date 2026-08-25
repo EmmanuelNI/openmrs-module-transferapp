@@ -24,6 +24,7 @@ import org.openmrs.module.transferapp.TransferAppActivator;
 import org.openmrs.module.transferapp.TransferPrivilegeHelper;
 import org.openmrs.module.transferapp.api.PatientInsuranceService;
 import org.openmrs.module.transferapp.api.PatientTransferListService;
+import org.openmrs.module.transferapp.api.TransferAdminService;
 import org.openmrs.module.transferapp.api.TransferPatientSnapshotResolver;
 import org.openmrs.module.transferapp.api.TransferProfileService;
 import org.openmrs.module.transferapp.api.TransferRegistrationObsService;
@@ -56,6 +57,7 @@ public class TransfersSectionFragmentController {
 			@SpringBean("patientTransferListService") PatientTransferListService patientTransferListService,
 			@SpringBean("patientInsuranceService") PatientInsuranceService patientInsuranceService,
 			@SpringBean("transferProfileService") TransferProfileService transferProfileService,
+			@SpringBean("transferAdminService") TransferAdminService transferAdminService,
 			@SpringBean("transferAppRegistrationObsService") TransferRegistrationObsService registrationObsService) {
 
 		config.require("patient");
@@ -72,6 +74,7 @@ public class TransfersSectionFragmentController {
 		boolean canCreateTransfer = TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);
 		boolean patientInsuranceAvailable = false;
 		boolean providerProfileComplete = false;
+		boolean outboundFacilityConfigured = false;
 		String accessDeniedMessage = null;
 
 		List<PatientTransferListItem> transfers = Collections.emptyList();
@@ -113,6 +116,7 @@ public class TransfersSectionFragmentController {
 				User user = Context.getAuthenticatedUser();
 				TransferProfile profile = user != null ? transferProfileService.getProfileForUser(user) : null;
 				providerProfileComplete = profile != null && profile.isCompleteForTransfer();
+				outboundFacilityConfigured = transferAdminService.isOutboundFacilityNameConfigured();
 			}
 			catch (Exception ex) {
 				canCreateTransfer = false;
@@ -189,6 +193,7 @@ public class TransfersSectionFragmentController {
 		model.addAttribute("canProvideFeedback", canProvideFeedback);
 		model.addAttribute("patientId", patientId);
 		model.addAttribute("providerProfileComplete", providerProfileComplete);
+		model.addAttribute("outboundFacilityConfigured", outboundFacilityConfigured);
 		model.addAttribute("requiredListPrivilege", TransferAppActivator.PRIVILEGE_LIST_TRANSFERS);
 		model.addAttribute("requiredCreatePrivilege", TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);
 		model.addAttribute("accessDeniedMessage", accessDeniedMessage);

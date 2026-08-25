@@ -66,4 +66,16 @@ public interface TransferAdminService {
 	@Transactional(readOnly = true)
 	String resolveCurrentSendingFacilityName();
 
+	/**
+	 * Normalized facility name for outbound HIE payloads ({@code transferapp.outboundFacilityName}).
+	 */
+	@Transactional(readOnly = true)
+	String resolveOutboundFacilityName();
+
+	/**
+	 * True when {@code transferapp.outboundFacilityName} is set (required to start outbound transfers).
+	 */
+	@Transactional(readOnly = true)
+	boolean isOutboundFacilityNameConfigured();
+
 }

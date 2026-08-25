@@ -16,6 +16,7 @@ package org.openmrs.module.transferapp.api.impl;
 import org.apache.commons.lang.StringUtils;
 import org.openmrs.Patient;
 import org.openmrs.module.transferapp.api.PatientTransferListService;
+import org.openmrs.module.transferapp.api.TransferAdminService;
 import org.openmrs.module.transferapp.api.TransferService;
 import org.openmrs.module.transferapp.model.PatientTransferListItem;
 import org.openmrs.module.transferapp.model.Transfer;
@@ -28,8 +29,14 @@ public class PatientTransferListServiceImpl implements PatientTransferListServic
 
 	private TransferService transferService;
 
+	private TransferAdminService transferAdminService;
+
 	public void setTransferService(TransferService transferService) {
 		this.transferService = transferService;
+	}
+
+	public void setTransferAdminService(TransferAdminService transferAdminService) {
+		this.transferAdminService = transferAdminService;
 	}
 
 	@Override
@@ -60,10 +67,9 @@ public class PatientTransferListServiceImpl implements PatientTransferListServic
 			item.setTransferDate(transfer.getDecisionToTransferAt() != null
 					? transfer.getDecisionToTransferAt()
 					: transfer.getDateCreated());
-			item.setFromFacility(StringUtils.defaultString(
-					transfer.getSendingFacility(),
-					resolveFacilityLabel(transfer.getReceivingFacilityCode())));
-			item.setService(transfer.getReceivingService());
+			// Destination only: receiving facility selected on the transfer form.
+			item.setToFacility(resolveSelectedDestinationName(transfer.getReceivingFacilityCode()));
+			item.setService(StringUtils.defaultString(transfer.getReceivingService()));
 			item.setClientName(transfer.getClientName());
 			item.setEmrId(transfer.getEmrId());
 			item.setHieSent(transfer.isSentToHie());
@@ -72,22 +78,21 @@ public class PatientTransferListServiceImpl implements PatientTransferListServic
 		return items;
 	}
 
-	protected String resolveFacilityLabel(String facilityCode) {
-		if (facilityCode == null || facilityCode.trim().isEmpty()) {
+	/**
+	 * Display name for the destination facility chosen on the form ({@code receivingFacilityCode}).
+	 * Never uses sending / outbound facility name.
+	 */
+	private String resolveSelectedDestinationName(String receivingFacilityCode) {
+		if (StringUtils.isBlank(receivingFacilityCode)) {
 			return "";
 		}
-		switch (facilityCode) {
-			case "KUTH":
-				return "Kigali University Teaching Hospital";
-			case "RUHENGERI":
-				return "Ruhengeri District Hospital";
-			case "BUTARO":
-				return "Butaro District Hospital";
-			case "KFH":
-				return "King Faisal Hospital";
-			default:
-				return facilityCode;
+		String code = receivingFacilityCode.trim();
+		if (transferAdminService == null) {
+			return code;
 		}
+		Integer sendingLocationId = transferAdminService.resolveCurrentSendingLocationId();
+		String name = transferAdminService.resolveReceivingFacilityName(sendingLocationId, code);
+		return StringUtils.isNotBlank(name) ? name : code;
 	}
 
 }
