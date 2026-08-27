@@ -123,6 +123,59 @@ public class HibernateTransferDao implements TransferDao {
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
+	public List<Transfer> getAmbulanceVoucherTransfers(String sendingFacility, Date startDate, Date endDate,
+			Integer firstResult, Integer maxResults) {
+		Criteria criteria = createAmbulanceVoucherCriteria(sendingFacility, startDate, endDate);
+		if (criteria == null) {
+			return Collections.emptyList();
+		}
+		criteria.addOrder(Order.desc("decisionToTransferAt"));
+		criteria.addOrder(Order.desc("dateCreated"));
+		if (firstResult != null && firstResult.intValue() > 0) {
+			criteria.setFirstResult(firstResult.intValue());
+		}
+		if (maxResults != null && maxResults.intValue() > 0) {
+			criteria.setMaxResults(maxResults.intValue());
+		}
+		return criteria.list();
+	}
+
+	@Override
+	public int countAmbulanceVoucherTransfers(String sendingFacility, Date startDate, Date endDate) {
+		Criteria criteria = createAmbulanceVoucherCriteria(sendingFacility, startDate, endDate);
+		if (criteria == null) {
+			return 0;
+		}
+		criteria.setProjection(Projections.rowCount());
+		Number count = (Number) criteria.uniqueResult();
+		return count == null ? 0 : count.intValue();
+	}
+
+	private Criteria createAmbulanceVoucherCriteria(String sendingFacility, Date startDate, Date endDate) {
+		if (StringUtils.isBlank(sendingFacility)) {
+			return null;
+		}
+		Criteria criteria = getSession().createCriteria(Transfer.class);
+		criteria.add(Restrictions.eq("voided", false));
+		criteria.add(Restrictions.eq("sendingFacility", sendingFacility.trim()));
+		criteria.add(Restrictions.isNotNull("ambulanceConsommationId"));
+		if (startDate != null) {
+			criteria.add(Restrictions.sqlRestriction(
+					"COALESCE({alias}.decision_to_transfer_at, {alias}.date_created) >= ?",
+					startDate,
+					StandardBasicTypes.TIMESTAMP));
+		}
+		if (endDate != null) {
+			criteria.add(Restrictions.sqlRestriction(
+					"COALESCE({alias}.decision_to_transfer_at, {alias}.date_created) <= ?",
+					endDate,
+					StandardBasicTypes.TIMESTAMP));
+		}
+		return criteria;
+	}
+
+	@Override
 	public int countOutboundTransfers(String sendingFacility, Date fromDate, Boolean hieSent) {
 		if (StringUtils.isBlank(sendingFacility)) {
 			return 0;

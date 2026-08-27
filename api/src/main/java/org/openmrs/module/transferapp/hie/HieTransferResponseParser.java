@@ -479,13 +479,27 @@ public class HieTransferResponseParser {
 
         String insurance = extractExtensionDisplay(resource, EXT_INSURANCE_TYPE);
         transfer.put("healthInsurance", insurance);
-        String insuranceLower = insurance.toLowerCase();
-        transfer.put("isCbhiInsurance", String.valueOf(insuranceLower.contains("cbhi") || insuranceLower.contains("mutuelle")));
-        transfer.put("isRssbInsurance", String.valueOf(insuranceLower.contains("rssb")));
-        transfer.put("isMmiInsurance", String.valueOf(insuranceLower.contains("mmi")));
-        transfer.put("otherInsurance", (insuranceLower.contains("cbhi") || insuranceLower.contains("mutuelle")
-                || insuranceLower.contains("rssb") || insuranceLower.contains("mmi")) ? "" : insurance);
-        transfer.put("isNoInsurance", String.valueOf(insurance.trim().isEmpty()));
+        String insuranceLower = insurance == null ? "" : insurance.toLowerCase().trim();
+        boolean isCbhi = insuranceLower.contains("cbhi") || insuranceLower.contains("mutuelle");
+        boolean isRssb = insuranceLower.contains("rssb");
+        boolean isMmi = insuranceLower.contains("mmi");
+        boolean isNone = insuranceLower.isEmpty()
+                || "none".equals(insuranceLower)
+                || "n/a".equals(insuranceLower)
+                || "na".equals(insuranceLower)
+                || "no".equals(insuranceLower)
+                || "no insurance".equals(insuranceLower)
+                || "without insurance".equals(insuranceLower)
+                || "uninsured".equals(insuranceLower);
+        boolean isKnownNamed = isCbhi || isRssb || isMmi || isNone;
+        transfer.put("isCbhiInsurance", String.valueOf(isCbhi));
+        transfer.put("isRssbInsurance", String.valueOf(isRssb));
+        transfer.put("isMmiInsurance", String.valueOf(isMmi));
+        transfer.put("otherInsurance", isKnownNamed ? "" : insurance);
+        transfer.put("isNoInsurance", String.valueOf(isNone));
+        if (isNone) {
+            transfer.put("healthInsuranceType", "NONE");
+        }
 
         transfer.put("laboratory", extractExtensionValue(resource, EXT_LAB_RESULTS));
         transfer.put("others", firstNonBlank(

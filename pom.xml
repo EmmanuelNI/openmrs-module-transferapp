@@ -4,7 +4,7 @@
 
 	<groupId>org.openmrs.module</groupId>
 	<artifactId>transferapp</artifactId>
-	<version>1.3.0-SNAPSHOT</version>
+	<version>1.3.2-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>Transfer App Module</name>
 	<description>Transfer App for the Reference Application</description>
@@ -40,6 +40,7 @@
 		<registrationcoreVersion>1.13.0</registrationcoreVersion>
 		<addresshierarchyVersion>2.21.0</addresshierarchyVersion>
 		<initializerVersion>2.10.0</initializerVersion>
+		<mohbillingVersion>2.2.1-SNAPSHOT</mohbillingVersion>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
@@ -126,6 +127,13 @@
 			<groupId>org.openmrs.module</groupId>
 			<artifactId>addresshierarchy-api</artifactId>
 			<version>${addresshierarchyVersion}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.openmrs.module</groupId>
+			<artifactId>mohbilling-api</artifactId>
+			<version>${mohbillingVersion}</version>
 			<scope>provided</scope>
 		</dependency>
 

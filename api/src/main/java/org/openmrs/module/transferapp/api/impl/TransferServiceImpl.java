@@ -23,6 +23,7 @@ import org.openmrs.api.context.Context;
 import org.openmrs.module.transferapp.TransferAppConstants;
 import org.openmrs.module.transferapp.api.PatientInsuranceService;
 import org.openmrs.module.transferapp.api.TransferAdminService;
+import org.openmrs.module.transferapp.api.TransferAmbulanceBillingService;
 import org.openmrs.module.transferapp.api.TransferPatientSnapshotResolver;
 import org.openmrs.module.transferapp.api.TransferProfileService;
 import org.openmrs.module.transferapp.api.TransferService;
@@ -66,6 +67,8 @@ public class TransferServiceImpl implements TransferService {
 
 	private TransferPatientSnapshotResolver patientSnapshotResolver = new TransferPatientSnapshotResolver();
 
+	private TransferAmbulanceBillingService transferAmbulanceBillingService;
+
 	public void setTransferDao(TransferDao transferDao) {
 		this.transferDao = transferDao;
 	}
@@ -88,6 +91,10 @@ public class TransferServiceImpl implements TransferService {
 
 	public void setQueueService(QueueService queueService) {
 		this.queueService = queueService;
+	}
+
+	public void setTransferAmbulanceBillingService(TransferAmbulanceBillingService transferAmbulanceBillingService) {
+		this.transferAmbulanceBillingService = transferAmbulanceBillingService;
 	}
 
 	@Override
@@ -167,6 +174,8 @@ public class TransferServiceImpl implements TransferService {
 
 		boolean isUpdate = StringUtils.isNotBlank(transferUuid);
 		Transfer transfer;
+		String previousReceivingFacilityCode = null;
+		String previousTransportType = null;
 		if (isUpdate) {
 			transfer = transferDao.getTransferByUuid(transferUuid.trim());
 			if (transfer == null || transfer.isVoided()) {
@@ -177,6 +186,8 @@ public class TransferServiceImpl implements TransferService {
 					|| !transfer.getPatient().getPatientId().equals(patientId)) {
 				throw new APIException("Transfer does not belong to this patient");
 			}
+			previousReceivingFacilityCode = transfer.getReceivingFacilityCode();
+			previousTransportType = transfer.getTransportType();
 		}
 		else {
 			transfer = new Transfer();
@@ -230,6 +241,7 @@ public class TransferServiceImpl implements TransferService {
 
 		applyFormExtras(transfer, formExtras, isUpdate);
 		validateRequiredClinicalFields(transfer);
+		ensureSendingFacilityMatchesOutbound(transfer);
 
 		Date now = new Date();
 		if (isUpdate) {
@@ -245,6 +257,10 @@ public class TransferServiceImpl implements TransferService {
 		Transfer savedTransfer = transferDao.saveTransfer(transfer);
 		if (!isUpdate) {
 			markActiveQueueEntryTransferred(patient, savedTransfer, now);
+		}
+		if (transferAmbulanceBillingService != null) {
+			savedTransfer = transferAmbulanceBillingService.syncAmbulanceBill(
+					savedTransfer, previousReceivingFacilityCode, previousTransportType);
 		}
 		return savedTransfer;
 	}
@@ -292,6 +308,26 @@ public class TransferServiceImpl implements TransferService {
 		}
 		if (StringUtils.isBlank(transfer.getDiagnosis())) {
 			throw new APIException("Diagnosis is required");
+		}
+	}
+
+	/**
+	 * Ensures local {@code sendingFacility} matches {@code transferapp.outboundFacilityName}.
+	 * On edit of older records this rewrites alias/session names to the normalized outbound value.
+	 */
+	private void ensureSendingFacilityMatchesOutbound(Transfer transfer) {
+		if (transfer == null || transferAdminService == null) {
+			return;
+		}
+		if (!transferAdminService.isOutboundFacilityNameConfigured()) {
+			throw new APIException("Outbound facility name is not configured (transferapp.outboundFacilityName)");
+		}
+		String configuredName = StringUtils.trimToNull(transferAdminService.resolveOutboundFacilityName());
+		if (configuredName == null) {
+			throw new APIException("Outbound facility name is not configured (transferapp.outboundFacilityName)");
+		}
+		if (!configuredName.equals(StringUtils.trimToEmpty(transfer.getSendingFacility()))) {
+			transfer.setSendingFacility(configuredName);
 		}
 	}
 

@@ -13,21 +13,29 @@
  */
 package org.openmrs.module.transferapp.api;
 
-import org.openmrs.Patient;
-import org.openmrs.module.transferapp.model.PatientInsuranceInfo;
+import org.openmrs.module.transferapp.model.AmbulanceVoucherPage;
+import org.openmrs.module.transferapp.model.AmbulanceVoucherPreview;
 import org.springframework.transaction.annotation.Transactional;
 
-@Transactional
-public interface PatientInsuranceService {
+import java.util.Date;
 
-	@Transactional(readOnly = true)
-	PatientInsuranceInfo getPatientInsurance(Patient patient);
+/**
+ * Lists transfers that have a linked ambulance consommation (voucher).
+ */
+@Transactional
+public interface TransferAmbulanceVoucherService {
 
 	/**
-	 * Insurance card/policy number from the latest registration encounter when available,
-	 * otherwise falls back to {@link #getPatientInsurance(Patient)}.
+	 * All ambulance vouchers whose transfer date falls in {@code [startDate, endDate]}.
+	 * Intended for client-side DataTables search/pagination.
 	 */
 	@Transactional(readOnly = true)
-	String resolveInsuranceCardNumber(Patient patient);
+	AmbulanceVoucherPage getVouchers(Date startDate, Date endDate);
+
+	/**
+	 * Full BON D'AMBULANCE preview for one transfer (must have ambulance consommation).
+	 */
+	@Transactional(readOnly = true)
+	AmbulanceVoucherPreview getVoucherPreview(String transferUuid);
 
 }

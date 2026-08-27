@@ -232,7 +232,9 @@ public class TransferHieSubmissionServiceImpl implements TransferHieSubmissionSe
 			String encounterId, boolean keepRequiresVerification) {
 		String existingJson = hieShrClient.fetchEncounterById(connection, encounterId);
 		if (StringUtils.isBlank(existingJson)) {
-			// No prior HIE resource (or 404) — first effective upload for this id; keep clinical build.
+			// No prior HIE resource (404 or RHIE "Encounter … not found") — submit as a new transfer.
+			log.info("No existing HIE Encounter for id " + encounterId
+					+ "; submitting clinical payload as a new transfer.");
 			return clinicalEncounterJson;
 		}
 		return agentDecisionPreserver.mergePreservingAgentDecision(
@@ -286,13 +288,13 @@ public class TransferHieSubmissionServiceImpl implements TransferHieSubmissionSe
 	}
 
 	/**
-	 * Aligns outbound sending facility with {@code transferapp.sendingFacilityName} before HIE submit.
+	 * Aligns outbound sending facility with {@code transferapp.outboundFacilityName} before HIE submit.
 	 */
 	private void applyConfiguredSendingFacility(Transfer transfer) {
 		if (transfer == null || transferAdminService == null) {
 			return;
 		}
-		String configuredName = StringUtils.trimToNull(transferAdminService.resolveCurrentSendingFacilityName());
+		String configuredName = StringUtils.trimToNull(transferAdminService.resolveOutboundFacilityName());
 		if (configuredName != null) {
 			transfer.setSendingFacility(configuredName);
 		}

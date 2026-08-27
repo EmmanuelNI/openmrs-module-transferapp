@@ -20,6 +20,7 @@ import org.openmrs.api.context.Context;
 import org.openmrs.module.transferapp.TransferAppActivator;
 import org.openmrs.module.transferapp.TransferPrivilegeHelper;
 import org.openmrs.module.transferapp.api.NewTransferOutService;
+import org.openmrs.module.transferapp.api.TransferAdminService;
 import org.openmrs.module.transferapp.api.TransferProfileService;
 import org.openmrs.module.transferapp.model.NewTransferOutFormData;
 import org.openmrs.module.transferapp.model.TransferProfile;
@@ -38,7 +39,8 @@ public class NewTransferOutFormFragmentController {
 			@RequestParam(value = "patientId", required = false) Integer patientId,
 			@RequestParam(value = "transferUuid", required = false) String transferUuid,
 			@SpringBean("newTransferOutService") NewTransferOutService newTransferOutService,
-			@SpringBean("transferProfileService") TransferProfileService transferProfileService) {
+			@SpringBean("transferProfileService") TransferProfileService transferProfileService,
+			@SpringBean("transferAdminService") TransferAdminService transferAdminService) {
 
 		model.addAttribute("error", "");
 		model.addAttribute("formData", null);
@@ -46,6 +48,11 @@ public class NewTransferOutFormFragmentController {
 		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)) {
 			model.addAttribute("error",
 					TransferPrivilegeHelper.requiredPrivilegeMessage(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER));
+			return;
+		}
+
+		if (!transferAdminService.isOutboundFacilityNameConfigured()) {
+			model.addAttribute("error", ui.message("transferapp.patient.transfers.outboundFacilityRequired"));
 			return;
 		}
 

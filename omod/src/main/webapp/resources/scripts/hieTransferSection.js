@@ -61,7 +61,10 @@
             previewDialogs.slice(1).remove();
         }
 
-        var transferOpenmrsPath = (typeof openmrsContextPath !== "undefined" ? openmrsContextPath : "");
+        var transferOpenmrsPath = (typeof openmrsContextPath !== "undefined" && openmrsContextPath)
+            ? openmrsContextPath
+            : "/openmrs";
+        window.transferOpenmrsPath = transferOpenmrsPath;
         var runtime = {
             restUrl: normalizeRootUrl(transferOpenmrsPath + "/ws/rest/v1/transferapp/transfer"),
             validateUrl: normalizeRootUrl(transferOpenmrsPath + "/ws/rest/v1/transferapp/transfer/validate"),

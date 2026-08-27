@@ -16,6 +16,7 @@ package org.openmrs.module.transferapp.hie;
 import org.apache.commons.lang.StringUtils;
 import org.openmrs.Patient;
 import org.openmrs.module.transferapp.TransferAppConstants;
+import org.openmrs.module.transferapp.api.impl.PatientInsuranceServiceImpl;
 import org.openmrs.module.transferapp.model.Transfer;
 
 import java.text.ParseException;
@@ -162,6 +163,17 @@ public class HieReceivedTransferMapper {
 			return;
 		}
 		String insurance = stringValue(hieData.get("healthInsurance"));
+		String byDisplay = PatientInsuranceServiceImpl.matchCategoryByDisplayName(insurance);
+		if (TransferAppConstants.HEALTH_INSURANCE_NONE.equals(byDisplay)) {
+			transfer.setHealthInsuranceType(TransferAppConstants.HEALTH_INSURANCE_NONE);
+			return;
+		}
+		if (TransferAppConstants.HEALTH_INSURANCE_CBHI.equals(byDisplay)
+				|| TransferAppConstants.HEALTH_INSURANCE_RSSB.equals(byDisplay)
+				|| TransferAppConstants.HEALTH_INSURANCE_MMI.equals(byDisplay)) {
+			transfer.setHealthInsuranceType(byDisplay);
+			return;
+		}
 		if (StringUtils.isNotBlank(insurance)) {
 			transfer.setHealthInsuranceType(TransferAppConstants.HEALTH_INSURANCE_OTHER);
 			transfer.setHealthInsuranceOther(truncate(firstNonBlank(
