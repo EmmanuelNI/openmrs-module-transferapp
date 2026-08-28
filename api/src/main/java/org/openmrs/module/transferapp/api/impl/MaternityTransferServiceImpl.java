@@ -88,11 +88,32 @@ public class MaternityTransferServiceImpl implements MaternityTransferService {
 		ensureReceivingServiceConfigured(formData.getReceivingFacilityCode(), receivingFacilityId,
 				formData.getReceivingService());
 
-		MaternityTransfer transfer = new MaternityTransfer();
-		transfer.setUuid(UUID.randomUUID().toString());
-		transfer.setPatient(patient);
+		boolean isUpdate = StringUtils.isNotBlank(formData.getTransferUuid());
+		MaternityTransfer transfer;
+		if (isUpdate) {
+			transfer = maternityTransferDao.getMaternityTransferByUuid(formData.getTransferUuid().trim());
+			if (transfer == null || transfer.isVoided()) {
+				throw new APIException("Transfer not found");
+			}
+			if (transfer.getPatient() == null
+					|| transfer.getPatient().getPatientId() == null
+					|| !transfer.getPatient().getPatientId().equals(patientId)) {
+				throw new APIException("Transfer does not belong to this patient");
+			}
+			transfer.getTreatments().clear();
+		}
+		else {
+			transfer = new MaternityTransfer();
+			transfer.setUuid(UUID.randomUUID().toString());
+			transfer.setPatient(patient);
+		}
 
 		// Step 1 — client & referral info
+		transfer.setProvince(StringUtils.trimToNull(formData.getProvince()));
+		transfer.setDistrict(StringUtils.trimToNull(formData.getDistrict()));
+		transfer.setHospitalName(StringUtils.trimToNull(formData.getHospitalName()));
+		transfer.setReferringFacilityName(StringUtils.trimToNull(formData.getReferringFacilityName()));
+		transfer.setReferringUnit(StringUtils.trimToNull(formData.getReferringUnit()));
 		transfer.setClientName(StringUtils.trimToNull(formData.getClientName()));
 		transfer.setSerialNumberEmr(StringUtils.trimToNull(formData.getSerialNumberEmr()));
 		transfer.setAgeOrDob(StringUtils.trimToNull(formData.getAgeOrDob()));
@@ -135,6 +156,7 @@ public class MaternityTransferServiceImpl implements MaternityTransferService {
 		transfer.setAncCompletedCount(StringUtils.trimToNull(formData.getAncCompletedCount()));
 		transfer.setTetanusVaccineDoses(StringUtils.trimToNull(formData.getTetanusVaccineDoses()));
 		transfer.setPreviousSignificantHistory(StringUtils.trimToNull(formData.getPreviousSignificantHistory()));
+		transfer.setMultiPregnanciesAndKnownHiv(StringUtils.trimToNull(formData.getMultiPregnanciesAndKnownHiv()));
 		transfer.setCurrentPregnancyComplications(StringUtils.trimToNull(formData.getCurrentPregnancyComplications()));
 
 		// Step 3 — clinical findings
@@ -164,7 +186,6 @@ public class MaternityTransferServiceImpl implements MaternityTransferService {
 		transfer.setMembranesRuptured(parseBoolean(formData.getMembranesRuptured()));
 		transfer.setMembranesRupturedAt(parseDateTimeLocal(formData.getMembranesRupturedAt()));
 		transfer.setAmnioticFluidColor(StringUtils.trimToNull(formData.getAmnioticFluidColor()));
-		transfer.setOffensive(parseBoolean(formData.getOffensive()));
 		transfer.setEstimatedBloodLossMl(StringUtils.trimToNull(formData.getEstimatedBloodLossMl()));
 		transfer.setInvestigationHgb(StringUtils.trimToNull(formData.getInvestigationHgb()));
 		transfer.setInvestigationUrineTest(StringUtils.trimToNull(formData.getInvestigationUrineTest()));
@@ -189,10 +210,21 @@ public class MaternityTransferServiceImpl implements MaternityTransferService {
 		transfer.setReferringSignedTime(StringUtils.trimToNull(formData.getReferringSignedTime()));
 		transfer.setReferringProviderPhone(StringUtils.trimToNull(formData.getReferringProviderPhone()));
 
-		transfer.setCreator(Context.getAuthenticatedUser());
 		Date now = new Date();
-		transfer.setDateCreated(now);
-		transfer.setVoided(false);
+		if (isUpdate) {
+			transfer.setChangedBy(Context.getAuthenticatedUser());
+			transfer.setDateChanged(now);
+			// Local correction must be submitted to HIE again.
+			transfer.setHieSent(false);
+			transfer.setHieSentAt(null);
+			transfer.setHieSendError(null);
+		}
+		else {
+			transfer.setCreator(Context.getAuthenticatedUser());
+			transfer.setDateCreated(now);
+			transfer.setVoided(false);
+			transfer.setHieSent(false);
+		}
 		if (transfer.getReferringSignedDate() == null) {
 			transfer.setReferringSignedDate(now);
 		}

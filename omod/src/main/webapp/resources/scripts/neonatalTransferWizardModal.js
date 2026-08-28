@@ -312,6 +312,30 @@
 		});
 	}
 
+	function syncConditionalPanel(triggerSelector, panelSelector, requiredValue) {
+		var value = jq(triggerSelector).val();
+		var isVisible = value === requiredValue;
+		jq(panelSelector).toggle(isVisible);
+		if (!isVisible) {
+			jq(panelSelector).find('input, select, textarea').val('').prop('checked', false);
+		}
+	}
+
+	function syncNeonatalConditionalPanels() {
+		syncConditionalPanel('#neonatalResuscitationAtBirth', '#neonatalResuscitationMethodsPanel', 'Yes');
+		syncConditionalPanel('#neonatalHie', '#neonatalHieGradePanel', 'Yes');
+		syncConditionalPanel('#neonatalImmunization', '#neonatalImmunizationDetailsPanel', 'Yes');
+		syncConditionalPanel('#neonatalInotropes', '#neonatalInotropesSpecifyPanel', 'Yes');
+		syncConditionalPanel('#neonatalImagingResultsAvailable', '#neonatalImagingResultsPanel', 'Yes');
+
+		var fbcDone = jq('#neonatalLabFbc').val();
+		var fbcVisible = fbcDone === 'Yes';
+		jq('#neonatalLabHbPanel, #neonatalLabWbcPanel, #neonatalLabPlateletsPanel').toggle(fbcVisible);
+		if (!fbcVisible) {
+			jq('#neonatalLabHbPanel, #neonatalLabWbcPanel, #neonatalLabPlateletsPanel').find('input').val('');
+		}
+	}
+
 	function bindToggles() {
 		jq(document).off('change.neonatalTransferWizard', '#moh-neonatal-transfer-wizard-form input[name="modeOfTransport"]');
 		jq(document).on('change.neonatalTransferWizard', '#moh-neonatal-transfer-wizard-form input[name="modeOfTransport"]', syncTransportOther);
@@ -322,6 +346,12 @@
 				updateWizardHeader(currentStep);
 			}
 		});
+
+		jq(document).off('change.neonatalTransferWizard',
+			'#neonatalResuscitationAtBirth, #neonatalHie, #neonatalImmunization, #neonatalInotropes, #neonatalImagingResultsAvailable, #neonatalLabFbc');
+		jq(document).on('change.neonatalTransferWizard',
+			'#neonatalResuscitationAtBirth, #neonatalHie, #neonatalImmunization, #neonatalInotropes, #neonatalImagingResultsAvailable, #neonatalLabFbc',
+			syncNeonatalConditionalPanels);
 	}
 
 	function bindNavigation() {
@@ -368,6 +398,7 @@
 
 			var $submitBtn = jq(this);
 			$submitBtn.prop('disabled', true);
+			var isEditing = $form.attr('data-editing') === 'true';
 
 			jq.ajax({
 				url: getSaveUrl(),
@@ -377,10 +408,16 @@
 			}).done(function (response) {
 				if (response && response.status === 'success') {
 					if (typeof emr !== 'undefined' && typeof emr.successMessage === 'function') {
-						emr.successMessage('Neonatal transfer referral saved.');
+						emr.successMessage(isEditing ? 'Neonatal transfer referral updated.' : 'Neonatal transfer referral saved.');
 					}
 					if (typeof window.closeNewNeonatalTransferOutDialog === 'function') {
 						window.closeNewNeonatalTransferOutDialog();
+					}
+					if (response.uuid) {
+						try {
+							sessionStorage.setItem('transferapp.previewTransferUuid', response.uuid);
+							sessionStorage.setItem('transferapp.previewFormType', 'Neonatal');
+						} catch (ignoreStorage) {}
 					}
 					window.location.reload();
 					return;
@@ -414,6 +451,7 @@
 		initReceivingServiceSelect2();
 		initDateTimePickers();
 		syncTransportOther();
+		syncNeonatalConditionalPanels();
 		showStep(1);
 		loadReceivingServicesForSelectedFacility();
 	};

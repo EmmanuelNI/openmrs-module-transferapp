@@ -299,6 +299,45 @@
 		});
 	}
 
+	function zeroPad(value) {
+		return value < 10 ? '0' + value : String(value);
+	}
+
+	function formatDateYmd(date) {
+		return date.getFullYear() + '-' + zeroPad(date.getMonth() + 1) + '-' + zeroPad(date.getDate());
+	}
+
+	function calculateEddAndGestationFromLmp(lmpDate) {
+		if (!lmpDate) {
+			return;
+		}
+
+		var lmpMidnight = new Date(lmpDate.getFullYear(), lmpDate.getMonth(), lmpDate.getDate());
+
+		var eddDate = new Date(lmpMidnight.getTime());
+		eddDate.setDate(eddDate.getDate() + 280);
+		var eddEl = document.getElementById('eddDate');
+		if (eddEl && eddEl._flatpickr) {
+			eddEl._flatpickr.setDate(eddDate, true);
+		} else if (eddEl) {
+			eddEl.value = formatDateYmd(eddDate);
+		}
+
+		var today = new Date();
+		var todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+		var diffDays = Math.round((todayMidnight - lmpMidnight) / (1000 * 60 * 60 * 24));
+		if (diffDays < 0) {
+			diffDays = 0;
+		}
+		var weeks = Math.floor(diffDays / 7);
+		var days = diffDays % 7;
+
+		var gestationEl = document.getElementById('gestationAge');
+		if (gestationEl) {
+			gestationEl.value = days > 0 ? (weeks + ' weeks ' + days + ' days') : (weeks + ' weeks');
+		}
+	}
+
 	function destroyDateTimePickers() {
 		if (typeof flatpickr !== 'function') {
 			return;
@@ -338,14 +377,20 @@
 			});
 		});
 		document.querySelectorAll('#moh-maternity-transfer-wizard-form .js-date-picker').forEach(function (el) {
-			flatpickr(el, {
+			var options = {
 				enableTime: false,
 				dateFormat: 'Y-m-d',
 				altInput: true,
 				altFormat: 'd/m/Y',
 				allowInput: true,
 				disableMobile: true
-			});
+			};
+			if (el.id === 'lmpDate') {
+				options.onChange = function (selectedDates) {
+					calculateEddAndGestationFromLmp(selectedDates[0]);
+				};
+			}
+			flatpickr(el, options);
 		});
 	}
 
@@ -359,9 +404,15 @@
 			return;
 		}
 		var cellStyle = "padding:0.3rem;border-bottom:1px solid #eef2f6;";
+		var treatmentOptions = ["IV Fluids", "Dexamethasone", "Magnesium sulphate", "Nifedipine", "Oxytocin", "ATBs"];
+		var treatmentSelectHtml = '<select name="treatmentName"><option value="">Select treatment</option>';
+		treatmentOptions.forEach(function (option) {
+			treatmentSelectHtml += '<option value="' + option + '">' + option + '</option>';
+		});
+		treatmentSelectHtml += '</select>';
 		var $row = jq(
 			'<tr class="maternity-treatment-row">'
-			+ '<td style="' + cellStyle + '"><input type="text" name="treatmentName" value="" placeholder="Treatment" /></td>'
+			+ '<td style="' + cellStyle + '">' + treatmentSelectHtml + '</td>'
 			+ '<td style="' + cellStyle + '"><input type="text" name="treatmentDose" value="" /></td>'
 			+ '<td style="' + cellStyle + '"><input type="text" class="js-date-picker" name="treatmentGivenDate" value="" placeholder="Date" autocomplete="off" /></td>'
 			+ '<td style="' + cellStyle + '"><input type="text" class="js-time-picker" name="treatmentGivenTime" value="" placeholder="Time" autocomplete="off" /></td>'
@@ -455,6 +506,7 @@
 
 			var $submitBtn = jq(this);
 			$submitBtn.prop('disabled', true);
+			var isEditing = $form.attr('data-editing') === 'true';
 
 			jq.ajax({
 				url: getSaveUrl(),
@@ -464,10 +516,16 @@
 			}).done(function (response) {
 				if (response && response.status === 'success') {
 					if (typeof emr !== 'undefined' && typeof emr.successMessage === 'function') {
-						emr.successMessage('Maternity transfer referral saved.');
+						emr.successMessage(isEditing ? 'Maternity transfer referral updated.' : 'Maternity transfer referral saved.');
 					}
 					if (typeof window.closeNewMaternityTransferOutDialog === 'function') {
 						window.closeNewMaternityTransferOutDialog();
+					}
+					if (response.uuid) {
+						try {
+							sessionStorage.setItem('transferapp.previewTransferUuid', response.uuid);
+							sessionStorage.setItem('transferapp.previewFormType', 'Maternity');
+						} catch (ignoreStorage) {}
 					}
 					window.location.reload();
 					return;

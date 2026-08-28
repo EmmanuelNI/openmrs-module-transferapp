@@ -118,6 +118,35 @@ public class NeonatalTransfer extends BaseOpenmrsData {
 	@Column(name = "sending_facility", length = 255)
 	private String sendingFacility;
 
+	@Column(name = "hie_sent")
+	private Boolean hieSent;
+
+	@Column(name = "hie_sent_at")
+	private Date hieSentAt;
+
+	@Column(name = "hie_send_err", length = 500)
+	private String hieSendError;
+
+	@Column(name = "hie_transfer_id", length = 64)
+	private String hieTransferId;
+
+	// Facility details (header)
+
+	@Column(name = "province", length = 255)
+	private String province;
+
+	@Column(name = "district", length = 255)
+	private String district;
+
+	@Column(name = "hospital_name", length = 255)
+	private String hospitalName;
+
+	@Column(name = "referring_facility_name", length = 255)
+	private String referringFacilityName;
+
+	@Column(name = "referring_unit", length = 255)
+	private String referringUnit;
+
 	// Step 2 — maternal history
 
 	@Column(name = "mother_alive", length = 16)
@@ -137,6 +166,9 @@ public class NeonatalTransfer extends BaseOpenmrsData {
 
 	@Column(name = "pathologies_during_pregnancy")
 	private String pathologiesDuringPregnancy;
+
+	@Column(name = "pregnancy_other_pathologies")
+	private String pregnancyOtherPathologies;
 
 	@Column(name = "pregnancy_treatment")
 	private String pregnancyTreatment;
@@ -308,6 +340,9 @@ public class NeonatalTransfer extends BaseOpenmrsData {
 	@Column(name = "ventilation_settings")
 	private String ventilationSettings;
 
+	@Column(name = "blood_gas_analysis", length = 16)
+	private String bloodGasAnalysis;
+
 	@Column(name = "iv_fluid_vol", length = 32)
 	private String ivFluidVol;
 
@@ -316,6 +351,9 @@ public class NeonatalTransfer extends BaseOpenmrsData {
 
 	@Column(name = "inotropes", length = 255)
 	private String inotropes;
+
+	@Column(name = "inotropes_specify", length = 255)
+	private String inotropesSpecify;
 
 	@Column(name = "peripheral_iv", length = 16)
 	private String peripheralIv;
@@ -397,6 +435,12 @@ public class NeonatalTransfer extends BaseOpenmrsData {
 
 	@Column(name = "lab_cultures", length = 255)
 	private String labCultures;
+
+	@Column(name = "fbc_done", length = 16)
+	private String fbcDone;
+
+	@Column(name = "imaging_results_available", length = 16)
+	private String imagingResultsAvailable;
 
 	@Column(name = "imaging_results")
 	private String imagingResults;
@@ -632,6 +676,82 @@ public class NeonatalTransfer extends BaseOpenmrsData {
 		this.sendingFacility = sendingFacility;
 	}
 
+	public Boolean getHieSent() {
+		return hieSent;
+	}
+
+	public void setHieSent(Boolean hieSent) {
+		this.hieSent = hieSent;
+	}
+
+	public boolean isSentToHie() {
+		return Boolean.TRUE.equals(hieSent);
+	}
+
+	public Date getHieSentAt() {
+		return hieSentAt;
+	}
+
+	public void setHieSentAt(Date hieSentAt) {
+		this.hieSentAt = hieSentAt;
+	}
+
+	public String getHieSendError() {
+		return hieSendError;
+	}
+
+	public void setHieSendError(String hieSendError) {
+		this.hieSendError = hieSendError;
+	}
+
+	public String getHieTransferId() {
+		return hieTransferId;
+	}
+
+	public void setHieTransferId(String hieTransferId) {
+		this.hieTransferId = hieTransferId;
+	}
+
+	public String getProvince() {
+		return province;
+	}
+
+	public void setProvince(String province) {
+		this.province = province;
+	}
+
+	public String getDistrict() {
+		return district;
+	}
+
+	public void setDistrict(String district) {
+		this.district = district;
+	}
+
+	public String getHospitalName() {
+		return hospitalName;
+	}
+
+	public void setHospitalName(String hospitalName) {
+		this.hospitalName = hospitalName;
+	}
+
+	public String getReferringFacilityName() {
+		return referringFacilityName;
+	}
+
+	public void setReferringFacilityName(String referringFacilityName) {
+		this.referringFacilityName = referringFacilityName;
+	}
+
+	public String getReferringUnit() {
+		return referringUnit;
+	}
+
+	public void setReferringUnit(String referringUnit) {
+		this.referringUnit = referringUnit;
+	}
+
 	public String getMotherAlive() {
 		return motherAlive;
 	}
@@ -678,6 +798,14 @@ public class NeonatalTransfer extends BaseOpenmrsData {
 
 	public void setPathologiesDuringPregnancy(String pathologiesDuringPregnancy) {
 		this.pathologiesDuringPregnancy = pathologiesDuringPregnancy;
+	}
+
+	public String getPregnancyOtherPathologies() {
+		return pregnancyOtherPathologies;
+	}
+
+	public void setPregnancyOtherPathologies(String pregnancyOtherPathologies) {
+		this.pregnancyOtherPathologies = pregnancyOtherPathologies;
 	}
 
 	public String getPregnancyTreatment() {
@@ -1112,6 +1240,14 @@ public class NeonatalTransfer extends BaseOpenmrsData {
 		this.ventilationSettings = ventilationSettings;
 	}
 
+	public String getBloodGasAnalysis() {
+		return bloodGasAnalysis;
+	}
+
+	public void setBloodGasAnalysis(String bloodGasAnalysis) {
+		this.bloodGasAnalysis = bloodGasAnalysis;
+	}
+
 	public String getIvFluidVol() {
 		return ivFluidVol;
 	}
@@ -1134,6 +1270,14 @@ public class NeonatalTransfer extends BaseOpenmrsData {
 
 	public void setInotropes(String inotropes) {
 		this.inotropes = inotropes;
+	}
+
+	public String getInotropesSpecify() {
+		return inotropesSpecify;
+	}
+
+	public void setInotropesSpecify(String inotropesSpecify) {
+		this.inotropesSpecify = inotropesSpecify;
 	}
 
 	public String getPeripheralIv() {
@@ -1350,6 +1494,22 @@ public class NeonatalTransfer extends BaseOpenmrsData {
 
 	public void setLabCultures(String labCultures) {
 		this.labCultures = labCultures;
+	}
+
+	public String getFbcDone() {
+		return fbcDone;
+	}
+
+	public void setFbcDone(String fbcDone) {
+		this.fbcDone = fbcDone;
+	}
+
+	public String getImagingResultsAvailable() {
+		return imagingResultsAvailable;
+	}
+
+	public void setImagingResultsAvailable(String imagingResultsAvailable) {
+		this.imagingResultsAvailable = imagingResultsAvailable;
 	}
 
 	public String getImagingResults() {

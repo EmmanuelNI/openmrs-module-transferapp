@@ -81,9 +81,24 @@ public class NeonatalTransferServiceImpl implements NeonatalTransferService {
 		ensureReceivingServiceConfigured(formData.getReceivingFacilityCode(), receivingFacilityId,
 				formData.getReceivingService());
 
-		NeonatalTransfer transfer = new NeonatalTransfer();
-		transfer.setUuid(UUID.randomUUID().toString());
-		transfer.setPatient(patient);
+		boolean isUpdate = StringUtils.isNotBlank(formData.getTransferUuid());
+		NeonatalTransfer transfer;
+		if (isUpdate) {
+			transfer = neonatalTransferDao.getNeonatalTransferByUuid(formData.getTransferUuid().trim());
+			if (transfer == null || transfer.isVoided()) {
+				throw new APIException("Transfer not found");
+			}
+			if (transfer.getPatient() == null
+					|| transfer.getPatient().getPatientId() == null
+					|| !transfer.getPatient().getPatientId().equals(patientId)) {
+				throw new APIException("Transfer does not belong to this patient");
+			}
+		}
+		else {
+			transfer = new NeonatalTransfer();
+			transfer.setUuid(UUID.randomUUID().toString());
+			transfer.setPatient(patient);
+		}
 
 		// Step 1 — baby & referral info
 		transfer.setBabyName(StringUtils.trimToNull(formData.getBabyName()));
@@ -114,6 +129,13 @@ public class NeonatalTransferServiceImpl implements NeonatalTransferService {
 		transfer.setDecisionToTransferAt(parseDateTimeLocal(formData.getDecisionToTransferAt()));
 		transfer.setSendingFacility(resolveCurrentFacilityName());
 
+		// Facility details (header)
+		transfer.setProvince(StringUtils.trimToNull(formData.getProvince()));
+		transfer.setDistrict(StringUtils.trimToNull(formData.getDistrict()));
+		transfer.setHospitalName(StringUtils.trimToNull(formData.getHospitalName()));
+		transfer.setReferringFacilityName(StringUtils.trimToNull(formData.getReferringFacilityName()));
+		transfer.setReferringUnit(StringUtils.trimToNull(formData.getReferringUnit()));
+
 		// Step 2 — maternal history
 		transfer.setMotherAlive(StringUtils.trimToNull(formData.getMotherAlive()));
 		transfer.setObstetricGravida(StringUtils.trimToNull(formData.getObstetricGravida()));
@@ -121,6 +143,7 @@ public class NeonatalTransferServiceImpl implements NeonatalTransferService {
 		transfer.setPregnancyType(StringUtils.trimToNull(formData.getPregnancyType()));
 		transfer.setAncScreening(StringUtils.trimToNull(formData.getAncScreening()));
 		transfer.setPathologiesDuringPregnancy(StringUtils.trimToNull(formData.getPathologiesDuringPregnancy()));
+		transfer.setPregnancyOtherPathologies(StringUtils.trimToNull(formData.getPregnancyOtherPathologies()));
 		transfer.setPregnancyTreatment(StringUtils.trimToNull(formData.getPregnancyTreatment()));
 		transfer.setBloodGroup(StringUtils.trimToNull(formData.getBloodGroup()));
 		transfer.setRhFactor(StringUtils.trimToNull(formData.getRhFactor()));
@@ -183,9 +206,11 @@ public class NeonatalTransferServiceImpl implements NeonatalTransferService {
 		// Step 6 — management at referring facility
 		transfer.setRespiratorySupport(StringUtils.trimToNull(formData.getRespiratorySupport()));
 		transfer.setVentilationSettings(StringUtils.trimToNull(formData.getVentilationSettings()));
+		transfer.setBloodGasAnalysis(StringUtils.trimToNull(formData.getBloodGasAnalysis()));
 		transfer.setIvFluidVol(StringUtils.trimToNull(formData.getIvFluidVol()));
 		transfer.setPassedUrine(StringUtils.trimToNull(formData.getPassedUrine()));
 		transfer.setInotropes(StringUtils.trimToNull(formData.getInotropes()));
+		transfer.setInotropesSpecify(StringUtils.trimToNull(formData.getInotropesSpecify()));
 		transfer.setPeripheralIv(StringUtils.trimToNull(formData.getPeripheralIv()));
 		transfer.setCentralIv(StringUtils.trimToNull(formData.getCentralIv()));
 		transfer.setIntraosseousLine(StringUtils.trimToNull(formData.getIntraosseousLine()));
@@ -213,6 +238,8 @@ public class NeonatalTransferServiceImpl implements NeonatalTransferService {
 		transfer.setLabBiliDirect(StringUtils.trimToNull(formData.getLabBiliDirect()));
 		transfer.setLabUe(StringUtils.trimToNull(formData.getLabUe()));
 		transfer.setLabCultures(StringUtils.trimToNull(formData.getLabCultures()));
+		transfer.setFbcDone(StringUtils.trimToNull(formData.getFbcDone()));
+		transfer.setImagingResultsAvailable(StringUtils.trimToNull(formData.getImagingResultsAvailable()));
 		transfer.setImagingResults(StringUtils.trimToNull(formData.getImagingResults()));
 		transfer.setPainSedationDrugs(StringUtils.trimToNull(formData.getPainSedationDrugs()));
 		transfer.setImagingReportAttached(parseBoolean(formData.getImagingReportAttached()));
@@ -226,10 +253,21 @@ public class NeonatalTransferServiceImpl implements NeonatalTransferService {
 		transfer.setReferringSignedTime(StringUtils.trimToNull(formData.getReferringSignedTime()));
 		transfer.setReferringProviderPhone(StringUtils.trimToNull(formData.getReferringProviderPhone()));
 
-		transfer.setCreator(Context.getAuthenticatedUser());
 		Date now = new Date();
-		transfer.setDateCreated(now);
-		transfer.setVoided(false);
+		if (isUpdate) {
+			transfer.setChangedBy(Context.getAuthenticatedUser());
+			transfer.setDateChanged(now);
+			// Local correction must be submitted to HIE again.
+			transfer.setHieSent(false);
+			transfer.setHieSentAt(null);
+			transfer.setHieSendError(null);
+		}
+		else {
+			transfer.setCreator(Context.getAuthenticatedUser());
+			transfer.setDateCreated(now);
+			transfer.setVoided(false);
+			transfer.setHieSent(false);
+		}
 		if (transfer.getReferringSignedDate() == null) {
 			transfer.setReferringSignedDate(now);
 		}

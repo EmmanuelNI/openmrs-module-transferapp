@@ -50,6 +50,23 @@ public class MaternityTransfer extends BaseOpenmrsData {
 	@JoinColumn(name = "patient_id", nullable = false)
 	private Patient patient;
 
+	// Facility details (header)
+
+	@Column(name = "province", length = 255)
+	private String province;
+
+	@Column(name = "district", length = 255)
+	private String district;
+
+	@Column(name = "hospital_name", length = 255)
+	private String hospitalName;
+
+	@Column(name = "referring_facility_name", length = 255)
+	private String referringFacilityName;
+
+	@Column(name = "referring_unit", length = 255)
+	private String referringUnit;
+
 	// Client / referral (step 1)
 
 	@Column(name = "client_name", length = 255)
@@ -125,6 +142,18 @@ public class MaternityTransfer extends BaseOpenmrsData {
 	@Column(name = "sending_facility", length = 255)
 	private String sendingFacility;
 
+	@Column(name = "hie_sent")
+	private Boolean hieSent;
+
+	@Column(name = "hie_sent_at")
+	private Date hieSentAt;
+
+	@Column(name = "hie_send_err", length = 500)
+	private String hieSendError;
+
+	@Column(name = "hie_transfer_id", length = 64)
+	private String hieTransferId;
+
 	// Obstetric history & current pregnancy (step 2)
 
 	@Column(name = "obstetric_gravida", length = 16)
@@ -168,6 +197,9 @@ public class MaternityTransfer extends BaseOpenmrsData {
 
 	@Column(name = "previous_significant_history")
 	private String previousSignificantHistory;
+
+	@Column(name = "multi_pregnancies_known_hiv")
+	private String multiPregnanciesAndKnownHiv;
 
 	@Column(name = "current_pregnancy_complications")
 	private String currentPregnancyComplications;
@@ -344,6 +376,46 @@ public class MaternityTransfer extends BaseOpenmrsData {
 
 	public void setPatient(Patient patient) {
 		this.patient = patient;
+	}
+
+	public String getProvince() {
+		return province;
+	}
+
+	public void setProvince(String province) {
+		this.province = province;
+	}
+
+	public String getDistrict() {
+		return district;
+	}
+
+	public void setDistrict(String district) {
+		this.district = district;
+	}
+
+	public String getHospitalName() {
+		return hospitalName;
+	}
+
+	public void setHospitalName(String hospitalName) {
+		this.hospitalName = hospitalName;
+	}
+
+	public String getReferringFacilityName() {
+		return referringFacilityName;
+	}
+
+	public void setReferringFacilityName(String referringFacilityName) {
+		this.referringFacilityName = referringFacilityName;
+	}
+
+	public String getReferringUnit() {
+		return referringUnit;
+	}
+
+	public void setReferringUnit(String referringUnit) {
+		this.referringUnit = referringUnit;
 	}
 
 	public String getClientName() {
@@ -538,6 +610,42 @@ public class MaternityTransfer extends BaseOpenmrsData {
 		this.sendingFacility = sendingFacility;
 	}
 
+	public Boolean getHieSent() {
+		return hieSent;
+	}
+
+	public void setHieSent(Boolean hieSent) {
+		this.hieSent = hieSent;
+	}
+
+	public boolean isSentToHie() {
+		return Boolean.TRUE.equals(hieSent);
+	}
+
+	public Date getHieSentAt() {
+		return hieSentAt;
+	}
+
+	public void setHieSentAt(Date hieSentAt) {
+		this.hieSentAt = hieSentAt;
+	}
+
+	public String getHieSendError() {
+		return hieSendError;
+	}
+
+	public void setHieSendError(String hieSendError) {
+		this.hieSendError = hieSendError;
+	}
+
+	public String getHieTransferId() {
+		return hieTransferId;
+	}
+
+	public void setHieTransferId(String hieTransferId) {
+		this.hieTransferId = hieTransferId;
+	}
+
 	public String getObstetricGravida() {
 		return obstetricGravida;
 	}
@@ -648,6 +756,14 @@ public class MaternityTransfer extends BaseOpenmrsData {
 
 	public void setPreviousSignificantHistory(String previousSignificantHistory) {
 		this.previousSignificantHistory = previousSignificantHistory;
+	}
+
+	public String getMultiPregnanciesAndKnownHiv() {
+		return multiPregnanciesAndKnownHiv;
+	}
+
+	public void setMultiPregnanciesAndKnownHiv(String multiPregnanciesAndKnownHiv) {
+		this.multiPregnanciesAndKnownHiv = multiPregnanciesAndKnownHiv;
 	}
 
 	public String getCurrentPregnancyComplications() {

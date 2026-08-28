@@ -26,12 +26,40 @@ ui.includeCss("transferapp", "styles/select2.min.css")
 
         <div class="transfer-wizard-scroll">
         <form id="moh-maternity-transfer-wizard-form" class="transfer-out-form" novalidate="novalidate"
+              data-editing="${ formData.transferUuid ? 'true' : 'false' }"
               data-client-name="${ ui.encodeHtmlAttribute(formData.clientName ?: '') }">
             <input type="hidden" name="patientId" value="${ formData.patientId }" />
+            <input type="hidden" name="transferUuid" value="${ ui.encodeHtmlAttribute(formData.transferUuid ?: '') }" />
             <input type="hidden" id="maternityReceivingFacilityId" name="receivingFacilityId" value="" />
 
             <!-- Step 1: Client & Referral Info -->
             <div class="transfer-wizard-step-panel is-active" data-step="1">
+                <div class="transfer-wizard-section">
+                    <h2 class="transfer-wizard-section-title">Facility details</h2>
+                    <div class="transfer-wizard-row transfer-wizard-row-three-col">
+                        <div class="transfer-wizard-field">
+                            <label for="maternityProvince">Province</label>
+                            <input type="text" id="maternityProvince" name="province" value="${ ui.encodeHtmlAttribute(formData.province ?: '') }" />
+                        </div>
+                        <div class="transfer-wizard-field">
+                            <label for="maternityFacilityDistrict">District</label>
+                            <input type="text" id="maternityFacilityDistrict" name="district" value="${ ui.encodeHtmlAttribute(formData.district ?: '') }" />
+                        </div>
+                        <div class="transfer-wizard-field">
+                            <label for="maternityHospitalName">Name of hospital</label>
+                            <input type="text" id="maternityHospitalName" name="hospitalName" value="${ ui.encodeHtmlAttribute(formData.hospitalName ?: '') }" />
+                        </div>
+                        <div class="transfer-wizard-field">
+                            <label for="maternityReferringFacilityName">Name of referring facility</label>
+                            <input type="text" id="maternityReferringFacilityName" name="referringFacilityName" value="${ ui.encodeHtmlAttribute(formData.referringFacilityName ?: '') }" />
+                        </div>
+                        <div class="transfer-wizard-field">
+                            <label for="maternityReferringUnit">Referring unit</label>
+                            <input type="text" id="maternityReferringUnit" name="referringUnit" value="${ ui.encodeHtmlAttribute(formData.referringUnit ?: '') }" />
+                        </div>
+                    </div>
+                </div>
+
                 <div class="transfer-wizard-section">
                     <h2 class="transfer-wizard-section-title">Client information</h2>
                     <div class="transfer-wizard-row transfer-wizard-row-three-col">
@@ -40,7 +68,7 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                             <input type="text" id="maternityClientName" name="clientName" value="${ ui.encodeHtmlAttribute(formData.clientName ?: '') }" required />
                         </div>
                         <div class="transfer-wizard-field">
-                            <label for="maternitySerialNumberEmr">Serial number / EMR ID</label>
+                            <label for="maternitySerialNumberEmr">UPID</label>
                             <input type="text" id="maternitySerialNumberEmr" name="serialNumberEmr" value="${ ui.encodeHtmlAttribute(formData.serialNumberEmr ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field">
@@ -98,7 +126,8 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                                 <option value="">Select receiving facility</option>
                                 <% formData.receivingFacilities.each { facility -> %>
                                     <option value="${ ui.encodeHtmlAttribute(facility.value) }"
-                                            data-receiving-facility-id="${ facility.receivingFacilityId ?: '' }">
+                                            data-receiving-facility-id="${ facility.receivingFacilityId ?: '' }"
+                                            <% if (formData.receivingFacilityCode == facility.value) { %>selected="selected"<% } %>>
                                         ${ ui.format(facility.label) }
                                     </option>
                                 <% } %>
@@ -128,7 +157,7 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                         <% formData.transferTypes.each { type -> %>
                         <span class="transfer-type-option">
                             <input type="radio" name="transferType" id="maternityTransferType_${ ui.encodeHtmlAttribute(type.value) }"
-                                   value="${ ui.encodeHtmlAttribute(type.value) }" required />
+                                   value="${ ui.encodeHtmlAttribute(type.value) }" <% if (formData.transferType == type.value) { %>checked="checked"<% } %> required />
                             <label for="maternityTransferType_${ ui.encodeHtmlAttribute(type.value) }">${ ui.format(type.label) }</label>
                         </span>
                         <% } %>
@@ -152,7 +181,7 @@ ui.includeCss("transferapp", "styles/select2.min.css")
 
                 <div class="transfer-wizard-section transfer-wizard-field">
                     <label for="maternityReasonForTransfer" class="transfer-wizard-section-title">Reason for transfer</label>
-                    <textarea id="maternityReasonForTransfer" name="reasonForTransfer" rows="4" required placeholder="Enter the reason for transfer"></textarea>
+                    <textarea id="maternityReasonForTransfer" name="reasonForTransfer" rows="4" required placeholder="Enter the reason for transfer">${ ui.format(formData.reasonForTransfer ?: '') }</textarea>
                 </div>
 
                 <div class="transfer-wizard-section">
@@ -167,7 +196,7 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                     </div>
                     <div class="transfer-wizard-field">
                         <label for="maternityClinicalPresentation">Clinical presentation</label>
-                        <textarea id="maternityClinicalPresentation" name="clinicalPresentation" rows="3" placeholder="Enter clinical presentation"></textarea>
+                        <textarea id="maternityClinicalPresentation" name="clinicalPresentation" rows="3" placeholder="Enter clinical presentation">${ ui.format(formData.clinicalPresentation ?: '') }</textarea>
                     </div>
                 </div>
             </div>
@@ -179,31 +208,31 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                     <div class="transfer-vitals-grid">
                         <div class="transfer-wizard-field transfer-vital-field">
                             <label for="obstetricGravida">Gravida</label>
-                            <input type="text" id="obstetricGravida" name="obstetricGravida" />
+                            <input type="text" id="obstetricGravida" name="obstetricGravida"  value="${ ui.encodeHtmlAttribute(formData.obstetricGravida ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field transfer-vital-field">
                             <label for="obstetricParity">Parity</label>
-                            <input type="text" id="obstetricParity" name="obstetricParity" />
+                            <input type="text" id="obstetricParity" name="obstetricParity"  value="${ ui.encodeHtmlAttribute(formData.obstetricParity ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field transfer-vital-field">
                             <label for="obstetricLivingChildren">Living children</label>
-                            <input type="text" id="obstetricLivingChildren" name="obstetricLivingChildren" />
+                            <input type="text" id="obstetricLivingChildren" name="obstetricLivingChildren"  value="${ ui.encodeHtmlAttribute(formData.obstetricLivingChildren ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field transfer-vital-field">
                             <label for="obstetricAbortion">Abortion</label>
-                            <input type="text" id="obstetricAbortion" name="obstetricAbortion" />
+                            <input type="text" id="obstetricAbortion" name="obstetricAbortion"  value="${ ui.encodeHtmlAttribute(formData.obstetricAbortion ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field transfer-vital-field">
                             <label for="obstetricStillbirth">Stillbirth</label>
-                            <input type="text" id="obstetricStillbirth" name="obstetricStillbirth" />
+                            <input type="text" id="obstetricStillbirth" name="obstetricStillbirth"  value="${ ui.encodeHtmlAttribute(formData.obstetricStillbirth ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field transfer-vital-field">
                             <label for="obstetricNeonatalDeath">Neonatal death</label>
-                            <input type="text" id="obstetricNeonatalDeath" name="obstetricNeonatalDeath" />
+                            <input type="text" id="obstetricNeonatalDeath" name="obstetricNeonatalDeath"  value="${ ui.encodeHtmlAttribute(formData.obstetricNeonatalDeath ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field transfer-vital-field">
                             <label for="obstetricPretermBirth">Preterm birth</label>
-                            <input type="text" id="obstetricPretermBirth" name="obstetricPretermBirth" />
+                            <input type="text" id="obstetricPretermBirth" name="obstetricPretermBirth"  value="${ ui.encodeHtmlAttribute(formData.obstetricPretermBirth ?: '') }" />
                         </div>
                     </div>
                 </div>
@@ -213,36 +242,40 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                     <div class="transfer-wizard-row transfer-wizard-row-three-col">
                         <div class="transfer-wizard-field">
                             <label for="lmpDate">LMP date</label>
-                            <input type="text" class="js-date-picker" id="lmpDate" name="lmpDate" placeholder="Select date" autocomplete="off" />
+                            <input type="text" class="js-date-picker" id="lmpDate" name="lmpDate" placeholder="Select date" autocomplete="off"  value="${ ui.encodeHtmlAttribute(formData.lmpDate ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="eddDate">EDD date</label>
-                            <input type="text" class="js-date-picker" id="eddDate" name="eddDate" placeholder="Select date" autocomplete="off" />
+                            <input type="text" class="js-date-picker" id="eddDate" name="eddDate" placeholder="Select date" autocomplete="off"  value="${ ui.encodeHtmlAttribute(formData.eddDate ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="gestationAge">Gestation age</label>
-                            <input type="text" id="gestationAge" name="gestationAge" placeholder="e.g. 34 weeks" />
+                            <input type="text" id="gestationAge" name="gestationAge" placeholder="e.g. 34 weeks"  value="${ ui.encodeHtmlAttribute(formData.gestationAge ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="obstetricMuac">MUAC</label>
-                            <input type="text" id="obstetricMuac" name="muac" />
+                            <input type="text" id="obstetricMuac" name="muac"  value="${ ui.encodeHtmlAttribute(formData.muac ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="ancCompletedCount">ANC visits completed</label>
-                            <input type="text" id="ancCompletedCount" name="ancCompletedCount" />
+                            <input type="text" id="ancCompletedCount" name="ancCompletedCount"  value="${ ui.encodeHtmlAttribute(formData.ancCompletedCount ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="tetanusVaccineDoses">Tetanus vaccine doses</label>
-                            <input type="text" id="tetanusVaccineDoses" name="tetanusVaccineDoses" />
+                            <input type="text" id="tetanusVaccineDoses" name="tetanusVaccineDoses"  value="${ ui.encodeHtmlAttribute(formData.tetanusVaccineDoses ?: '') }" />
                         </div>
                     </div>
                     <div class="transfer-wizard-field">
                         <label for="previousSignificantHistory">Previous significant history</label>
-                        <textarea id="previousSignificantHistory" name="previousSignificantHistory" rows="3"></textarea>
+                        <textarea id="previousSignificantHistory" name="previousSignificantHistory" rows="3">${ ui.format(formData.previousSignificantHistory ?: '') }</textarea>
+                    </div>
+                    <div class="transfer-wizard-field">
+                        <label for="multiPregnanciesAndKnownHiv">Multi pregnancies and known HIV</label>
+                        <textarea id="multiPregnanciesAndKnownHiv" name="multiPregnanciesAndKnownHiv" rows="2">${ ui.format(formData.multiPregnanciesAndKnownHiv ?: '') }</textarea>
                     </div>
                     <div class="transfer-wizard-field">
                         <label for="currentPregnancyComplications">Current pregnancy complications</label>
-                        <textarea id="currentPregnancyComplications" name="currentPregnancyComplications" rows="3"></textarea>
+                        <textarea id="currentPregnancyComplications" name="currentPregnancyComplications" rows="3">${ ui.format(formData.currentPregnancyComplications ?: '') }</textarea>
                     </div>
                 </div>
             </div>
@@ -254,20 +287,20 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                     <div class="transfer-wizard-row transfer-wizard-row-three-col">
                         <div class="transfer-wizard-field">
                             <label for="latestHemoglobin">Hemoglobin</label>
-                            <input type="text" id="latestHemoglobin" name="latestHemoglobin" />
+                            <input type="text" id="latestHemoglobin" name="latestHemoglobin"  value="${ ui.encodeHtmlAttribute(formData.latestHemoglobin ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="latestHivStatus">HIV status</label>
-                            <input type="text" id="latestHivStatus" name="latestHivStatus" />
+                            <input type="text" id="latestHivStatus" name="latestHivStatus"  value="${ ui.encodeHtmlAttribute(formData.latestHivStatus ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="latestBloodGroup">Blood group</label>
-                            <input type="text" id="latestBloodGroup" name="latestBloodGroup" />
+                            <input type="text" id="latestBloodGroup" name="latestBloodGroup"  value="${ ui.encodeHtmlAttribute(formData.latestBloodGroup ?: '') }" />
                         </div>
                     </div>
                     <div class="transfer-wizard-field">
                         <label for="latestOtherResults">Other results</label>
-                        <textarea id="latestOtherResults" name="latestOtherResults" rows="2"></textarea>
+                        <textarea id="latestOtherResults" name="latestOtherResults" rows="2">${ ui.format(formData.latestOtherResults ?: '') }</textarea>
                     </div>
                 </div>
 
@@ -276,31 +309,31 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                     <div class="transfer-vitals-grid">
                         <div class="transfer-wizard-field transfer-vital-field">
                             <label for="maternityVitalBp">BP</label>
-                            <input type="text" id="maternityVitalBp" name="vitalBp" />
+                            <input type="text" id="maternityVitalBp" name="vitalBp"  value="${ ui.encodeHtmlAttribute(formData.vitalBp ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field transfer-vital-field">
                             <label for="maternityVitalTemp">Temp</label>
-                            <input type="text" id="maternityVitalTemp" name="vitalTemp" />
+                            <input type="text" id="maternityVitalTemp" name="vitalTemp"  value="${ ui.encodeHtmlAttribute(formData.vitalTemp ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field transfer-vital-field">
                             <label for="maternityVitalSpo2">SpO2</label>
-                            <input type="text" id="maternityVitalSpo2" name="vitalSpo2" />
+                            <input type="text" id="maternityVitalSpo2" name="vitalSpo2"  value="${ ui.encodeHtmlAttribute(formData.vitalSpo2 ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field transfer-vital-field">
                             <label for="maternityVitalRr">RR</label>
-                            <input type="text" id="maternityVitalRr" name="vitalRr" />
+                            <input type="text" id="maternityVitalRr" name="vitalRr"  value="${ ui.encodeHtmlAttribute(formData.vitalRr ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field transfer-vital-field">
                             <label for="maternityVitalPulse">Pulse</label>
-                            <input type="text" id="maternityVitalPulse" name="vitalPulse" />
+                            <input type="text" id="maternityVitalPulse" name="vitalPulse"  value="${ ui.encodeHtmlAttribute(formData.vitalPulse ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field transfer-vital-field">
                             <label for="maternityVitalWeight">Weight</label>
-                            <input type="text" id="maternityVitalWeight" name="vitalWeight" />
+                            <input type="text" id="maternityVitalWeight" name="vitalWeight"  value="${ ui.encodeHtmlAttribute(formData.vitalWeight ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field transfer-vital-field">
                             <label for="maternityVitalHeight">Height</label>
-                            <input type="text" id="maternityVitalHeight" name="vitalHeight" />
+                            <input type="text" id="maternityVitalHeight" name="vitalHeight"  value="${ ui.encodeHtmlAttribute(formData.vitalHeight ?: '') }" />
                         </div>
                     </div>
                 </div>
@@ -310,69 +343,114 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                     <div class="transfer-wizard-row transfer-wizard-row-three-col">
                         <div class="transfer-wizard-field">
                             <label for="fetalPresentation">Fetal presentation</label>
-                            <input type="text" id="fetalPresentation" name="fetalPresentation" />
+                            <select id="fetalPresentation" name="fetalPresentation">
+                                <option value="">Select presentation</option>
+                                <option value="Cephalic" <% if (formData.fetalPresentation == 'Cephalic') { %>selected="selected"<% } %>>Cephalic</option>
+                                <option value="Breech" <% if (formData.fetalPresentation == 'Breech') { %>selected="selected"<% } %>>Breech</option>
+                                <option value="Transverse" <% if (formData.fetalPresentation == 'Transverse') { %>selected="selected"<% } %>>Transverse</option>
+                                <option value="Oblique" <% if (formData.fetalPresentation == 'Oblique') { %>selected="selected"<% } %>>Oblique</option>
+                                <option value="Face" <% if (formData.fetalPresentation == 'Face') { %>selected="selected"<% } %>>Face</option>
+                                <option value="Brow" <% if (formData.fetalPresentation == 'Brow') { %>selected="selected"<% } %>>Brow</option>
+                                <option value="Compound" <% if (formData.fetalPresentation == 'Compound') { %>selected="selected"<% } %>>Compound</option>
+                                <option value="Unknown" <% if (formData.fetalPresentation == 'Unknown') { %>selected="selected"<% } %>>Unknown / Not assessed</option>
+                            </select>
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="fundalHeight">Fundal height</label>
-                            <input type="text" id="fundalHeight" name="fundalHeight" />
+                            <input type="text" id="fundalHeight" name="fundalHeight"  value="${ ui.encodeHtmlAttribute(formData.fundalHeight ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="fetalHeartRate">Fetal heart rate</label>
-                            <input type="text" id="fetalHeartRate" name="fetalHeartRate" />
+                            <input type="text" id="fetalHeartRate" name="fetalHeartRate"  value="${ ui.encodeHtmlAttribute(formData.fetalHeartRate ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="contractions">Contractions</label>
-                            <input type="text" id="contractions" name="contractions" />
+                            <input type="text" id="contractions" name="contractions"  value="${ ui.encodeHtmlAttribute(formData.contractions ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="vaginalExamAt">Vaginal exam date &amp; time</label>
-                            <input type="text" class="js-datetime-picker" id="vaginalExamAt" name="vaginalExamAt" placeholder="Select date and time" autocomplete="off" />
+                            <input type="text" class="js-datetime-picker" id="vaginalExamAt" name="vaginalExamAt" placeholder="Select date and time" autocomplete="off"  value="${ ui.encodeHtmlAttribute(formData.vaginalExamAt ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="dilation">Dilation</label>
-                            <input type="text" id="dilation" name="dilation" />
+                            <input type="text" id="dilation" name="dilation"  value="${ ui.encodeHtmlAttribute(formData.dilation ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="effacement">Effacement</label>
-                            <input type="text" id="effacement" name="effacement" />
+                            <input type="text" id="effacement" name="effacement"  value="${ ui.encodeHtmlAttribute(formData.effacement ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="descent">Descent</label>
-                            <input type="text" id="descent" name="descent" />
+                            <input type="text" id="descent" name="descent"  value="${ ui.encodeHtmlAttribute(formData.descent ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="consistency">Consistency</label>
-                            <input type="text" id="consistency" name="consistency" />
+                            <select id="consistency" name="consistency">
+                                <option value="">Select consistency</option>
+                                <option value="Firm" <% if (formData.consistency == 'Firm') { %>selected="selected"<% } %>>Firm</option>
+                                <option value="Medium" <% if (formData.consistency == 'Medium') { %>selected="selected"<% } %>>Medium</option>
+                                <option value="Soft" <% if (formData.consistency == 'Soft') { %>selected="selected"<% } %>>Soft</option>
+                            </select>
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="maternityPosition">Position</label>
-                            <input type="text" id="maternityPosition" name="position" />
-                        </div>
-                        <div class="transfer-wizard-field">
-                            <label for="membranesRupturedAt">Membranes ruptured at</label>
-                            <input type="text" class="js-datetime-picker" id="membranesRupturedAt" name="membranesRupturedAt" placeholder="Select date and time" autocomplete="off" />
-                        </div>
-                        <div class="transfer-wizard-field">
-                            <label for="amnioticFluidColor">Amniotic fluid color</label>
-                            <input type="text" id="amnioticFluidColor" name="amnioticFluidColor" />
-                        </div>
-                        <div class="transfer-wizard-field">
-                            <label for="estimatedBloodLossMl">Estimated blood loss (mL)</label>
-                            <input type="text" id="estimatedBloodLossMl" name="estimatedBloodLossMl" />
+                            <select id="maternityPosition" name="position">
+                                <option value="">Select position</option>
+                                <option value="Occipito-Anterior (OA)" <% if (formData.position == 'Occipito-Anterior (OA)') { %>selected="selected"<% } %>>Occipito-Anterior (OA)</option>
+                                <option value="Left Occipito-Anterior (LOA)" <% if (formData.position == 'Left Occipito-Anterior (LOA)') { %>selected="selected"<% } %>>Left Occipito-Anterior (LOA)</option>
+                                <option value="Right Occipito-Anterior (ROA)" <% if (formData.position == 'Right Occipito-Anterior (ROA)') { %>selected="selected"<% } %>>Right Occipito-Anterior (ROA)</option>
+                                <option value="Occipito-Transverse (OT)" <% if (formData.position == 'Occipito-Transverse (OT)') { %>selected="selected"<% } %>>Occipito-Transverse (OT)</option>
+                                <option value="Left Occipito-Transverse (LOT)" <% if (formData.position == 'Left Occipito-Transverse (LOT)') { %>selected="selected"<% } %>>Left Occipito-Transverse (LOT)</option>
+                                <option value="Right Occipito-Transverse (ROT)" <% if (formData.position == 'Right Occipito-Transverse (ROT)') { %>selected="selected"<% } %>>Right Occipito-Transverse (ROT)</option>
+                                <option value="Occipito-Posterior (OP)" <% if (formData.position == 'Occipito-Posterior (OP)') { %>selected="selected"<% } %>>Occipito-Posterior (OP)</option>
+                                <option value="Left Occipito-Posterior (LOP)" <% if (formData.position == 'Left Occipito-Posterior (LOP)') { %>selected="selected"<% } %>>Left Occipito-Posterior (LOP)</option>
+                                <option value="Right Occipito-Posterior (ROP)" <% if (formData.position == 'Right Occipito-Posterior (ROP)') { %>selected="selected"<% } %>>Right Occipito-Posterior (ROP)</option>
+                                <option value="Unknown" <% if (formData.position == 'Unknown') { %>selected="selected"<% } %>>Unknown / Not assessed</option>
+                            </select>
                         </div>
                     </div>
                     <div class="transfer-wizard-row transfer-wizard-row-two-col" style="margin-top:0.75rem;">
                         <div class="transfer-wizard-field">
-                            <label><input type="checkbox" name="caput" value="true" style="width:auto;display:inline-block;margin-right:0.4rem;" /> Caput</label>
+                            <label for="caput">Caput</label>
+                            <select id="caput" name="caput">
+                                <option value="">Select</option>
+                                <option value="true" <% if (formData.caput == 'true') { %>selected="selected"<% } %>>Yes</option>
+                                <option value="false" <% if (formData.caput == 'false') { %>selected="selected"<% } %>>No</option>
+                            </select>
                         </div>
                         <div class="transfer-wizard-field">
-                            <label><input type="checkbox" name="moulding" value="true" style="width:auto;display:inline-block;margin-right:0.4rem;" /> Moulding</label>
+                            <label for="moulding">Moulding</label>
+                            <select id="moulding" name="moulding">
+                                <option value="">Select</option>
+                                <option value="true" <% if (formData.moulding == 'true') { %>selected="selected"<% } %>>Yes</option>
+                                <option value="false" <% if (formData.moulding == 'false') { %>selected="selected"<% } %>>No</option>
+                            </select>
                         </div>
                         <div class="transfer-wizard-field">
-                            <label><input type="checkbox" name="membranesRuptured" value="true" style="width:auto;display:inline-block;margin-right:0.4rem;" /> Membranes ruptured</label>
+                            <label for="membranesRuptured">Membranes ruptured</label>
+                            <select id="membranesRuptured" name="membranesRuptured">
+                                <option value="">Select</option>
+                                <option value="true" <% if (formData.membranesRuptured == 'true') { %>selected="selected"<% } %>>Yes</option>
+                                <option value="false" <% if (formData.membranesRuptured == 'false') { %>selected="selected"<% } %>>No</option>
+                            </select>
                         </div>
                         <div class="transfer-wizard-field">
-                            <label><input type="checkbox" name="offensive" value="true" style="width:auto;display:inline-block;margin-right:0.4rem;" /> Offensive</label>
+                            <label for="membranesRupturedAt">If yes: date and time</label>
+                            <input type="text" class="js-datetime-picker" id="membranesRupturedAt" name="membranesRupturedAt" placeholder="Select date and time" autocomplete="off"  value="${ ui.encodeHtmlAttribute(formData.membranesRupturedAt ?: '') }" />
+                        </div>
+                        <div class="transfer-wizard-field">
+                            <label for="amnioticFluidColor">Color/character of amniotic fluid</label>
+                            <select id="amnioticFluidColor" name="amnioticFluidColor">
+                                <option value="">Select</option>
+                                <option value="Clear" <% if (formData.amnioticFluidColor == 'Clear') { %>selected="selected"<% } %>>Clear</option>
+                                <option value="Meconium" <% if (formData.amnioticFluidColor == 'Meconium') { %>selected="selected"<% } %>>Meconium</option>
+                                <option value="Bloody" <% if (formData.amnioticFluidColor == 'Bloody') { %>selected="selected"<% } %>>Bloody</option>
+                                <option value="Offensive" <% if (formData.amnioticFluidColor == 'Offensive') { %>selected="selected"<% } %>>Offensive</option>
+                            </select>
+                        </div>
+                        <div class="transfer-wizard-field">
+                            <label for="estimatedBloodLossMl">If bloody: estimated blood loss (mL)</label>
+                            <input type="text" id="estimatedBloodLossMl" name="estimatedBloodLossMl"  value="${ ui.encodeHtmlAttribute(formData.estimatedBloodLossMl ?: '') }" />
                         </div>
                     </div>
                 </div>
@@ -382,40 +460,50 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                     <div class="transfer-wizard-row transfer-wizard-row-three-col">
                         <div class="transfer-wizard-field">
                             <label for="investigationHgb">Investigation HGB</label>
-                            <input type="text" id="investigationHgb" name="investigationHgb" />
+                            <input type="text" id="investigationHgb" name="investigationHgb"  value="${ ui.encodeHtmlAttribute(formData.investigationHgb ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="investigationUrineTest">Urine test</label>
-                            <input type="text" id="investigationUrineTest" name="investigationUrineTest" />
+                            <input type="text" id="investigationUrineTest" name="investigationUrineTest"  value="${ ui.encodeHtmlAttribute(formData.investigationUrineTest ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="investigationOtherTest">Other test</label>
-                            <input type="text" id="investigationOtherTest" name="investigationOtherTest" />
+                            <input type="text" id="investigationOtherTest" name="investigationOtherTest"  value="${ ui.encodeHtmlAttribute(formData.investigationOtherTest ?: '') }" />
                         </div>
                     </div>
                     <div class="transfer-wizard-field">
                         <label for="imagingInvestigations">Imaging investigations</label>
-                        <textarea id="imagingInvestigations" name="imagingInvestigations" rows="2"></textarea>
+                        <textarea id="imagingInvestigations" name="imagingInvestigations" rows="2">${ ui.format(formData.imagingInvestigations ?: '') }</textarea>
                     </div>
                     <div class="transfer-wizard-field">
                         <label for="maternityDiagnosis">Diagnosis</label>
-                        <textarea id="maternityDiagnosis" name="diagnosis" rows="3"></textarea>
+                        <textarea id="maternityDiagnosis" name="diagnosis" rows="3">${ ui.format(formData.diagnosis ?: '') }</textarea>
                     </div>
                     <div class="transfer-wizard-field">
                         <label for="maternityProcedures">Procedures</label>
-                        <textarea id="maternityProcedures" name="procedures" rows="3"></textarea>
+                        <textarea id="maternityProcedures" name="procedures" rows="3">${ ui.format(formData.procedures ?: '') }</textarea>
                     </div>
                     <div class="transfer-wizard-row transfer-wizard-row-two-col">
                         <div class="transfer-wizard-field">
-                            <label><input type="checkbox" name="attachedLabTests" value="true" style="width:auto;display:inline-block;margin-right:0.4rem;" /> Lab tests attached</label>
+                            <label for="attachedLabTests">Lab tests attached</label>
+                            <select id="attachedLabTests" name="attachedLabTests">
+                                <option value="">Select</option>
+                                <option value="true" <% if (formData.attachedLabTests == 'true') { %>selected="selected"<% } %>>Yes</option>
+                                <option value="false" <% if (formData.attachedLabTests == 'false') { %>selected="selected"<% } %>>No</option>
+                            </select>
                         </div>
                         <div class="transfer-wizard-field">
-                            <label><input type="checkbox" name="attachedImaging" value="true" style="width:auto;display:inline-block;margin-right:0.4rem;" /> Imaging attached</label>
+                            <label for="attachedImaging">Imaging attached</label>
+                            <select id="attachedImaging" name="attachedImaging">
+                                <option value="">Select</option>
+                                <option value="true" <% if (formData.attachedImaging == 'true') { %>selected="selected"<% } %>>Yes</option>
+                                <option value="false" <% if (formData.attachedImaging == 'false') { %>selected="selected"<% } %>>No</option>
+                            </select>
                         </div>
                     </div>
                     <div class="transfer-wizard-field">
                         <label for="attachedOther">Other attachments</label>
-                        <input type="text" id="attachedOther" name="attachedOther" />
+                        <input type="text" id="attachedOther" name="attachedOther"  value="${ ui.encodeHtmlAttribute(formData.attachedOther ?: '') }" />
                     </div>
                 </div>
             </div>
@@ -439,11 +527,16 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                                 <% formData.defaultTreatmentRows.each { row -> %>
                                 <tr class="maternity-treatment-row">
                                     <td style="padding:0.3rem;border-bottom:1px solid #eef2f6;">
-                                        <input type="text" name="treatmentName" value="${ ui.encodeHtmlAttribute(row.treatmentName ?: '') }" />
+                                        <select name="treatmentName">
+                                            <option value="">Select treatment</option>
+                                            <% ["IV Fluids", "Dexamethasone", "Magnesium sulphate", "Nifedipine", "Oxytocin", "ATBs"].each { option -> %>
+                                                <option value="${ ui.encodeHtmlAttribute(option) }"${ option == row.treatmentName ? ' selected="selected"' : '' }>${ ui.format(option) }</option>
+                                            <% } %>
+                                        </select>
                                     </td>
-                                    <td style="padding:0.3rem;border-bottom:1px solid #eef2f6;"><input type="text" name="treatmentDose" value="" /></td>
-                                    <td style="padding:0.3rem;border-bottom:1px solid #eef2f6;"><input type="text" class="js-date-picker" name="treatmentGivenDate" value="" placeholder="Date" autocomplete="off" /></td>
-                                    <td style="padding:0.3rem;border-bottom:1px solid #eef2f6;"><input type="text" class="js-time-picker" name="treatmentGivenTime" value="" placeholder="Time" autocomplete="off" /></td>
+                                    <td style="padding:0.3rem;border-bottom:1px solid #eef2f6;"><input type="text" name="treatmentDose" value="${ ui.encodeHtmlAttribute(row.dose ?: '') }" /></td>
+                                    <td style="padding:0.3rem;border-bottom:1px solid #eef2f6;"><input type="text" class="js-date-picker" name="treatmentGivenDate" value="${ ui.encodeHtmlAttribute(row.givenDate ?: '') }" placeholder="Date" autocomplete="off" /></td>
+                                    <td style="padding:0.3rem;border-bottom:1px solid #eef2f6;"><input type="text" class="js-time-picker" name="treatmentGivenTime" value="${ ui.encodeHtmlAttribute(row.givenTime ?: '') }" placeholder="Time" autocomplete="off" /></td>
                                     <td style="padding:0.3rem;border-bottom:1px solid #eef2f6;"><button type="button" class="transfer-wizard-btn transfer-wizard-btn-outline js-remove-treatment-row">Remove</button></td>
                                 </tr>
                                 <% } %>
@@ -461,7 +554,8 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                             <input type="radio" name="transportationType"
                                    id="maternityTransportationType_${ ui.encodeHtmlAttribute(transport.value) }"
                                    value="${ ui.encodeHtmlAttribute(transport.value) }"
-                                   data-transport-value="${ ui.encodeHtmlAttribute(transport.value) }" />
+                                   data-transport-value="${ ui.encodeHtmlAttribute(transport.value) }"
+                                   <% if (formData.transportationType == transport.value) { %>checked="checked"<% } %> />
                             <label for="maternityTransportationType_${ ui.encodeHtmlAttribute(transport.value) }">${ ui.format(transport.label) }</label>
                         </span>
                         <% } %>
@@ -469,7 +563,7 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                     <div id="maternityTransportOtherField" class="transfer-transport-other transfer-wizard-field">
                         <label for="maternityTransportationOtherSpec">${ ui.message("transferapp.patient.transfers.transportationOtherSpec") }</label>
                         <input type="text" id="maternityTransportationOtherSpec" name="transportationOtherSpec" maxlength="255"
-                               placeholder="${ ui.message('transferapp.patient.transfers.transportationOtherSpec.placeholder') }" />
+                               placeholder="${ ui.message('transferapp.patient.transfers.transportationOtherSpec.placeholder') }"  value="${ ui.encodeHtmlAttribute(formData.transportationOtherSpec ?: '') }" />
                     </div>
                 </div>
 
@@ -480,14 +574,14 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                         <span class="transfer-insurance-option">
                             <input type="radio" name="healthInsuranceType"
                                    id="maternityHealthInsuranceType_${ ui.encodeHtmlAttribute(insurance.value) }"
-                                   value="${ ui.encodeHtmlAttribute(insurance.value) }" required />
+                                   value="${ ui.encodeHtmlAttribute(insurance.value) }" <% if (formData.healthInsuranceType == insurance.value) { %>checked="checked"<% } %> required />
                             <label for="maternityHealthInsuranceType_${ ui.encodeHtmlAttribute(insurance.value) }">${ ui.format(insurance.label) }</label>
                         </span>
                         <% } %>
                     </div>
                     <div id="maternityInsuranceOtherField" class="transfer-insurance-other transfer-wizard-field">
                         <label for="maternityHealthInsuranceOtherSpec">Other (specify)</label>
-                        <input type="text" id="maternityHealthInsuranceOtherSpec" name="healthInsuranceOtherSpec" maxlength="255" />
+                        <input type="text" id="maternityHealthInsuranceOtherSpec" name="healthInsuranceOtherSpec" maxlength="255"  value="${ ui.encodeHtmlAttribute(formData.healthInsuranceOtherSpec ?: '') }" />
                     </div>
                 </div>
             </div>
@@ -504,7 +598,7 @@ ui.includeCss("transferapp", "styles/select2.min.css")
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="maternityReferringProviderQualification">Qualification</label>
-                            <input type="text" id="maternityReferringProviderQualification" name="referringProviderQualification" />
+                            <input type="text" id="maternityReferringProviderQualification" name="referringProviderQualification"  value="${ ui.encodeHtmlAttribute(formData.referringProviderQualification ?: '') }" />
                         </div>
                         <div class="transfer-wizard-field">
                             <label for="maternityReferringProviderPhone">Provider phone</label>

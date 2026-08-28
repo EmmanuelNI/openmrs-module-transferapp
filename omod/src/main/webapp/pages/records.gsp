@@ -154,7 +154,7 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "recor
             <tr class="transfer-row${ record.hieSent ? ' transfer-row-sent' : '' }"
                 data-transfer-id="${ ui.encodeHtmlAttribute(record.id) }"
                 data-uuid="${ ui.encodeHtmlAttribute(record.id) }"
-                data-form-type="${ ui.encodeHtmlAttribute(record.formType ?: 'External') }">
+                data-form-type="${ ui.encodeHtmlAttribute(record.formType) }">
                 <td>${ ui.format(record.transferDate) }</td>
                 <td>${ ui.format(record.clientName) }</td>
                 <td>${ ui.format(record.emrId) }</td>
@@ -162,9 +162,7 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "recor
                 <td>${ ui.format(record.service) }</td>
                 <td>${ ui.format(record.formType) }</td>
                 <td>
-                    <% if (record.formType == "Maternity" || record.formType == "Neonatal") { %>
-                        <span class="transfer-status-pending">${ ui.message("transferapp.patient.transfers.statusPending") }</span>
-                    <% } else if (record.hieSent) { %>
+                    <% if (record.hieSent) { %>
                         <span class="transfer-status-sent">${ ui.message("transferapp.patient.transfers.statusSent") }</span>
                     <% } else { %>
                         <span class="transfer-status-pending">${ ui.message("transferapp.patient.transfers.statusPending") }</span>
@@ -175,7 +173,7 @@ ${ ui.includeFragment("transferapp", "transfer/transferNav", [ activeTab: "recor
                        href="#"
                        data-transfer-id="${ ui.encodeHtmlAttribute(record.id) }"
                        data-uuid="${ ui.encodeHtmlAttribute(record.id) }"
-                       data-form-type="${ ui.encodeHtmlAttribute(record.formType ?: 'External') }">
+                       data-form-type="${ ui.encodeHtmlAttribute(record.formType) }">
                         <i class="icon-share-alt"></i> ${ ui.message("transferapp.patient.transfers.view") }
                     </a>
                     <% if (canCreateTransfer && record.patientId != null) { %>

@@ -174,6 +174,8 @@
         window.transferOpenmrsPath = transferOpenmrsPath;
         var transferPreviewUrl = transferOpenmrsPath + "/module/transferapp/transfer/preview.form";
         var transferSubmitUrl = transferOpenmrsPath + "/module/transferapp/transfer/submit.form";
+        var transferSubmitNeonatalUrl = transferOpenmrsPath + "/module/transferapp/transfer/submitNeonatal.form";
+        var transferSubmitMaternityUrl = transferOpenmrsPath + "/module/transferapp/transfer/submitMaternity.form";
         var transferPreviewResourcesBase = transferOpenmrsPath + "/moduleResources/transferapp/scripts/";
         var transferPreviewScriptsLoading = null;
         var currentPreviewTransferUuid = null;
@@ -184,10 +186,6 @@
         function syncTransferPreviewSubmitButton() {
             var submitBtn = jq("#transfer-preview-submit");
             if (!submitBtn.length) {
-                return;
-            }
-            if (currentPreviewFormType === "Maternity" || currentPreviewFormType === "Neonatal") {
-                submitBtn.hide();
                 return;
             }
             submitBtn.show();
@@ -260,8 +258,8 @@
                 previewHtml = "<p style='color:red;'>Preview renderer not loaded.</p>";
             }
             jq("#transfer-preview-body").html(previewHtml);
-            currentPreviewTransferSent = currentPreviewFormType === "External"
-                && !!(transfer && (transfer.hieSent === true || transfer.hieSent === "true"));
+            currentPreviewTransferSent = !!(transfer && (transfer.hieSent === true || transfer.hieSent === "true"));
+            // Only External supports resubmitting an update to an already-sent HIE encounter.
             currentPreviewIsHieUpdate = currentPreviewFormType === "External"
                 && !currentPreviewTransferSent && !!(transfer && String(transfer.hieTransferId || "").trim());
             syncTransferPreviewSubmitButton();
@@ -367,8 +365,11 @@
             }
             var submitBtn = jq(this);
             submitBtn.prop("disabled", true);
+            var submitUrl = currentPreviewFormType === "Neonatal" ? transferSubmitNeonatalUrl
+                : currentPreviewFormType === "Maternity" ? transferSubmitMaternityUrl
+                : transferSubmitUrl;
             jq.ajax({
-                url: transferSubmitUrl,
+                url: submitUrl,
                 type: "POST",
                 data: { uuid: currentPreviewTransferUuid },
                 dataType: "json"

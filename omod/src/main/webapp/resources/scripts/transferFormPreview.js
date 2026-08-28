@@ -417,18 +417,6 @@
 		return buildExternalTransferFormPreviewHtml(p);
 	}
 
-	function buildMaternityTransferFormPreviewHtml(p) {
-		return buildExternalTransferFormPreviewHtml(p, {
-			unsupportedNotice: "Maternity transfer form preview is not fully implemented yet. Showing external transfer layout."
-		});
-	}
-
-	function buildNeonatalTransferFormPreviewHtml(p) {
-		return buildExternalTransferFormPreviewHtml(p, {
-			unsupportedNotice: "Neonatal transfer form preview is not fully implemented yet. Showing external transfer layout."
-		});
-	}
-
 	function buildExternalTransferFormPreviewHtml(itemOrNormalized, options) {
 		var p = itemOrNormalized && itemOrNormalized.formKind
 			? itemOrNormalized
@@ -605,8 +593,11 @@
 			+ "<div class='tf-row' style='margin-top: 22px;'><strong>MINISTRY OF HEALTH</strong></div>"
 			+ "</div>"
 			+ "<div class='tf-right'>"
+			+ "<div class='tf-row'><strong>Province:</strong>" + line(p.province, 180) + "</div>"
+			+ "<div class='tf-row'><strong>District:</strong>" + line(p.district, 180) + "</div>"
 			+ "<div class='tf-row'><strong>Name of Hospital:</strong>" + line(p.hospitalName, 230) + "</div>"
 			+ "<div class='tf-row'><strong>Name of Referring Facility:</strong>" + line(p.referringFacilityName, 172) + "</div>"
+			+ "<div class='tf-row'><strong>Referring Unit:</strong>" + line(p.referringUnit, 172) + "</div>"
 			+ "</div>"
 			+ "</div>"
 
@@ -614,7 +605,7 @@
 			+ "<div class='tf-section-title'>ANC / Delivery / PNC Transfer</div>"
 
 			+ "<div class='tf-row'><strong>Client Name:</strong> " + line(p.clientName, 280)
-			+ " <strong>Serial No. / EMR ID:</strong> " + line(p.serialNumberEmr, 220)
+			+ " <strong>UPID:</strong> " + line(p.serialNumberEmr, 220)
 			+ " <strong>Age(DOB):</strong> " + line(p.ageOrDob, 150) + "</div>"
 			+ "<div class='tf-row'><strong>Next of kin:</strong> " + line(p.nextOfKinName, 250)
 			+ " <strong>Telephone:</strong> " + line(p.nextOfKinTelephone, 180) + "</div>"
@@ -660,6 +651,7 @@
 			+ " <strong>ANC visits:</strong>" + line(p.ancCompletedCount, 90)
 			+ " <strong>Tetanus doses:</strong>" + line(p.tetanusVaccineDoses, 90) + "</div>"
 			+ "<div class='tf-row'><strong>Previous significant history:</strong> " + line(p.previousSignificantHistory, 780) + "</div>"
+			+ "<div class='tf-row'><strong>Multi pregnancies and known HIV:</strong> " + line(p.multiPregnanciesAndKnownHiv, 700) + "</div>"
 			+ "<div class='tf-row'><strong>Current pregnancy complications:</strong> " + line(p.currentPregnancyComplications, 700) + "</div>"
 
 			+ "<div class='tf-section-title'>Latest Results</div>"
@@ -692,8 +684,7 @@
 			+ "Caput:<span class='tf-circle'>" + yesNoCircle(truthy(p.caput)) + "</span>"
 			+ " Moulding:<span class='tf-circle'>" + yesNoCircle(truthy(p.moulding)) + "</span>"
 			+ " Membranes ruptured:<span class='tf-circle'>" + yesNoCircle(truthy(p.membranesRuptured)) + "</span>"
-			+ " at " + line(p.membranesRupturedAt, 180)
-			+ " Offensive:<span class='tf-circle'>" + yesNoCircle(truthy(p.offensive)) + "</span></div>"
+			+ " at " + line(p.membranesRupturedAt, 180) + "</div>"
 			+ "<div class='tf-row'><strong>Amniotic fluid color:</strong>" + line(p.amnioticFluidColor, 150)
 			+ " <strong>Estimated blood loss (mL):</strong>" + line(p.estimatedBloodLossMl, 120) + "</div>"
 
@@ -752,8 +743,11 @@
 			+ "<div class='tf-row' style='margin-top: 22px;'><strong>MINISTRY OF HEALTH</strong></div>"
 			+ "</div>"
 			+ "<div class='tf-right'>"
+			+ "<div class='tf-row'><strong>Province:</strong>" + line(p.province, 180) + "</div>"
+			+ "<div class='tf-row'><strong>District:</strong>" + line(p.district, 180) + "</div>"
 			+ "<div class='tf-row'><strong>Name of Hospital:</strong>" + line(p.hospitalName, 230) + "</div>"
 			+ "<div class='tf-row'><strong>Name of Referring Facility:</strong>" + line(p.referringFacilityName, 172) + "</div>"
+			+ "<div class='tf-row'><strong>Referring Unit:</strong>" + line(p.referringUnit, 172) + "</div>"
 			+ "</div>"
 			+ "</div>"
 
@@ -792,6 +786,7 @@
 			+ " <strong>Pregnancy type:</strong>" + line(p.pregnancyType, 120) + "</div>"
 			+ "<div class='tf-row'><strong>ANC screening:</strong> " + line(p.ancScreening, 700) + "</div>"
 			+ "<div class='tf-row'><strong>Pathologies during pregnancy:</strong> " + line(p.pathologiesDuringPregnancy, 700) + "</div>"
+			+ "<div class='tf-row'><strong>Infections / other pathologies:</strong> " + line(p.pregnancyOtherPathologies, 700) + "</div>"
 			+ "<div class='tf-row'><strong>Pregnancy treatment:</strong> " + line(p.pregnancyTreatment, 700) + "</div>"
 			+ "<div class='tf-row'><strong>Blood group:</strong>" + line(p.bloodGroup, 90)
 			+ " <strong>Rh factor:</strong>" + line(p.rhFactor, 90)
@@ -850,10 +845,12 @@
 
 			+ "<div class='tf-section-title'>Management at Referring Facility</div>"
 			+ "<div class='tf-row'><strong>Respiratory support:</strong>" + line(p.respiratorySupport, 150)
+			+ " <strong>Blood gas analysis:</strong>" + line(p.bloodGasAnalysis, 90)
 			+ " <strong>IV fluid vol:</strong>" + line(p.ivFluidVol, 100)
 			+ " <strong>Passed urine:</strong>" + line(p.passedUrine, 100) + "</div>"
 			+ "<div class='tf-row'><strong>Ventilation settings:</strong> " + line(p.ventilationSettings, 700) + "</div>"
-			+ "<div class='tf-row'><strong>Inotropes:</strong>" + line(p.inotropes, 200)
+			+ "<div class='tf-row'><strong>Inotropes:</strong>" + line(p.inotropes, 150)
+			+ " <strong>Specify:</strong>" + line(p.inotropesSpecify, 200)
 			+ " <strong>Peripheral IV:</strong>" + line(p.peripheralIv, 90)
 			+ " <strong>Central IV:</strong>" + line(p.centralIv, 90)
 			+ " <strong>Intraosseous line:</strong>" + line(p.intraosseousLine, 90) + "</div>"
@@ -871,7 +868,7 @@
 			+ " <strong>Nasogastric tube:</strong>" + line(p.nasogastricTube, 90) + "</div>"
 			+ "<div class='tf-row'><strong>Latest labs:</strong>"
 			+ " Glucose:" + line(p.labGlucose, 80)
-			+ " FBC:" + line(p.labFbc, 100)
+			+ " FBC done:" + line(p.fbcDone, 60)
 			+ " Hb:" + line(p.labHb, 80)
 			+ " WBC:" + line(p.labWbc, 80)
 			+ " Platelets:" + line(p.labPlatelets, 90)
@@ -881,6 +878,7 @@
 			+ " Bili direct:" + line(p.labBiliDirect, 90)
 			+ " U&amp;E:" + line(p.labUe, 100)
 			+ " Cultures:" + line(p.labCultures, 200) + "</div>"
+			+ "<div class='tf-row'><strong>Imaging results available:</strong>" + line(p.imagingResultsAvailable, 90) + "</div>"
 			+ "<div class='tf-row'><strong>Imaging results:</strong> " + line(p.imagingResults, 700) + "</div>"
 			+ "<div class='tf-row'><strong>Pain/sedation drugs:</strong> " + line(p.painSedationDrugs, 700) + "</div>"
 			+ "<div class='tf-row'>"

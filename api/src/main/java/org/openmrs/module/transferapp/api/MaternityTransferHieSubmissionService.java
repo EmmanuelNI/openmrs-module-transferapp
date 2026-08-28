@@ -13,24 +13,15 @@
  */
 package org.openmrs.module.transferapp.api;
 
-import org.openmrs.Patient;
 import org.openmrs.annotation.Authorized;
 import org.openmrs.module.transferapp.TransferAppActivator;
-import org.openmrs.module.transferapp.model.NeonatalTransferFormData;
+import org.openmrs.module.transferapp.model.MaternityTransfer;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Provides data for the new Neonatal transfer out form.
- */
 @Transactional
-public interface NewNeonatalTransferOutService {
+public interface MaternityTransferHieSubmissionService {
 
 	@Authorized(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)
-	@Transactional(readOnly = true)
-	NeonatalTransferFormData getNeonatalTransferFormData(Patient patient);
-
-	@Authorized(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)
-	@Transactional(readOnly = true)
-	NeonatalTransferFormData getNeonatalTransferFormData(Patient patient, String transferUuid);
+	MaternityTransfer submitMaternityTransferToHie(String transferUuid);
 
 }

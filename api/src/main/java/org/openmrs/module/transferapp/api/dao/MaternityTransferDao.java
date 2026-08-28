@@ -37,6 +37,8 @@ public interface MaternityTransferDao {
 
 	int countOutboundMaternityTransfers(String sendingFacility, Date fromDate);
 
+	int countOutboundMaternityTransfers(String sendingFacility, Date fromDate, Boolean hieSent);
+
 	MaternityTransfer getMaternityTransferByUuid(String uuid);
 
 }

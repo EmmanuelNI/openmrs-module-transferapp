@@ -249,39 +249,45 @@
   border-radius: 12px;
   box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
   max-width: 95% !important;
+  height: 94vh !important;
   max-height: 94vh !important;
   width: 1100px !important;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* Only show when explicitly opened — never override jQuery .hide() with display:!important */
+#new-maternity-transfer-out-dialog.transfer-wizard-dialog.dialog.transfer-wizard-open {
+  display: flex !important;
 }
 
 #new-maternity-transfer-out-dialog .dialog-content {
   padding: 0 !important;
-  overflow: hidden;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  display: block !important;
   background: #fff;
 }
 
 #new-maternity-transfer-out-data {
-  flex: 1;
   min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  display: block;
 }
 
 #new-maternity-transfer-out-data .transfer-wizard-shell {
-  min-height: 0;
-  max-height: 100%;
-  height: 100%;
-  overflow: hidden;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  display: block !important;
 }
 
 #new-maternity-transfer-out-data .transfer-wizard-panel {
+  overflow: visible !important;
+  max-height: none !important;
   padding-right: 0.35rem;
 }
 
@@ -338,39 +344,45 @@
   border-radius: 12px;
   box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
   max-width: 95% !important;
+  height: 94vh !important;
   max-height: 94vh !important;
   width: 1100px !important;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* Only show when explicitly opened — never override jQuery .hide() with display:!important */
+#new-neonatal-transfer-out-dialog.transfer-wizard-dialog.dialog.transfer-wizard-open {
+  display: flex !important;
 }
 
 #new-neonatal-transfer-out-dialog .dialog-content {
   padding: 0 !important;
-  overflow: hidden;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  display: block !important;
   background: #fff;
 }
 
 #new-neonatal-transfer-out-data {
-  flex: 1;
   min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  display: block;
 }
 
 #new-neonatal-transfer-out-data .transfer-wizard-shell {
-  min-height: 0;
-  max-height: 100%;
-  height: 100%;
-  overflow: hidden;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  display: block !important;
 }
 
 #new-neonatal-transfer-out-data .transfer-wizard-panel {
+  overflow: visible !important;
+  max-height: none !important;
   padding-right: 0.35rem;
 }
 
@@ -546,7 +558,7 @@
                     </thead>
                     <tbody>
                         <% transfers.each { transfer -> %>
-                            <tr class="transfer-row${ transfer.hieSent ? ' transfer-row-sent' : '' }" data-transfer-id="${ ui.encodeHtmlAttribute(transfer.id) }" data-hie-sent="${ transfer.hieSent ? 'true' : 'false' }">
+                            <tr class="transfer-row${ transfer.hieSent ? ' transfer-row-sent' : '' }" data-transfer-id="${ ui.encodeHtmlAttribute(transfer.id) }" data-hie-sent="${ transfer.hieSent ? 'true' : 'false' }" data-form-type="${ ui.encodeHtmlAttribute(transfer.formType) }">
                                 <td>${ ui.format(transfer.transferDate) }</td>
                                 <td>${ ui.format(transfer.toFacility) }</td>
                                 <td>${ ui.format(transfer.service) }</td>
@@ -561,15 +573,21 @@
                                     <a class="transfer-view-link transfer-action-icon"
                                        href="javascript:void(0);"
                                        data-transfer-id="${ ui.encodeHtmlAttribute(transfer.id) }"
+                                       data-form-type="${ ui.encodeHtmlAttribute(transfer.formType) }"
                                        title="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.view')) }"
                                        aria-label="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.view')) }">
                                         <i class="icon-eye-open"></i>
                                     </a>
-                                    <% if (canCreateTransfer && outboundFacilityConfigured) { %>
+                                    <% if (canCreateTransfer && outboundFacilityConfigured) {
+                                        def editFormPage = transfer.formType == "Neonatal" ? "patient/newNeonatalTransferOutForm"
+                                            : transfer.formType == "Maternity" ? "patient/newMaternityTransferOutForm"
+                                            : "patient/newTransferOutForm"
+                                    %>
                                     <a class="transfer-edit-link transfer-action-icon"
                                        href="javascript:void(0);"
                                        data-transfer-id="${ ui.encodeHtmlAttribute(transfer.id) }"
-                                       data-load-url="${ ui.encodeHtmlAttribute(ui.pageLink('transferapp', 'patient/newTransferOutForm') + '?patientId=' + patient.patient.patientId + '&transferUuid=' + transfer.id) }"
+                                       data-form-type="${ ui.encodeHtmlAttribute(transfer.formType ?: 'External') }"
+                                       data-load-url="${ ui.encodeHtmlAttribute(ui.pageLink('transferapp', editFormPage) + '?patientId=' + patient.patient.patientId + '&transferUuid=' + transfer.id) }"
                                        title="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.edit')) }"
                                        aria-label="${ ui.encodeHtmlAttribute(ui.message('transferapp.patient.transfers.edit')) }">
                                         <i class="icon-pencil"></i>
@@ -830,7 +848,7 @@
                 newMaternityTransferOutDialog.close();
             }
         } catch (ignoreClose) {}
-        jq("#new-maternity-transfer-out-dialog").hide();
+        jq("#new-maternity-transfer-out-dialog").removeClass("transfer-wizard-open").hide();
     };
 
     function showNewMaternityTransferOutDialog(loadUrl) {
@@ -858,15 +876,16 @@
                 } else {
                     ensureMaternityTransferWizardAssets(function() {
                         initMaternityTransferWizardModal();
+                        jq("#new-maternity-transfer-out-dialog .dialog-content").scrollTop(0);
                     });
                 }
             });
         }
 
-        if (newMaternityTransferOutDialog) {
+        jq("#new-maternity-transfer-out-dialog").addClass("transfer-wizard-open").show().css("display", "flex");
+        if (newMaternityTransferOutDialog && typeof newMaternityTransferOutDialog.show === "function") {
             newMaternityTransferOutDialog.show();
-        } else {
-            jq("#new-maternity-transfer-out-dialog").show();
+            jq("#new-maternity-transfer-out-dialog").addClass("transfer-wizard-open").css("display", "flex");
         }
     }
 
@@ -939,7 +958,7 @@
                 newNeonatalTransferOutDialog.close();
             }
         } catch (ignoreClose) {}
-        jq("#new-neonatal-transfer-out-dialog").hide();
+        jq("#new-neonatal-transfer-out-dialog").removeClass("transfer-wizard-open").hide();
     };
 
     function showNewNeonatalTransferOutDialog(loadUrl) {
@@ -967,15 +986,16 @@
                 } else {
                     ensureNeonatalTransferWizardAssets(function() {
                         initNeonatalTransferWizardModal();
+                        jq("#new-neonatal-transfer-out-dialog .dialog-content").scrollTop(0);
                     });
                 }
             });
         }
 
-        if (newNeonatalTransferOutDialog) {
+        jq("#new-neonatal-transfer-out-dialog").addClass("transfer-wizard-open").show().css("display", "flex");
+        if (newNeonatalTransferOutDialog && typeof newNeonatalTransferOutDialog.show === "function") {
             newNeonatalTransferOutDialog.show();
-        } else {
-            jq("#new-neonatal-transfer-out-dialog").show();
+            jq("#new-neonatal-transfer-out-dialog").addClass("transfer-wizard-open").css("display", "flex");
         }
     }
 
@@ -1039,6 +1059,19 @@
 
         jq(document).on("click", ".transfer-edit-link", function(e) {
             e.preventDefault();
+            var editLink = jq(this);
+            var formType = editLink.attr("data-form-type") || "External";
+            var loadUrl = editLink.attr("data-load-url");
+
+            if (formType === "Neonatal") {
+                showNewNeonatalTransferOutDialog(loadUrl);
+                return;
+            }
+            if (formType === "Maternity") {
+                showNewMaternityTransferOutDialog(loadUrl);
+                return;
+            }
+
             var gateEl = jq("#new-transfer-out-dialog");
             if (gateEl.attr("data-provider-profile-complete") === "false") {
                 var incompleteMessage = gateEl.attr("data-profile-incomplete-message")
@@ -1046,7 +1079,6 @@
                 showProfileIncompleteDialog(incompleteMessage);
                 return;
             }
-            var loadUrl = jq(this).attr("data-load-url");
             showNewTransferOutDialog(loadUrl);
         });
 
@@ -1108,6 +1140,7 @@
                     if (response.uuid) {
                         try {
                             sessionStorage.setItem("transferapp.previewTransferUuid", response.uuid);
+                            sessionStorage.setItem("transferapp.previewFormType", "External");
                         } catch (ignoreStorage) {}
                     }
                     window.location.reload();
@@ -1138,19 +1171,24 @@
     window.transferOpenmrsPath = transferOpenmrsPath;
     var transferPreviewUrl = transferOpenmrsPath + "/module/transferapp/transfer/preview.form";
     var transferSubmitUrl = transferOpenmrsPath + "/module/transferapp/transfer/submit.form";
+    var transferSubmitNeonatalUrl = transferOpenmrsPath + "/module/transferapp/transfer/submitNeonatal.form";
+    var transferSubmitMaternityUrl = transferOpenmrsPath + "/module/transferapp/transfer/submitMaternity.form";
     var transferPreviewResourcesBase = transferOpenmrsPath + "/moduleResources/transferapp/scripts/";
     var transferPreviewStorageKey = "transferapp.previewTransferUuid";
+    var transferPreviewFormTypeStorageKey = "transferapp.previewFormType";
     var transferPreviewDialog = null;
     var transferPreviewScriptsLoading = null;
     var currentPreviewTransferUuid = null;
     var currentPreviewTransferSent = false;
     var currentPreviewIsHieUpdate = false;
+    var currentPreviewFormType = "External";
 
     function syncTransferPreviewSubmitButton() {
         var submitBtn = jq("#transfer-preview-submit");
         if (!submitBtn.length) {
             return;
         }
+        submitBtn.show();
         if (currentPreviewTransferSent) {
             submitBtn.prop("disabled", true).text("${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.alreadySent')) }");
         } else if (currentPreviewIsHieUpdate) {
@@ -1210,12 +1248,23 @@
     }
 
     function renderTransferPreview(transfer) {
-        var previewHtml = typeof buildTransferFormPreviewHtml === "function"
-            ? buildTransferFormPreviewHtml(transfer)
-            : "<p style='color:red;'>Preview renderer not loaded.</p>";
+        var formType = (transfer && transfer.formType) || "External";
+        currentPreviewFormType = (formType === "Maternity" || formType === "Neonatal") ? formType : "External";
+        var previewHtml;
+        if (currentPreviewFormType === "Maternity" && typeof buildMaternityTransferFormPreviewHtml === "function") {
+            previewHtml = buildMaternityTransferFormPreviewHtml(transfer);
+        } else if (currentPreviewFormType === "Neonatal" && typeof buildNeonatalTransferFormPreviewHtml === "function") {
+            previewHtml = buildNeonatalTransferFormPreviewHtml(transfer);
+        } else if (currentPreviewFormType === "External" && typeof buildTransferFormPreviewHtml === "function") {
+            previewHtml = buildTransferFormPreviewHtml(transfer);
+        } else {
+            previewHtml = "<p style='color:red;'>Preview renderer not loaded.</p>";
+        }
         jq("#transfer-preview-body").html(previewHtml);
         currentPreviewTransferSent = !!(transfer && (transfer.hieSent === true || transfer.hieSent === "true"));
-        currentPreviewIsHieUpdate = !currentPreviewTransferSent && !!(transfer && String(transfer.hieTransferId || "").trim());
+        // Only External supports resubmitting an update to an already-sent HIE encounter.
+        currentPreviewIsHieUpdate = currentPreviewFormType === "External"
+            && !currentPreviewTransferSent && !!(transfer && String(transfer.hieTransferId || "").trim());
         syncTransferPreviewSubmitButton();
     }
 
@@ -1237,8 +1286,7 @@
         }
     }
 
-    function showTransferPreview(transferUuid) {
-        jq("#transfer-preview-submit").show();
+    function showTransferPreview(transferUuid, formType) {
         if (!transferUuid) {
             return;
         }
@@ -1246,6 +1294,7 @@
         jq("#transfer-preview-body").html("<div style='padding: 10px;'><i class='icon-spinner icon-spin'></i> ${ ui.encodeJavaScript(ui.message('transferapp.patient.transfers.previewLoading')) }</div>");
         currentPreviewTransferUuid = transferUuid;
         currentPreviewTransferSent = false;
+        currentPreviewFormType = (formType === "Maternity" || formType === "Neonatal") ? formType : "External";
         currentPreviewIsHieUpdate = false;
         syncTransferPreviewSubmitButton();
         showTransferPreviewDialog();
@@ -1253,7 +1302,7 @@
         jq.ajax({
             url: transferPreviewUrl,
             type: "GET",
-            data: { uuid: transferUuid },
+            data: { uuid: transferUuid, formType: currentPreviewFormType },
             dataType: "json"
         }).done(function(response) {
             if (response && response.status === "success" && response.transfer) {
@@ -1280,8 +1329,11 @@
             }
             var submitBtn = jq(this);
             submitBtn.prop("disabled", true);
+            var submitUrl = currentPreviewFormType === "Neonatal" ? transferSubmitNeonatalUrl
+                : currentPreviewFormType === "Maternity" ? transferSubmitMaternityUrl
+                : transferSubmitUrl;
             jq.ajax({
-                url: transferSubmitUrl,
+                url: submitUrl,
                 type: "POST",
                 data: { uuid: currentPreviewTransferUuid },
                 dataType: "json"
@@ -1325,20 +1377,25 @@
 
         jq(document).on("click", ".transfer-view-link", function(e) {
             e.preventDefault();
-            var transferUuid = jq(this).attr("data-transfer-id")
-                || jq(this).closest("tr.transfer-row").attr("data-transfer-id");
-            showTransferPreview(transferUuid);
+            var clickedLink = jq(this);
+            var parentRow = clickedLink.closest("tr.transfer-row");
+            var transferUuid = clickedLink.attr("data-transfer-id") || parentRow.attr("data-transfer-id");
+            var formType = clickedLink.attr("data-form-type") || parentRow.attr("data-form-type") || "External";
+            showTransferPreview(transferUuid, formType);
         });
 
         var pendingPreviewUuid = null;
+        var pendingPreviewFormType = "External";
         try {
             pendingPreviewUuid = sessionStorage.getItem(transferPreviewStorageKey);
+            pendingPreviewFormType = sessionStorage.getItem(transferPreviewFormTypeStorageKey) || "External";
         } catch (ignoreStorage) {}
         if (pendingPreviewUuid) {
             try {
                 sessionStorage.removeItem(transferPreviewStorageKey);
+                sessionStorage.removeItem(transferPreviewFormTypeStorageKey);
             } catch (ignoreStorage) {}
-            showTransferPreview(pendingPreviewUuid);
+            showTransferPreview(pendingPreviewUuid, pendingPreviewFormType);
         }
     });
 </script>

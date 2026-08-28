@@ -107,6 +107,8 @@ public class TransferDashboardServiceImpl implements TransferDashboardService {
 				? maternityTransferDao.countOutboundMaternityTransfers(facilityName, startOfWeek) : 0;
 		int maternityTotal = maternityTransferDao != null
 				? maternityTransferDao.countOutboundMaternityTransfers(facilityName, null) : 0;
+		int maternityPending = maternityTransferDao != null
+				? maternityTransferDao.countOutboundMaternityTransfers(facilityName, null, Boolean.FALSE) : 0;
 
 		int neonatalToday = neonatalTransferDao != null
 				? neonatalTransferDao.countOutboundNeonatalTransfers(facilityName, startOfToday) : 0;
@@ -114,6 +116,8 @@ public class TransferDashboardServiceImpl implements TransferDashboardService {
 				? neonatalTransferDao.countOutboundNeonatalTransfers(facilityName, startOfWeek) : 0;
 		int neonatalTotal = neonatalTransferDao != null
 				? neonatalTransferDao.countOutboundNeonatalTransfers(facilityName, null) : 0;
+		int neonatalPending = neonatalTransferDao != null
+				? neonatalTransferDao.countOutboundNeonatalTransfers(facilityName, null, Boolean.FALSE) : 0;
 
 		statistics.setToday(transferDao.countOutboundTransfers(facilityName, startOfToday, null)
 				+ maternityToday + neonatalToday);
@@ -121,10 +125,8 @@ public class TransferDashboardServiceImpl implements TransferDashboardService {
 				+ maternityThisWeek + neonatalThisWeek);
 		statistics.setTotal(transferDao.countOutboundTransfers(facilityName, null, null)
 				+ maternityTotal + neonatalTotal);
-		// Maternity and Neonatal transfers have no HIE submission concept yet, so every one of
-		// them counts toward "pending" the same way an un-sent External transfer does.
 		statistics.setPending(transferDao.countOutboundTransfers(facilityName, null, Boolean.FALSE)
-				+ maternityTotal + neonatalTotal);
+				+ maternityPending + neonatalPending);
 
 		return statistics;
 	}

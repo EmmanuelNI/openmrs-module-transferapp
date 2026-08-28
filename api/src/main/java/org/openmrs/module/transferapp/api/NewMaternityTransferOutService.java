@@ -29,4 +29,8 @@ public interface NewMaternityTransferOutService {
 	@Transactional(readOnly = true)
 	MaternityTransferFormData getMaternityTransferFormData(Patient patient);
 
+	@Authorized(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)
+	@Transactional(readOnly = true)
+	MaternityTransferFormData getMaternityTransferFormData(Patient patient, String transferUuid);
+
 }

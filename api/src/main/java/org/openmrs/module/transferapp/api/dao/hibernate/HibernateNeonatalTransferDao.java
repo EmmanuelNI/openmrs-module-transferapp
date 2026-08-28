@@ -145,6 +145,38 @@ public class HibernateNeonatalTransferDao implements NeonatalTransferDao {
 	}
 
 	@Override
+	public int countOutboundNeonatalTransfers(String sendingFacility, Date fromDate, Boolean hieSent) {
+		if (StringUtils.isBlank(sendingFacility)) {
+			return 0;
+		}
+
+		Criteria criteria = getSession().createCriteria(NeonatalTransfer.class);
+		criteria.add(Restrictions.eq("voided", false));
+		criteria.add(Restrictions.eq("sendingFacility", sendingFacility.trim()));
+		if (fromDate != null) {
+			criteria.add(Restrictions.or(
+					Restrictions.and(
+							Restrictions.isNotNull("decisionToTransferAt"),
+							Restrictions.ge("decisionToTransferAt", fromDate)),
+					Restrictions.and(
+							Restrictions.isNull("decisionToTransferAt"),
+							Restrictions.ge("dateCreated", fromDate))));
+		}
+		if (hieSent != null) {
+			if (Boolean.TRUE.equals(hieSent)) {
+				criteria.add(Restrictions.eq("hieSent", true));
+			} else {
+				criteria.add(Restrictions.or(
+						Restrictions.eq("hieSent", false),
+						Restrictions.isNull("hieSent")));
+			}
+		}
+		criteria.setProjection(Projections.rowCount());
+		Number count = (Number) criteria.uniqueResult();
+		return count == null ? 0 : count.intValue();
+	}
+
+	@Override
 	public NeonatalTransfer getNeonatalTransferByUuid(String uuid) {
 		Criteria criteria = getSession().createCriteria(NeonatalTransfer.class);
 		criteria.add(Restrictions.eq("uuid", uuid));

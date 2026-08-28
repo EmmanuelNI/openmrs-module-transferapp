@@ -33,6 +33,7 @@ public class NewNeonatalTransferOutFormFragmentController {
 	public void controller(FragmentModel model,
 			UiUtils ui,
 			@RequestParam(value = "patientId", required = false) Integer patientId,
+			@RequestParam(value = "transferUuid", required = false) String transferUuid,
 			@SpringBean("newNeonatalTransferOutService") NewNeonatalTransferOutService newNeonatalTransferOutService) {
 
 		model.addAttribute("error", "");
@@ -57,7 +58,7 @@ public class NewNeonatalTransferOutFormFragmentController {
 		}
 
 		try {
-			NeonatalTransferFormData formData = newNeonatalTransferOutService.getNeonatalTransferFormData(patient);
+			NeonatalTransferFormData formData = newNeonatalTransferOutService.getNeonatalTransferFormData(patient, transferUuid);
 			model.addAttribute("formData", formData);
 		}
 		catch (Exception ex) {

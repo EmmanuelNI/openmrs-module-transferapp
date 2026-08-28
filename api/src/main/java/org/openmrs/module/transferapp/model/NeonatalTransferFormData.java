@@ -24,6 +24,8 @@ public class NeonatalTransferFormData {
 
 	private String patientDisplay;
 
+	private String transferUuid;
+
 	private String sendingFacility;
 
 	private List<TransferFormOption> receivingFacilities;
@@ -33,6 +35,17 @@ public class NeonatalTransferFormData {
 	private List<TransferFormOption> transferTypes;
 
 	private List<TransferFormOption> transportTypes;
+
+	// Facility details (header)
+	private String province;
+
+	private String district;
+
+	private String hospitalName;
+
+	private String referringFacilityName;
+
+	private String referringUnit;
 
 	// Step 1 — baby & referral info
 	private String babyName;
@@ -89,6 +102,8 @@ public class NeonatalTransferFormData {
 	private String ancScreening;
 
 	private String pathologiesDuringPregnancy;
+
+	private String pregnancyOtherPathologies;
 
 	private String pregnancyTreatment;
 
@@ -202,11 +217,15 @@ public class NeonatalTransferFormData {
 
 	private String ventilationSettings;
 
+	private String bloodGasAnalysis;
+
 	private String ivFluidVol;
 
 	private String passedUrine;
 
 	private String inotropes;
+
+	private String inotropesSpecify;
 
 	private String peripheralIv;
 
@@ -262,6 +281,10 @@ public class NeonatalTransferFormData {
 
 	private String labCultures;
 
+	private String fbcDone;
+
+	private String imagingResultsAvailable;
+
 	private String imagingResults;
 
 	private String painSedationDrugs;
@@ -297,6 +320,14 @@ public class NeonatalTransferFormData {
 
 	public void setPatientDisplay(String patientDisplay) {
 		this.patientDisplay = patientDisplay;
+	}
+
+	public String getTransferUuid() {
+		return transferUuid;
+	}
+
+	public void setTransferUuid(String transferUuid) {
+		this.transferUuid = transferUuid;
 	}
 
 	public String getSendingFacility() {
@@ -337,6 +368,46 @@ public class NeonatalTransferFormData {
 
 	public void setTransportTypes(List<TransferFormOption> transportTypes) {
 		this.transportTypes = transportTypes;
+	}
+
+	public String getProvince() {
+		return province;
+	}
+
+	public void setProvince(String province) {
+		this.province = province;
+	}
+
+	public String getDistrict() {
+		return district;
+	}
+
+	public void setDistrict(String district) {
+		this.district = district;
+	}
+
+	public String getHospitalName() {
+		return hospitalName;
+	}
+
+	public void setHospitalName(String hospitalName) {
+		this.hospitalName = hospitalName;
+	}
+
+	public String getReferringFacilityName() {
+		return referringFacilityName;
+	}
+
+	public void setReferringFacilityName(String referringFacilityName) {
+		this.referringFacilityName = referringFacilityName;
+	}
+
+	public String getReferringUnit() {
+		return referringUnit;
+	}
+
+	public void setReferringUnit(String referringUnit) {
+		this.referringUnit = referringUnit;
 	}
 
 	public String getBabyName() {
@@ -553,6 +624,14 @@ public class NeonatalTransferFormData {
 
 	public void setPathologiesDuringPregnancy(String pathologiesDuringPregnancy) {
 		this.pathologiesDuringPregnancy = pathologiesDuringPregnancy;
+	}
+
+	public String getPregnancyOtherPathologies() {
+		return pregnancyOtherPathologies;
+	}
+
+	public void setPregnancyOtherPathologies(String pregnancyOtherPathologies) {
+		this.pregnancyOtherPathologies = pregnancyOtherPathologies;
 	}
 
 	public String getPregnancyTreatment() {
@@ -987,6 +1066,14 @@ public class NeonatalTransferFormData {
 		this.ventilationSettings = ventilationSettings;
 	}
 
+	public String getBloodGasAnalysis() {
+		return bloodGasAnalysis;
+	}
+
+	public void setBloodGasAnalysis(String bloodGasAnalysis) {
+		this.bloodGasAnalysis = bloodGasAnalysis;
+	}
+
 	public String getIvFluidVol() {
 		return ivFluidVol;
 	}
@@ -1009,6 +1096,14 @@ public class NeonatalTransferFormData {
 
 	public void setInotropes(String inotropes) {
 		this.inotropes = inotropes;
+	}
+
+	public String getInotropesSpecify() {
+		return inotropesSpecify;
+	}
+
+	public void setInotropesSpecify(String inotropesSpecify) {
+		this.inotropesSpecify = inotropesSpecify;
 	}
 
 	public String getPeripheralIv() {
@@ -1225,6 +1320,22 @@ public class NeonatalTransferFormData {
 
 	public void setLabCultures(String labCultures) {
 		this.labCultures = labCultures;
+	}
+
+	public String getFbcDone() {
+		return fbcDone;
+	}
+
+	public void setFbcDone(String fbcDone) {
+		this.fbcDone = fbcDone;
+	}
+
+	public String getImagingResultsAvailable() {
+		return imagingResultsAvailable;
+	}
+
+	public void setImagingResultsAvailable(String imagingResultsAvailable) {
+		this.imagingResultsAvailable = imagingResultsAvailable;
 	}
 
 	public String getImagingResults() {

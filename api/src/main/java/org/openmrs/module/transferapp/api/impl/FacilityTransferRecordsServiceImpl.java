@@ -170,7 +170,7 @@ public class FacilityTransferRecordsServiceImpl implements FacilityTransferRecor
 		item.setEmrId(StringUtils.defaultString(transfer.getSerialNumberEmr()));
 		item.setReceivingFacility(resolveReceivingFacilityLabel(transfer.getReceivingFacilityCode()));
 		item.setService(StringUtils.defaultString(transfer.getReceivingService()));
-		item.setHieSent(false);
+		item.setHieSent(transfer.isSentToHie());
 		item.setFormType(FORM_TYPE_MATERNITY);
 		return item;
 	}
@@ -188,8 +188,7 @@ public class FacilityTransferRecordsServiceImpl implements FacilityTransferRecor
 		item.setEmrId("");
 		item.setReceivingFacility(resolveReceivingFacilityLabel(transfer.getReceivingFacilityCode()));
 		item.setService(StringUtils.defaultString(transfer.getReceivingService()));
-		// Neonatal transfers have no HIE submission concept yet, matching the Maternity assumption.
-		item.setHieSent(false);
+		item.setHieSent(transfer.isSentToHie());
 		item.setFormType(FORM_TYPE_NEONATAL);
 		return item;
 	}

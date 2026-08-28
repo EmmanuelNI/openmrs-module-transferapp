@@ -23,6 +23,8 @@ import org.openmrs.module.transferapp.api.MaternityTransferService;
 import org.openmrs.module.transferapp.api.NeonatalTransferService;
 import org.openmrs.module.transferapp.api.TransferAdminService;
 import org.openmrs.module.transferapp.api.TransferAmbulanceVoucherService;
+import org.openmrs.module.transferapp.api.MaternityTransferHieSubmissionService;
+import org.openmrs.module.transferapp.api.NeonatalTransferHieSubmissionService;
 import org.openmrs.module.transferapp.api.TransferHieSubmissionService;
 import org.openmrs.module.transferapp.api.TransferProfileService;
 import org.openmrs.module.transferapp.api.TransferQrCodeService;
@@ -83,6 +85,14 @@ public class TransferSaveController {
 		return Context.getService(TransferHieSubmissionService.class);
 	}
 
+	private NeonatalTransferHieSubmissionService getNeonatalTransferHieSubmissionService() {
+		return Context.getService(NeonatalTransferHieSubmissionService.class);
+	}
+
+	private MaternityTransferHieSubmissionService getMaternityTransferHieSubmissionService() {
+		return Context.getService(MaternityTransferHieSubmissionService.class);
+	}
+
 	private TransferVerificationUrlService getTransferVerificationUrlService() {
 		return Context.getService(TransferVerificationUrlService.class);
 	}
@@ -119,6 +129,72 @@ public class TransferSaveController {
 		}
 		catch (Exception e) {
 			putError(data, e, TransferAppActivator.PRIVILEGE_CREATE_TRANSFER, "Unable to submit transfer to HIE");
+		}
+
+		writeJson(response, data);
+	}
+
+	@RequestMapping(value = "/module/transferapp/transfer/submitNeonatal.form", method = RequestMethod.POST)
+	public void submitNeonatalTransferToHie(HttpServletResponse response,
+			@RequestParam("uuid") String uuid) throws Exception {
+
+		Map<String, Object> data = new HashMap<String, Object>();
+
+		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)) {
+			writePrivilegeDenied(response, data, TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);
+			return;
+		}
+
+		if (!transferAdminService.isOutboundFacilityNameConfigured()) {
+			data.put("status", "error");
+			data.put("message", Context.getMessageSourceService().getMessage(
+					"transferapp.patient.transfers.outboundFacilityRequired"));
+			writeJson(response, data);
+			return;
+		}
+
+		try {
+			NeonatalTransfer transfer = getNeonatalTransferHieSubmissionService().submitNeonatalTransferToHie(uuid);
+			data.put("status", "success");
+			data.put("uuid", transfer.getUuid());
+			data.put("hieSent", transfer.isSentToHie());
+			data.put("hieSentAt", formatDateTime(transfer.getHieSentAt()));
+		}
+		catch (Exception e) {
+			putError(data, e, TransferAppActivator.PRIVILEGE_CREATE_TRANSFER, "Unable to submit neonatal transfer to HIE");
+		}
+
+		writeJson(response, data);
+	}
+
+	@RequestMapping(value = "/module/transferapp/transfer/submitMaternity.form", method = RequestMethod.POST)
+	public void submitMaternityTransferToHie(HttpServletResponse response,
+			@RequestParam("uuid") String uuid) throws Exception {
+
+		Map<String, Object> data = new HashMap<String, Object>();
+
+		if (!TransferPrivilegeHelper.hasPrivilege(TransferAppActivator.PRIVILEGE_CREATE_TRANSFER)) {
+			writePrivilegeDenied(response, data, TransferAppActivator.PRIVILEGE_CREATE_TRANSFER);
+			return;
+		}
+
+		if (!transferAdminService.isOutboundFacilityNameConfigured()) {
+			data.put("status", "error");
+			data.put("message", Context.getMessageSourceService().getMessage(
+					"transferapp.patient.transfers.outboundFacilityRequired"));
+			writeJson(response, data);
+			return;
+		}
+
+		try {
+			MaternityTransfer transfer = getMaternityTransferHieSubmissionService().submitMaternityTransferToHie(uuid);
+			data.put("status", "success");
+			data.put("uuid", transfer.getUuid());
+			data.put("hieSent", transfer.isSentToHie());
+			data.put("hieSentAt", formatDateTime(transfer.getHieSentAt()));
+		}
+		catch (Exception e) {
+			putError(data, e, TransferAppActivator.PRIVILEGE_CREATE_TRANSFER, "Unable to submit maternity transfer to HIE");
 		}
 
 		writeJson(response, data);
@@ -256,6 +332,13 @@ public class TransferSaveController {
 	public void saveMaternityTransfer(HttpServletResponse response,
 			@RequestParam("patientId") Integer patientId,
 			@RequestParam(value = "receivingFacilityId", required = false) Integer receivingFacilityId,
+			@RequestParam(value = "transferUuid", required = false) String transferUuid,
+			// Facility details (header)
+			@RequestParam(value = "province", required = false) String province,
+			@RequestParam(value = "district", required = false) String district,
+			@RequestParam(value = "hospitalName", required = false) String hospitalName,
+			@RequestParam(value = "referringFacilityName", required = false) String referringFacilityName,
+			@RequestParam(value = "referringUnit", required = false) String referringUnit,
 			// Step 1 — client & referral info
 			@RequestParam(value = "clientName", required = false) String clientName,
 			@RequestParam(value = "serialNumberEmr", required = false) String serialNumberEmr,
@@ -295,6 +378,7 @@ public class TransferSaveController {
 			@RequestParam(value = "ancCompletedCount", required = false) String ancCompletedCount,
 			@RequestParam(value = "tetanusVaccineDoses", required = false) String tetanusVaccineDoses,
 			@RequestParam(value = "previousSignificantHistory", required = false) String previousSignificantHistory,
+			@RequestParam(value = "multiPregnanciesAndKnownHiv", required = false) String multiPregnanciesAndKnownHiv,
 			@RequestParam(value = "currentPregnancyComplications", required = false) String currentPregnancyComplications,
 			// Step 3 — clinical findings
 			@RequestParam(value = "latestHemoglobin", required = false) String latestHemoglobin,
@@ -323,7 +407,6 @@ public class TransferSaveController {
 			@RequestParam(value = "membranesRuptured", required = false) String membranesRuptured,
 			@RequestParam(value = "membranesRupturedAt", required = false) String membranesRupturedAt,
 			@RequestParam(value = "amnioticFluidColor", required = false) String amnioticFluidColor,
-			@RequestParam(value = "offensive", required = false) String offensive,
 			@RequestParam(value = "estimatedBloodLossMl", required = false) String estimatedBloodLossMl,
 			@RequestParam(value = "investigationHgb", required = false) String investigationHgb,
 			@RequestParam(value = "investigationUrineTest", required = false) String investigationUrineTest,
@@ -359,6 +442,12 @@ public class TransferSaveController {
 
 		try {
 			MaternityTransferFormData formData = new MaternityTransferFormData();
+			formData.setTransferUuid(transferUuid);
+			formData.setProvince(province);
+			formData.setDistrict(district);
+			formData.setHospitalName(hospitalName);
+			formData.setReferringFacilityName(referringFacilityName);
+			formData.setReferringUnit(referringUnit);
 			formData.setClientName(clientName);
 			formData.setSerialNumberEmr(serialNumberEmr);
 			formData.setAgeOrDob(ageOrDob);
@@ -397,6 +486,7 @@ public class TransferSaveController {
 			formData.setAncCompletedCount(ancCompletedCount);
 			formData.setTetanusVaccineDoses(tetanusVaccineDoses);
 			formData.setPreviousSignificantHistory(previousSignificantHistory);
+			formData.setMultiPregnanciesAndKnownHiv(multiPregnanciesAndKnownHiv);
 			formData.setCurrentPregnancyComplications(currentPregnancyComplications);
 
 			formData.setLatestHemoglobin(latestHemoglobin);
@@ -425,7 +515,6 @@ public class TransferSaveController {
 			formData.setMembranesRuptured(membranesRuptured);
 			formData.setMembranesRupturedAt(membranesRupturedAt);
 			formData.setAmnioticFluidColor(amnioticFluidColor);
-			formData.setOffensive(offensive);
 			formData.setEstimatedBloodLossMl(estimatedBloodLossMl);
 			formData.setInvestigationHgb(investigationHgb);
 			formData.setInvestigationUrineTest(investigationUrineTest);
@@ -492,6 +581,13 @@ public class TransferSaveController {
 	public void saveNeonatalTransfer(HttpServletResponse response,
 			@RequestParam("patientId") Integer patientId,
 			@RequestParam(value = "receivingFacilityId", required = false) Integer receivingFacilityId,
+			@RequestParam(value = "transferUuid", required = false) String transferUuid,
+			// Facility details (header)
+			@RequestParam(value = "province", required = false) String province,
+			@RequestParam(value = "district", required = false) String district,
+			@RequestParam(value = "hospitalName", required = false) String hospitalName,
+			@RequestParam(value = "referringFacilityName", required = false) String referringFacilityName,
+			@RequestParam(value = "referringUnit", required = false) String referringUnit,
 			// Step 1 — baby & referral info
 			@RequestParam(value = "babyName", required = false) String babyName,
 			@RequestParam(value = "sex", required = false) String sex,
@@ -519,8 +615,9 @@ public class TransferSaveController {
 			@RequestParam(value = "obstetricGravida", required = false) String obstetricGravida,
 			@RequestParam(value = "obstetricParity", required = false) String obstetricParity,
 			@RequestParam(value = "pregnancyType", required = false) String pregnancyType,
-			@RequestParam(value = "ancScreening", required = false) String ancScreening,
-			@RequestParam(value = "pathologiesDuringPregnancy", required = false) String pathologiesDuringPregnancy,
+			@RequestParam(value = "ancScreening", required = false) String[] ancScreening,
+			@RequestParam(value = "pathologiesDuringPregnancy", required = false) String[] pathologiesDuringPregnancy,
+			@RequestParam(value = "pregnancyOtherPathologies", required = false) String pregnancyOtherPathologies,
 			@RequestParam(value = "pregnancyTreatment", required = false) String pregnancyTreatment,
 			@RequestParam(value = "bloodGroup", required = false) String bloodGroup,
 			@RequestParam(value = "rhFactor", required = false) String rhFactor,
@@ -540,16 +637,16 @@ public class TransferSaveController {
 			@RequestParam(value = "lastSteroidDoseAt", required = false) String lastSteroidDoseAt,
 			@RequestParam(value = "mgso4At", required = false) String mgso4At,
 			@RequestParam(value = "modeOfDelivery", required = false) String modeOfDelivery,
-			@RequestParam(value = "laborComplications", required = false) String laborComplications,
+			@RequestParam(value = "laborComplications", required = false) String[] laborComplications,
 			@RequestParam(value = "laborComplicationsOther", required = false) String laborComplicationsOther,
 			@RequestParam(value = "maternalAnesthesia", required = false) String maternalAnesthesia,
 			@RequestParam(value = "maternalAnesthesiaOther", required = false) String maternalAnesthesiaOther,
 			@RequestParam(value = "maternalAntibiotics", required = false) String maternalAntibiotics,
 			@RequestParam(value = "otherDrugs", required = false) String otherDrugs,
-			@RequestParam(value = "sepsisRiskFactors", required = false) String sepsisRiskFactors,
+			@RequestParam(value = "sepsisRiskFactors", required = false) String[] sepsisRiskFactors,
 			// Step 4 — neonatal history & drugs
 			@RequestParam(value = "resuscitationAtBirth", required = false) String resuscitationAtBirth,
-			@RequestParam(value = "resuscitationMethods", required = false) String resuscitationMethods,
+			@RequestParam(value = "resuscitationMethods", required = false) String[] resuscitationMethods,
 			@RequestParam(value = "apgar1min", required = false) String apgar1min,
 			@RequestParam(value = "apgar5min", required = false) String apgar5min,
 			@RequestParam(value = "apgar10min", required = false) String apgar10min,
@@ -569,7 +666,7 @@ public class TransferSaveController {
 			@RequestParam(value = "conditionHr", required = false) String conditionHr,
 			@RequestParam(value = "conditionRr", required = false) String conditionRr,
 			@RequestParam(value = "conditionBp", required = false) String conditionBp,
-			@RequestParam(value = "neurologicalStatus", required = false) String neurologicalStatus,
+			@RequestParam(value = "neurologicalStatus", required = false) String[] neurologicalStatus,
 			@RequestParam(value = "seizures", required = false) String seizures,
 			@RequestParam(value = "adverseEvents24h", required = false) String adverseEvents24h,
 			@RequestParam(value = "diagnosis1", required = false) String diagnosis1,
@@ -579,9 +676,11 @@ public class TransferSaveController {
 			// Step 6 — management at referring facility
 			@RequestParam(value = "respiratorySupport", required = false) String respiratorySupport,
 			@RequestParam(value = "ventilationSettings", required = false) String ventilationSettings,
+			@RequestParam(value = "bloodGasAnalysis", required = false) String bloodGasAnalysis,
 			@RequestParam(value = "ivFluidVol", required = false) String ivFluidVol,
 			@RequestParam(value = "passedUrine", required = false) String passedUrine,
 			@RequestParam(value = "inotropes", required = false) String inotropes,
+			@RequestParam(value = "inotropesSpecify", required = false) String inotropesSpecify,
 			@RequestParam(value = "peripheralIv", required = false) String peripheralIv,
 			@RequestParam(value = "centralIv", required = false) String centralIv,
 			@RequestParam(value = "intraosseousLine", required = false) String intraosseousLine,
@@ -600,7 +699,6 @@ public class TransferSaveController {
 			@RequestParam(value = "passedStool", required = false) String passedStool,
 			@RequestParam(value = "nasogastricTube", required = false) String nasogastricTube,
 			@RequestParam(value = "labGlucose", required = false) String labGlucose,
-			@RequestParam(value = "labFbc", required = false) String labFbc,
 			@RequestParam(value = "labHb", required = false) String labHb,
 			@RequestParam(value = "labWbc", required = false) String labWbc,
 			@RequestParam(value = "labPlatelets", required = false) String labPlatelets,
@@ -609,6 +707,8 @@ public class TransferSaveController {
 			@RequestParam(value = "labBiliDirect", required = false) String labBiliDirect,
 			@RequestParam(value = "labUe", required = false) String labUe,
 			@RequestParam(value = "labCultures", required = false) String labCultures,
+			@RequestParam(value = "fbcDone", required = false) String fbcDone,
+			@RequestParam(value = "imagingResultsAvailable", required = false) String imagingResultsAvailable,
 			@RequestParam(value = "imagingResults", required = false) String imagingResults,
 			@RequestParam(value = "painSedationDrugs", required = false) String painSedationDrugs,
 			@RequestParam(value = "imagingReportAttached", required = false) String imagingReportAttached,
@@ -630,6 +730,12 @@ public class TransferSaveController {
 
 		try {
 			NeonatalTransferFormData formData = new NeonatalTransferFormData();
+			formData.setTransferUuid(transferUuid);
+			formData.setProvince(province);
+			formData.setDistrict(district);
+			formData.setHospitalName(hospitalName);
+			formData.setReferringFacilityName(referringFacilityName);
+			formData.setReferringUnit(referringUnit);
 			formData.setBabyName(babyName);
 			formData.setSex(sex);
 			formData.setDob(dob);
@@ -656,8 +762,10 @@ public class TransferSaveController {
 			formData.setObstetricGravida(obstetricGravida);
 			formData.setObstetricParity(obstetricParity);
 			formData.setPregnancyType(pregnancyType);
-			formData.setAncScreening(ancScreening);
-			formData.setPathologiesDuringPregnancy(pathologiesDuringPregnancy);
+			formData.setAncScreening(ancScreening == null ? null : StringUtils.join(ancScreening, "; "));
+			formData.setPathologiesDuringPregnancy(
+					pathologiesDuringPregnancy == null ? null : StringUtils.join(pathologiesDuringPregnancy, "; "));
+			formData.setPregnancyOtherPathologies(pregnancyOtherPathologies);
 			formData.setPregnancyTreatment(pregnancyTreatment);
 			formData.setBloodGroup(bloodGroup);
 			formData.setRhFactor(rhFactor);
@@ -677,16 +785,17 @@ public class TransferSaveController {
 			formData.setLastSteroidDoseAt(lastSteroidDoseAt);
 			formData.setMgso4At(mgso4At);
 			formData.setModeOfDelivery(modeOfDelivery);
-			formData.setLaborComplications(laborComplications);
+			formData.setLaborComplications(laborComplications == null ? null : StringUtils.join(laborComplications, "; "));
 			formData.setLaborComplicationsOther(laborComplicationsOther);
 			formData.setMaternalAnesthesia(maternalAnesthesia);
 			formData.setMaternalAnesthesiaOther(maternalAnesthesiaOther);
 			formData.setMaternalAntibiotics(maternalAntibiotics);
 			formData.setOtherDrugs(otherDrugs);
-			formData.setSepsisRiskFactors(sepsisRiskFactors);
+			formData.setSepsisRiskFactors(sepsisRiskFactors == null ? null : StringUtils.join(sepsisRiskFactors, "; "));
 
 			formData.setResuscitationAtBirth(resuscitationAtBirth);
-			formData.setResuscitationMethods(resuscitationMethods);
+			formData.setResuscitationMethods(
+					resuscitationMethods == null ? null : StringUtils.join(resuscitationMethods, "; "));
 			formData.setApgar1min(apgar1min);
 			formData.setApgar5min(apgar5min);
 			formData.setApgar10min(apgar10min);
@@ -706,7 +815,7 @@ public class TransferSaveController {
 			formData.setConditionHr(conditionHr);
 			formData.setConditionRr(conditionRr);
 			formData.setConditionBp(conditionBp);
-			formData.setNeurologicalStatus(neurologicalStatus);
+			formData.setNeurologicalStatus(neurologicalStatus == null ? null : StringUtils.join(neurologicalStatus, "; "));
 			formData.setSeizures(seizures);
 			formData.setAdverseEvents24h(adverseEvents24h);
 			formData.setDiagnosis1(diagnosis1);
@@ -716,9 +825,11 @@ public class TransferSaveController {
 
 			formData.setRespiratorySupport(respiratorySupport);
 			formData.setVentilationSettings(ventilationSettings);
+			formData.setBloodGasAnalysis(bloodGasAnalysis);
 			formData.setIvFluidVol(ivFluidVol);
 			formData.setPassedUrine(passedUrine);
 			formData.setInotropes(inotropes);
+			formData.setInotropesSpecify(inotropesSpecify);
 			formData.setPeripheralIv(peripheralIv);
 			formData.setCentralIv(centralIv);
 			formData.setIntraosseousLine(intraosseousLine);
@@ -737,7 +848,6 @@ public class TransferSaveController {
 			formData.setPassedStool(passedStool);
 			formData.setNasogastricTube(nasogastricTube);
 			formData.setLabGlucose(labGlucose);
-			formData.setLabFbc(labFbc);
 			formData.setLabHb(labHb);
 			formData.setLabWbc(labWbc);
 			formData.setLabPlatelets(labPlatelets);
@@ -746,6 +856,8 @@ public class TransferSaveController {
 			formData.setLabBiliDirect(labBiliDirect);
 			formData.setLabUe(labUe);
 			formData.setLabCultures(labCultures);
+			formData.setFbcDone(fbcDone);
+			formData.setImagingResultsAvailable(imagingResultsAvailable);
 			formData.setImagingResults(imagingResults);
 			formData.setPainSedationDrugs(painSedationDrugs);
 			formData.setImagingReportAttached(imagingReportAttached);
@@ -984,9 +1096,15 @@ public class TransferSaveController {
 		Map<String, Object> preview = new HashMap<String, Object>();
 		preview.put("uuid", transfer.getUuid());
 		preview.put("formType", FORM_TYPE_MATERNITY);
+		preview.put("hieSent", transfer.isSentToHie());
+		preview.put("hieSentAt", formatDateTime(transfer.getHieSentAt()));
+		preview.put("hieTransferId", nullToEmpty(transfer.getHieTransferId()));
 
-		preview.put("hospitalName", nullToEmpty(transfer.getSendingFacility()));
-		preview.put("referringFacilityName", nullToEmpty(transfer.getSendingFacility()));
+		preview.put("province", nullToEmpty(transfer.getProvince()));
+		preview.put("district", nullToEmpty(transfer.getDistrict()));
+		preview.put("hospitalName", nullToEmpty(transfer.getHospitalName()));
+		preview.put("referringFacilityName", nullToEmpty(transfer.getReferringFacilityName()));
+		preview.put("referringUnit", nullToEmpty(transfer.getReferringUnit()));
 
 		preview.put("clientName", nullToEmpty(transfer.getClientName()));
 		preview.put("serialNumberEmr", nullToEmpty(transfer.getSerialNumberEmr()));
@@ -1033,6 +1151,7 @@ public class TransferSaveController {
 		preview.put("ancCompletedCount", nullToEmpty(transfer.getAncCompletedCount()));
 		preview.put("tetanusVaccineDoses", nullToEmpty(transfer.getTetanusVaccineDoses()));
 		preview.put("previousSignificantHistory", nullToEmpty(transfer.getPreviousSignificantHistory()));
+		preview.put("multiPregnanciesAndKnownHiv", nullToEmpty(transfer.getMultiPregnanciesAndKnownHiv()));
 		preview.put("currentPregnancyComplications", nullToEmpty(transfer.getCurrentPregnancyComplications()));
 
 		preview.put("latestHemoglobin", nullToEmpty(transfer.getLatestHemoglobin()));
@@ -1061,7 +1180,6 @@ public class TransferSaveController {
 		preview.put("membranesRuptured", Boolean.TRUE.equals(transfer.getMembranesRuptured()));
 		preview.put("membranesRupturedAt", formatDateTime(transfer.getMembranesRupturedAt()));
 		preview.put("amnioticFluidColor", nullToEmpty(transfer.getAmnioticFluidColor()));
-		preview.put("offensive", Boolean.TRUE.equals(transfer.getOffensive()));
 		preview.put("estimatedBloodLossMl", nullToEmpty(transfer.getEstimatedBloodLossMl()));
 		preview.put("investigationHgb", nullToEmpty(transfer.getInvestigationHgb()));
 		preview.put("investigationUrineTest", nullToEmpty(transfer.getInvestigationUrineTest()));
@@ -1114,9 +1232,15 @@ public class TransferSaveController {
 		Map<String, Object> preview = new HashMap<String, Object>();
 		preview.put("uuid", transfer.getUuid());
 		preview.put("formType", FORM_TYPE_NEONATAL);
+		preview.put("hieSent", transfer.isSentToHie());
+		preview.put("hieSentAt", formatDateTime(transfer.getHieSentAt()));
+		preview.put("hieTransferId", nullToEmpty(transfer.getHieTransferId()));
 
-		preview.put("hospitalName", nullToEmpty(transfer.getSendingFacility()));
-		preview.put("referringFacilityName", nullToEmpty(transfer.getSendingFacility()));
+		preview.put("province", nullToEmpty(transfer.getProvince()));
+		preview.put("district", nullToEmpty(transfer.getDistrict()));
+		preview.put("hospitalName", nullToEmpty(transfer.getHospitalName()));
+		preview.put("referringFacilityName", nullToEmpty(transfer.getReferringFacilityName()));
+		preview.put("referringUnit", nullToEmpty(transfer.getReferringUnit()));
 
 		preview.put("babyName", nullToEmpty(transfer.getBabyName()));
 		preview.put("sex", nullToEmpty(transfer.getSex()));
@@ -1153,6 +1277,7 @@ public class TransferSaveController {
 		preview.put("pregnancyType", nullToEmpty(transfer.getPregnancyType()));
 		preview.put("ancScreening", nullToEmpty(transfer.getAncScreening()));
 		preview.put("pathologiesDuringPregnancy", nullToEmpty(transfer.getPathologiesDuringPregnancy()));
+		preview.put("pregnancyOtherPathologies", nullToEmpty(transfer.getPregnancyOtherPathologies()));
 		preview.put("pregnancyTreatment", nullToEmpty(transfer.getPregnancyTreatment()));
 		preview.put("bloodGroup", nullToEmpty(transfer.getBloodGroup()));
 		preview.put("rhFactor", nullToEmpty(transfer.getRhFactor()));
@@ -1210,10 +1335,12 @@ public class TransferSaveController {
 		preview.put("diagnosis4", nullToEmpty(transfer.getDiagnosis4()));
 
 		preview.put("respiratorySupport", nullToEmpty(transfer.getRespiratorySupport()));
+		preview.put("bloodGasAnalysis", nullToEmpty(transfer.getBloodGasAnalysis()));
 		preview.put("ventilationSettings", nullToEmpty(transfer.getVentilationSettings()));
 		preview.put("ivFluidVol", nullToEmpty(transfer.getIvFluidVol()));
 		preview.put("passedUrine", nullToEmpty(transfer.getPassedUrine()));
 		preview.put("inotropes", nullToEmpty(transfer.getInotropes()));
+		preview.put("inotropesSpecify", nullToEmpty(transfer.getInotropesSpecify()));
 		preview.put("peripheralIv", nullToEmpty(transfer.getPeripheralIv()));
 		preview.put("centralIv", nullToEmpty(transfer.getCentralIv()));
 		preview.put("intraosseousLine", nullToEmpty(transfer.getIntraosseousLine()));
@@ -1232,7 +1359,7 @@ public class TransferSaveController {
 		preview.put("passedStool", nullToEmpty(transfer.getPassedStool()));
 		preview.put("nasogastricTube", nullToEmpty(transfer.getNasogastricTube()));
 		preview.put("labGlucose", nullToEmpty(transfer.getLabGlucose()));
-		preview.put("labFbc", nullToEmpty(transfer.getLabFbc()));
+		preview.put("fbcDone", nullToEmpty(transfer.getFbcDone()));
 		preview.put("labHb", nullToEmpty(transfer.getLabHb()));
 		preview.put("labWbc", nullToEmpty(transfer.getLabWbc()));
 		preview.put("labPlatelets", nullToEmpty(transfer.getLabPlatelets()));
@@ -1241,6 +1368,7 @@ public class TransferSaveController {
 		preview.put("labBiliDirect", nullToEmpty(transfer.getLabBiliDirect()));
 		preview.put("labUe", nullToEmpty(transfer.getLabUe()));
 		preview.put("labCultures", nullToEmpty(transfer.getLabCultures()));
+		preview.put("imagingResultsAvailable", nullToEmpty(transfer.getImagingResultsAvailable()));
 		preview.put("imagingResults", nullToEmpty(transfer.getImagingResults()));
 		preview.put("painSedationDrugs", nullToEmpty(transfer.getPainSedationDrugs()));
 		preview.put("imagingReportAttached", Boolean.TRUE.equals(transfer.getImagingReportAttached()));

@@ -24,6 +24,8 @@ public class MaternityTransferFormData {
 
 	private String patientDisplay;
 
+	private String transferUuid;
+
 	private String sendingFacility;
 
 	private List<TransferFormOption> receivingFacilities;
@@ -37,6 +39,17 @@ public class MaternityTransferFormData {
 	private List<TransferFormOption> healthInsuranceTypes;
 
 	private List<MaternityTransferTreatmentRow> defaultTreatmentRows;
+
+	// Facility details (header)
+	private String province;
+
+	private String district;
+
+	private String hospitalName;
+
+	private String referringFacilityName;
+
+	private String referringUnit;
 
 	// Step 1 — client & referral info
 	private String clientName;
@@ -114,6 +127,8 @@ public class MaternityTransferFormData {
 
 	private String previousSignificantHistory;
 
+	private String multiPregnanciesAndKnownHiv;
+
 	private String currentPregnancyComplications;
 
 	// Step 3 — clinical findings
@@ -168,8 +183,6 @@ public class MaternityTransferFormData {
 	private String membranesRupturedAt;
 
 	private String amnioticFluidColor;
-
-	private String offensive;
 
 	private String estimatedBloodLossMl;
 
@@ -227,6 +240,14 @@ public class MaternityTransferFormData {
 		this.patientDisplay = patientDisplay;
 	}
 
+	public String getTransferUuid() {
+		return transferUuid;
+	}
+
+	public void setTransferUuid(String transferUuid) {
+		this.transferUuid = transferUuid;
+	}
+
 	public String getSendingFacility() {
 		return sendingFacility;
 	}
@@ -281,6 +302,46 @@ public class MaternityTransferFormData {
 
 	public void setDefaultTreatmentRows(List<MaternityTransferTreatmentRow> defaultTreatmentRows) {
 		this.defaultTreatmentRows = defaultTreatmentRows;
+	}
+
+	public String getProvince() {
+		return province;
+	}
+
+	public void setProvince(String province) {
+		this.province = province;
+	}
+
+	public String getDistrict() {
+		return district;
+	}
+
+	public void setDistrict(String district) {
+		this.district = district;
+	}
+
+	public String getHospitalName() {
+		return hospitalName;
+	}
+
+	public void setHospitalName(String hospitalName) {
+		this.hospitalName = hospitalName;
+	}
+
+	public String getReferringFacilityName() {
+		return referringFacilityName;
+	}
+
+	public void setReferringFacilityName(String referringFacilityName) {
+		this.referringFacilityName = referringFacilityName;
+	}
+
+	public String getReferringUnit() {
+		return referringUnit;
+	}
+
+	public void setReferringUnit(String referringUnit) {
+		this.referringUnit = referringUnit;
 	}
 
 	public String getClientName() {
@@ -579,6 +640,14 @@ public class MaternityTransferFormData {
 		this.previousSignificantHistory = previousSignificantHistory;
 	}
 
+	public String getMultiPregnanciesAndKnownHiv() {
+		return multiPregnanciesAndKnownHiv;
+	}
+
+	public void setMultiPregnanciesAndKnownHiv(String multiPregnanciesAndKnownHiv) {
+		this.multiPregnanciesAndKnownHiv = multiPregnanciesAndKnownHiv;
+	}
+
 	public String getCurrentPregnancyComplications() {
 		return currentPregnancyComplications;
 	}
@@ -793,14 +862,6 @@ public class MaternityTransferFormData {
 
 	public void setAmnioticFluidColor(String amnioticFluidColor) {
 		this.amnioticFluidColor = amnioticFluidColor;
-	}
-
-	public String getOffensive() {
-		return offensive;
-	}
-
-	public void setOffensive(String offensive) {
-		this.offensive = offensive;
 	}
 
 	public String getEstimatedBloodLossMl() {
